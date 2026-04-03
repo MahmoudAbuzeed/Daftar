@@ -155,7 +155,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
     const amount = parseFloat(settlementAmount);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert(t('common.error'), 'Please enter a valid amount.');
+      Alert.alert(t('common.error'), t('groups.invalidAmount'));
       return;
     }
 
@@ -185,8 +185,8 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   };
 
   const getUserName = (userId: string, userData?: User): string => {
-    if (userId === user?.id) return t('common.you') || 'You';
-    return userData?.display_name || 'Unknown';
+    if (userId === user?.id) return t('common.you');
+    return userData?.display_name || t('common.unknown');
   };
 
   const renderDebtRow = ({ item }: { item: SimplifiedDebt }) => {
@@ -225,7 +225,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
           </View>
           <Text style={styles.debtRowText}>
             <Text style={styles.debtRowName}>{fromName}</Text>
-            {' owes '}
+            {` ${t('groups.owes')} `}
             <Text style={styles.debtRowName}>{toName}</Text>
           </Text>
           <Text style={styles.debtRowAmount}>
@@ -277,7 +277,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
         <Text style={styles.headerSubtitle}>
           {debts.length === 0
             ? t('groups.settled_up')
-            : `${debts.length} ${debts.length === 1 ? 'payment' : 'payments'} needed`}
+            : `${debts.length} ${debts.length === 1 ? t('groups.payment') : t('groups.payments')}`}
         </Text>
       </LinearGradient>
 
@@ -293,7 +293,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
             <Text style={styles.emptyIcon}>{'\uD83C\uDF89'}</Text>
             <Text style={styles.emptyTitle}>{t('groups.settled_up')}</Text>
             <Text style={styles.emptySubtitle}>
-              Everyone is all settled up in this group.
+              {t('groups.settled_up')}
             </Text>
           </View>
         }

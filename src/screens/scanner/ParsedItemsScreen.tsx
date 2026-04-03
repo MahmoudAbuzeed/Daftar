@@ -61,12 +61,12 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
             style={styles.editInput}
             value={item.name}
             onChangeText={(v) => updateItem(index, 'name', v)}
-            placeholder="Item name"
+            placeholder={t('scanner.itemName')}
             placeholderTextColor={Colors.textTertiary}
           />
           <View style={styles.editRow}>
             <View style={styles.editField}>
-              <Text style={styles.editLabel}>Qty</Text>
+              <Text style={styles.editLabel}>{t('scanner.qty')}</Text>
               <TextInput
                 style={styles.editInputSmall}
                 value={String(item.quantity)}
@@ -75,7 +75,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
               />
             </View>
             <View style={styles.editField}>
-              <Text style={styles.editLabel}>Price</Text>
+              <Text style={styles.editLabel}>{t('scanner.price')}</Text>
               <TextInput
                 style={styles.editInputSmall}
                 value={String(item.unit_price)}
@@ -84,7 +84,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
               />
             </View>
             <View style={styles.editField}>
-              <Text style={styles.editLabel}>Total</Text>
+              <Text style={styles.editLabel}>{t('scanner.total')}</Text>
               <Text style={styles.totalText}>{item.total.toFixed(2)}</Text>
             </View>
           </View>
@@ -104,7 +104,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
       <TouchableOpacity style={styles.itemCard} onPress={() => setEditingIndex(index)}>
         <View style={styles.itemRow}>
           <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.name || 'Unnamed item'}</Text>
+            <Text style={styles.itemName}>{item.name || t('scanner.unnamedItem')}</Text>
             <Text style={styles.itemDetail}>
               {item.quantity} x {item.unit_price.toFixed(2)}
             </Text>
@@ -133,13 +133,13 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
         ListFooterComponent={
           <View>
             <TouchableOpacity style={styles.addItemButton} onPress={addItem}>
-              <Text style={styles.addItemText}>+ Add Item</Text>
+              <Text style={styles.addItemText}>{t('scanner.addItem')}</Text>
             </TouchableOpacity>
 
             {/* Summary Card */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Subtotal</Text>
+                <Text style={styles.summaryLabel}>{t('scanner.subtotal')}</Text>
                 <Text style={styles.summaryValue}>{subtotal.toFixed(2)}</Text>
               </View>
 

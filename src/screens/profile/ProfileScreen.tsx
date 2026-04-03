@@ -98,14 +98,14 @@ export default function ProfileScreen() {
     {
       icon: 'moon-outline',
       label: t('profile.appearance') || 'Appearance',
-      value: isDark ? 'Dark' : 'Light',
+      value: isDark ? t('profile.dark') : t('profile.light'),
       onPress: toggleTheme,
       gradColors: isDark ? ['#1B7A6C', '#14B8A6'] : ['#0D9488', '#14B8A6'],
     },
     {
       icon: 'globe-outline',
       label: t('profile.language'),
-      value: isArabic ? '\u0627\u0644\u0639\u0631\u0628\u064A\u0629' : 'English',
+      value: isArabic ? t('profile.arabic') : t('profile.english'),
       onPress: handleLanguageToggle,
       gradColors: colors.primaryGradient,
     },
@@ -162,7 +162,7 @@ export default function ProfileScreen() {
 
           {/* Settings */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>PREFERENCES</Text>
+            <Text style={styles.sectionLabel}>{t('profile.preferences')}</Text>
 
             {settingsItems.map((s, i) => (
               <TouchableOpacity
@@ -241,7 +241,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <View style={styles.proBadge}>
-                <Text style={styles.proBadgeText}>PRO</Text>
+                <Text style={styles.proBadgeText}>{t('profile.pro')}</Text>
               </View>
             </TouchableOpacity>
 
@@ -278,7 +278,7 @@ export default function ProfileScreen() {
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.version}>Daftar v1.0.0</Text>
+          <Text style={styles.version}>{t('profile.version')}</Text>
         </ScrollView>
       </SafeAreaView>
     </View>

@@ -19,6 +19,7 @@ import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import DailyBanner from '../../components/DailyBanner';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -211,14 +212,16 @@ export default function ActivityScreen() {
 
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
-          <Text style={styles.headerKicker}>RECENT TRANSACTIONS</Text>
+          <Text style={styles.headerKicker}>{t('activity.recentTransactions')}</Text>
           <Text style={styles.headerTitle}>{t('activity.title')}</Text>
         </View>
+
+        <DailyBanner />
 
         {activities.length > 0 && (
           <View style={styles.countStrip}>
             <Ionicons name="pulse" size={14} color={colors.primaryLight} />
-            <Text style={styles.countText}>{activities.length} items</Text>
+            <Text style={styles.countText}>{t('activity.itemCount', { count: activities.length })}</Text>
           </View>
         )}
 

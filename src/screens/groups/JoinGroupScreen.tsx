@@ -47,7 +47,7 @@ export default function JoinGroupScreen({ navigation }: Props) {
         .single();
 
       if (groupError || !group) {
-        setError(t('groups.invalid_code') || 'Invalid invite code. Please check and try again.');
+        setError(t('groups.invalid_code'));
         return;
       }
 
@@ -62,7 +62,7 @@ export default function JoinGroupScreen({ navigation }: Props) {
       if (existError) throw existError;
 
       if (existing) {
-        setError(t('groups.already_member') || 'You are already a member of this group.');
+        setError(t('groups.already_member'));
         return;
       }
 
@@ -79,7 +79,7 @@ export default function JoinGroupScreen({ navigation }: Props) {
 
       Alert.alert(
         t('groups.join'),
-        `${t('groups.joined_successfully') || 'Successfully joined'} "${group.name}"!`,
+        `${t('groups.joined_successfully')} "${group.name}"`,
         [
           {
             text: t('common.done'),
@@ -108,7 +108,7 @@ export default function JoinGroupScreen({ navigation }: Props) {
 
           <Text style={styles.title}>{t('groups.join')}</Text>
           <Text style={styles.subtitle}>
-            {t('groups.enter_invite_code') || 'Enter the 6-character invite code to join a group.'}
+            {t('groups.enter_invite_code')}
           </Text>
 
           <View style={styles.inputContainer}>
@@ -119,7 +119,7 @@ export default function JoinGroupScreen({ navigation }: Props) {
                 setCode(text.toUpperCase());
                 setError(null);
               }}
-              placeholder="ABC123"
+              placeholder={t('groups.codePlaceholder')}
               placeholderTextColor="#D1D5DB"
               maxLength={6}
               autoCapitalize="characters"

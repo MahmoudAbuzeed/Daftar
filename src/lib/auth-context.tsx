@@ -22,6 +22,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const ensureProfile = async (id: string, displayName: string, email?: string | null) => {
+    const { error } = await supabase.rpc('ensure_user_profile', {
+      user_id: id,
+      user_display_name: displayName,
+      user_email: email ?? '',
+    });
+    if (error) console.warn('ensure_user_profile RPC failed:', error.message);
+  };
+
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from('users')
@@ -41,16 +50,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authUser.user_metadata?.display_name ||
         authUser.email?.split('@')[0] ||
         'User';
-      const { data: created } = await supabase
+      await ensureProfile(authUser.id, displayName, authUser.email);
+
+      const { data: profile } = await supabase
         .from('users')
-        .upsert({
-          id: authUser.id,
-          display_name: displayName,
-          email: authUser.email,
-        })
-        .select()
+        .select('*')
+        .eq('id', authUser.id)
         .single();
-      setProfile(created);
+      setProfile(profile);
     }
   };
 
@@ -88,12 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
-      const { error: profileError } = await supabase.from('users').upsert({
-        id: data.user.id,
-        display_name: displayName,
-        email,
-      });
-      if (profileError) console.warn('Failed to create user profile:', profileError.message);
+      await ensureProfile(data.user.id, displayName, email);
     }
   };
 

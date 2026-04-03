@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth-context';
 import { useAppTheme } from '../lib/theme-context';
 import { ActivityIndicator, View } from 'react-native';
 import AnimatedTabBar from '../components/AnimatedTabBar';
+import { FontFamily } from '../theme';
 
 // Auth Screens
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
@@ -100,7 +101,12 @@ function MainTabs() {
 
 function AuthNavigator() {
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'fade_from_bottom',
+      }}
+    >
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="SignIn" component={SignInScreen} />
       <AuthStack.Screen name="SignUp" component={SignUpScreen} />
@@ -109,22 +115,30 @@ function AuthNavigator() {
 }
 
 function AppStack() {
+  const { colors } = useAppTheme();
+
   return (
-    <RootStack.Navigator>
-      <RootStack.Screen
-        name="MainTabs"
-        component={MainTabs}
-        options={{ headerShown: false }}
-      />
-      <RootStack.Screen name="CreateGroup" component={CreateGroupScreen} />
-      <RootStack.Screen name="JoinGroup" component={JoinGroupScreen} />
+    <RootStack.Navigator
+      screenOptions={{
+        animation: 'slide_from_right',
+        gestureEnabled: true,
+        headerStyle: { backgroundColor: colors.bg },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontFamily: FontFamily.bodySemibold, fontSize: 17 },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <RootStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+      <RootStack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
+      <RootStack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ animation: 'slide_from_bottom' }} />
       <RootStack.Screen name="GroupDetail" component={GroupDetailScreen} />
       <RootStack.Screen name="GroupBalances" component={GroupBalancesScreen} />
-      <RootStack.Screen name="AddExpense" component={AddExpenseScreen} />
-      <RootStack.Screen name="ScanReceipt" component={ScanReceiptScreen} />
+      <RootStack.Screen name="AddExpense" component={AddExpenseScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
+      <RootStack.Screen name="ScanReceipt" component={ScanReceiptScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
       <RootStack.Screen name="ParsedItems" component={ParsedItemsScreen} />
       <RootStack.Screen name="AssignItems" component={AssignItemsScreen} />
-      <RootStack.Screen name="AddDaftarEntry" component={AddDaftarEntryScreen} />
+      <RootStack.Screen name="AddDaftarEntry" component={AddDaftarEntryScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
       <RootStack.Screen name="DaftarContact" component={DaftarContactScreen} />
     </RootStack.Navigator>
   );

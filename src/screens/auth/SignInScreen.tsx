@@ -82,7 +82,7 @@ export default function SignInScreen({ navigation }: Props) {
 
             {/* Header */}
             <View style={styles.headerBlock}>
-              <Text style={styles.headerKicker}>WELCOME BACK</Text>
+              <Text style={styles.headerKicker}>{t('auth.welcomeBack')}</Text>
               <Text style={styles.headerTitle}>{t('auth.signIn')}</Text>
               <Text style={styles.headerSub}>{t('auth.signInSubtitle')}</Text>
             </View>

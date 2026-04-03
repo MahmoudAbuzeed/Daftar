@@ -27,6 +27,7 @@ import { MainTabParamList, RootStackParamList } from '../../navigation/AppNaviga
 import { Group } from '../../types/database';
 import { formatCurrency } from '../../utils/balance';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import DailyBanner from '../../components/DailyBanner';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'GroupsTab'>,
@@ -246,7 +247,7 @@ export default function GroupsListScreen({ navigation }: Props) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerKicker}>YOUR CIRCLES</Text>
+            <Text style={styles.headerKicker}>{t('groups.yourCircles')}</Text>
             <Text style={styles.headerTitle}>{t('groups.title')}</Text>
           </View>
           <TouchableOpacity
@@ -258,6 +259,8 @@ export default function GroupsListScreen({ navigation }: Props) {
             <Text style={styles.joinBtnText}>{t('groups.join')}</Text>
           </TouchableOpacity>
         </View>
+
+        <DailyBanner />
 
         {error ? (
           <View style={styles.errorBar}>
@@ -271,7 +274,7 @@ export default function GroupsListScreen({ navigation }: Props) {
         {groups.length > 0 && (
           <View style={styles.listLabel}>
             <View style={styles.listLabelLine} />
-            <Text style={styles.listLabelText}>{groups.length} GROUPS</Text>
+            <Text style={styles.listLabelText}>{t('groups.groupCount', { count: groups.length })}</Text>
             <View style={styles.listLabelLine} />
           </View>
         )}

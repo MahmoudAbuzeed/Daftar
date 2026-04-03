@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,19 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  Animated,
+  Easing,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
-import { Colors, Gradients, Spacing, Radius, Typography, Shadows, CommonStyles } from '../../theme';
+import { Spacing, Radius, FontFamily } from '../../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateGroup'>;
 
@@ -37,22 +41,35 @@ function generateInviteCode(): string {
 export default function CreateGroupScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
   const [saving, setSaving] = useState(false);
 
+  const entrance = useRef(new Animated.Value(0)).current;
+  const btnScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(entrance, {
+      toValue: 1,
+      duration: 500,
+      easing: Easing.out(Easing.back(1.1)),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   const isValid = name.trim().length > 0;
 
   const handleCreate = async () => {
     if (!user || !isValid) return;
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSaving(true);
 
     try {
       const inviteCode = generateInviteCode();
-
-      // Insert group
       const { data: group, error: groupError } = await supabase
         .from('groups')
         .insert({
@@ -68,30 +85,39 @@ export default function CreateGroupScreen({ navigation }: Props) {
 
       if (groupError) throw groupError;
 
-      // Add creator as admin member
       const { error: memberError } = await supabase
         .from('group_members')
-        .insert({
-          group_id: group.id,
-          user_id: user.id,
-          role: 'admin',
-        });
+        .insert({ group_id: group.id, user_id: user.id, role: 'admin' });
 
       if (memberError) throw memberError;
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.goBack();
     } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('common.error'), err.message || t('common.error'));
     } finally {
       setSaving(false);
     }
   };
 
+  const animateBtnPress = () => {
+    Animated.sequence([
+      Animated.timing(btnScale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+      Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, damping: 12, stiffness: 200 }),
+    ]).start();
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.bg} />
+    <View style={styles.root}>
+      <StatusBar barStyle={colors.statusBarStyle} />
+      {isDark && (
+        <LinearGradient colors={colors.headerGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} />
+      )}
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         style={styles.flex}
       >
         <ScrollView
@@ -99,193 +125,234 @@ export default function CreateGroupScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.sectionTitle}>{t('groups.create')}</Text>
-
-          {/* Form Card */}
-          <View style={styles.formCard}>
-            {/* Group Name */}
-            <View style={styles.field}>
-              <Text style={styles.label}>{t('groups.name')}</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder={t('groups.name')}
-                placeholderTextColor={Colors.textTertiary}
-                maxLength={50}
-                autoFocus
-              />
+          <Animated.View style={{
+            opacity: entrance,
+            transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
+          }}>
+            <View style={styles.headerBlock}>
+              <Text style={styles.headerKicker}>{t('groups.newCircle')}</Text>
+              <Text style={styles.headerTitle}>{t('groups.create')}</Text>
             </View>
 
-            {/* Description */}
-            <View style={styles.field}>
-              <Text style={styles.label}>{t('groups.description')}</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder={t('groups.description')}
-                placeholderTextColor={Colors.textTertiary}
-                multiline
-                numberOfLines={3}
-                maxLength={200}
-                textAlignVertical="top"
-              />
-            </View>
+            <View style={styles.formCard}>
+              {isDark && (
+                <LinearGradient colors={colors.cardGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+              )}
+              <View style={styles.cardAccent} />
 
-            {/* Currency Picker */}
-            <View style={styles.fieldLast}>
-              <Text style={styles.label}>{t('groups.currency')}</Text>
-              <View style={styles.currencyRow}>
-                {CURRENCIES.map((cur) => {
-                  const isActive = currency === cur;
-                  return (
-                    <TouchableOpacity
-                      key={cur}
-                      style={styles.currencyOption}
-                      activeOpacity={0.7}
-                      onPress={() => setCurrency(cur)}
-                    >
-                      {isActive ? (
-                        <LinearGradient
-                          colors={Gradients.primary}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.currencyOptionInner}
-                        >
-                          <Text style={styles.currencyTextActive}>
-                            {cur === 'EGP' ? `${t('common.egp')} (E\u00A3)` : `${t('common.usd')} ($)`}
-                          </Text>
-                        </LinearGradient>
-                      ) : (
-                        <View style={styles.currencyOptionInnerInactive}>
-                          <Text style={styles.currencyText}>
-                            {cur === 'EGP' ? `${t('common.egp')} (E\u00A3)` : `${t('common.usd')} ($)`}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
+              <View style={styles.field}>
+                <Text style={styles.label}>{t('groups.name')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder={t('groups.name')}
+                  placeholderTextColor={colors.textTertiary}
+                  maxLength={50}
+                  autoFocus
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>{t('groups.description')}</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder={t('groups.description')}
+                  placeholderTextColor={colors.textTertiary}
+                  multiline
+                  numberOfLines={3}
+                  maxLength={200}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.fieldLast}>
+                <Text style={styles.label}>{t('groups.currency')}</Text>
+                <View style={styles.currencyRow}>
+                  {CURRENCIES.map((cur) => {
+                    const isActive = currency === cur;
+                    return (
+                      <TouchableOpacity
+                        key={cur}
+                        style={styles.currencyOption}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          setCurrency(cur);
+                        }}
+                      >
+                        {isActive ? (
+                          <LinearGradient
+                            colors={colors.primaryGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.currencyOptionInner}
+                          >
+                            <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                            <Text style={styles.currencyTextActive}>
+                              {cur === 'EGP' ? `${t('common.egp')} (E\u00A3)` : `${t('common.usd')} ($)`}
+                            </Text>
+                          </LinearGradient>
+                        ) : (
+                          <View style={styles.currencyOptionInnerInactive}>
+                            <Text style={styles.currencyText}>
+                              {cur === 'EGP' ? `${t('common.egp')} (E\u00A3)` : `${t('common.usd')} ($)`}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* Create Button */}
-          <TouchableOpacity
-            style={[styles.createButton, !isValid && styles.createButtonDisabled]}
-            activeOpacity={0.8}
-            onPress={handleCreate}
-            disabled={!isValid || saving}
-          >
-            {saving ? (
-              <ActivityIndicator color={Colors.textOnPrimary} size="small" />
-            ) : (
-              <Text style={styles.createButtonText}>{t('groups.create')}</Text>
-            )}
-          </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <TouchableOpacity
+                style={[styles.createButton, !isValid && styles.createButtonDisabled]}
+                activeOpacity={0.85}
+                onPress={() => { animateBtnPress(); handleCreate(); }}
+                disabled={!isValid || saving}
+              >
+                <LinearGradient
+                  colors={isValid ? colors.primaryGradient : [colors.primaryDark, colors.primaryDark]}
+                  style={styles.createBtnGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0.5 }}
+                >
+                  {saving ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <Text style={styles.createButtonText}>{t('groups.create')}</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bg,
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    padding: Spacing.xl,
-    paddingTop: Spacing.md,
-  },
-  sectionTitle: {
-    ...Typography.screenTitle,
-    marginBottom: Spacing.xxl,
-  },
-  // Form card
-  formCard: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.xl,
-    padding: Spacing.xl,
-    marginBottom: Spacing.xl,
-    ...Shadows.md,
-  },
-  field: {
-    marginBottom: Spacing.xl,
-  },
-  fieldLast: {
-    marginBottom: 0,
-  },
-  label: {
-    ...Typography.label,
-    marginBottom: Spacing.sm,
-  },
-  input: {
-    backgroundColor: '#F8F7F5',
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  textArea: {
-    minHeight: 80,
-    paddingTop: 14,
-  },
-  // Currency picker
-  currencyRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  currencyOption: {
-    flex: 1,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-  },
-  currencyOptionInner: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: Radius.lg,
-  },
-  currencyOptionInnerInactive: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderRadius: Radius.lg,
-    backgroundColor: '#F8F7F5',
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  currencyText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  currencyTextActive: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textOnPrimary,
-  },
-  // Create button
-  createButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-    ...Shadows.glow,
-  },
-  createButtonDisabled: {
-    backgroundColor: Colors.primaryLight,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  createButtonText: {
-    color: Colors.textOnPrimary,
-    ...Typography.button,
-  },
-});
+const createStyles = (c: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.bg },
+    flex: { flex: 1 },
+    content: { padding: Spacing.xl, paddingTop: Spacing.md, paddingBottom: 60 },
+
+    headerBlock: { marginBottom: Spacing.xxl },
+    headerKicker: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 10,
+      letterSpacing: 4,
+      color: c.kicker,
+      marginBottom: Spacing.xs,
+    },
+    headerTitle: {
+      fontFamily: FontFamily.display,
+      fontSize: 32,
+      letterSpacing: -1,
+      color: c.text,
+    },
+
+    formCard: {
+      borderRadius: Radius.xl,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: isDark ? undefined : c.bgCard,
+      padding: Spacing.xl,
+      marginBottom: Spacing.xl,
+      overflow: 'hidden',
+      shadowColor: c.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0 : 0.06,
+      shadowRadius: 12,
+      elevation: isDark ? 0 : 4,
+    },
+    cardAccent: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+      backgroundColor: c.accent,
+      opacity: isDark ? 0.5 : 0.35,
+    },
+    field: { marginBottom: Spacing.xl },
+    fieldLast: { marginBottom: 0 },
+    label: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      color: isDark ? c.kicker : c.textSecondary,
+      textTransform: 'uppercase',
+      marginBottom: Spacing.sm,
+    },
+    input: {
+      backgroundColor: isDark ? 'rgba(255,252,247,0.05)' : '#F8F7F5',
+      borderWidth: 1.5,
+      borderColor: c.border,
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 14,
+      fontSize: 16,
+      fontFamily: FontFamily.body,
+      color: c.text,
+    },
+    textArea: { minHeight: 80, paddingTop: 14 },
+
+    currencyRow: { flexDirection: 'row', gap: Spacing.md },
+    currencyOption: { flex: 1, borderRadius: Radius.lg, overflow: 'hidden' },
+    currencyOptionInner: {
+      flexDirection: 'row',
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: Radius.lg,
+    },
+    currencyOptionInnerInactive: {
+      paddingVertical: 14,
+      alignItems: 'center',
+      borderRadius: Radius.lg,
+      backgroundColor: isDark ? 'rgba(255,252,247,0.05)' : '#F8F7F5',
+      borderWidth: 1.5,
+      borderColor: c.border,
+    },
+    currencyText: {
+      fontSize: 15,
+      fontFamily: FontFamily.bodySemibold,
+      color: c.textSecondary,
+    },
+    currencyTextActive: {
+      fontSize: 15,
+      fontFamily: FontFamily.bodyBold,
+      color: '#FFFFFF',
+    },
+
+    createButton: { borderRadius: Radius.lg, overflow: 'hidden' },
+    createButtonDisabled: { opacity: 0.5 },
+    createBtnGradient: {
+      flexDirection: 'row',
+      paddingVertical: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: Radius.lg,
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    createButtonText: {
+      color: '#FFFFFF',
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 17,
+      letterSpacing: 0.3,
+    },
+  });

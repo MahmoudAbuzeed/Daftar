@@ -44,7 +44,7 @@ export default function WelcomeScreen({ navigation }: Props) {
         {/* Top bar */}
         <View style={styles.topBar}>
           <View style={styles.topBarLine} />
-          <Text style={styles.topBarLabel}>EST. 2025</Text>
+          <Text style={styles.topBarLabel}>{t('auth.est')}</Text>
           <View style={styles.topBarLine} />
         </View>
 
@@ -131,7 +131,7 @@ export default function WelcomeScreen({ navigation }: Props) {
 
             <View style={styles.ctaFooter}>
               <View style={styles.ctaFooterDot} />
-              <Text style={styles.ctaFooterText}>Split bills. Track debts. Stay even.</Text>
+              <Text style={styles.ctaFooterText}>{t('auth.taglineShort')}</Text>
               <View style={styles.ctaFooterDot} />
             </View>
           </View>

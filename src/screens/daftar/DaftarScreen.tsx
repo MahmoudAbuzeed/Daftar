@@ -24,6 +24,7 @@ import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
 import { DaftarEntry } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import DailyBanner from '../../components/DailyBanner';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const { width: SW } = Dimensions.get('window');
@@ -224,13 +225,15 @@ export default function DaftarScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerKicker}>YOUR LEDGER</Text>
+            <Text style={styles.headerKicker}>{t('daftar.yourLedger')}</Text>
             <Text style={styles.headerTitle}>{t('daftar.title')}</Text>
           </View>
           <View style={styles.headerDecor}>
             <View style={styles.decorDiamond} />
           </View>
         </View>
+
+        <DailyBanner />
 
         <View style={styles.summaryWrap}>
           <View style={styles.summaryCard}>
@@ -245,7 +248,7 @@ export default function DaftarScreen() {
             <View style={styles.summaryAccent} />
 
             <View style={styles.summaryNet}>
-              <Text style={styles.summaryNetLabel}>NET</Text>
+              <Text style={styles.summaryNetLabel}>{t('daftar.net')}</Text>
               <Text style={[styles.summaryNetAmount, { color: isNetPositive ? colors.positive : colors.negative }]}>
                 {isNetPositive ? '+' : '-'}{formatAmount(Math.abs(netTotal))}
               </Text>
@@ -272,7 +275,7 @@ export default function DaftarScreen() {
         {contacts.length > 0 && (
           <View style={styles.listLabel}>
             <View style={styles.listLabelLine} />
-            <Text style={styles.listLabelText}>{contacts.length} CONTACTS</Text>
+            <Text style={styles.listLabelText}>{t('daftar.contactCount', { count: contacts.length })}</Text>
             <View style={styles.listLabelLine} />
           </View>
         )}

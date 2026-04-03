@@ -98,7 +98,7 @@ export default function SignUpScreen({ navigation }: Props) {
             </TouchableOpacity>
 
             <View style={styles.headerBlock}>
-              <Text style={styles.headerKicker}>JOIN DAFTAR</Text>
+              <Text style={styles.headerKicker}>{t('auth.joinDaftar')}</Text>
               <Text style={styles.headerTitle}>{t('auth.signUp')}</Text>
               <Text style={styles.headerSub}>{t('auth.signUpSubtitle')}</Text>
             </View>
