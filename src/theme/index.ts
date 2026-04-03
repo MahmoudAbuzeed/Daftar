@@ -2,64 +2,63 @@ import { Platform, StyleSheet } from 'react-native';
 import { FontFamily } from './fonts';
 
 // ── Daftar Design System ──────────────────────────────────────
-// "Midnight ledger & brass" — obsidian teal, warm metal, cream paper
+// "Clean & Bright" — white backgrounds, friendly green, orange accents
 
 export const Colors = {
-  primary: '#1B7A6C',
-  primaryLight: '#2DD4BF',
-  primaryDark: '#115E56',
-  primarySurface: '#CCFBF1',
+  primary: '#1DB954',
+  primaryLight: '#4AD97B',
+  primaryDark: '#17A347',
+  primarySurface: '#E8F9EF',
 
-  accent: '#C9A227',
-  accentLight: '#F5E6A8',
-  accentDark: '#8B6914',
+  accent: '#FF9500',
+  accentLight: '#FFBB54',
+  accentDark: '#E08600',
 
-  success: '#0D9488',
-  successLight: '#5EEAD4',
-  successSurface: '#ECFEFF',
+  success: '#1DB954',
+  successLight: '#4AD97B',
+  successSurface: '#E8F9EF',
 
-  danger: '#C2410C',
-  dangerLight: '#FDBA74',
-  dangerSurface: '#FFF7ED',
+  danger: '#E53E3E',
+  dangerLight: '#FC8181',
+  dangerSurface: '#FEF2F2',
 
-  bg: '#F2EFE8',
-  bgCard: '#FFFCF7',
+  bg: '#FFFFFF',
+  bgCard: '#FFFFFF',
   bgElevated: '#FFFFFF',
-  bgDark: '#0A1210',
-  bgDarkMid: '#122420',
-  bgDarkCard: '#1A2E28',
+  bgDark: '#0D0D14',
+  bgDarkMid: '#151520',
+  bgDarkCard: '#1A1A28',
 
-  textPrimary: '#0F1A17',
-  textSecondary: '#4A5F59',
-  textTertiary: '#7A9189',
-  textOnDark: '#F4F0E8',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#555770',
+  textTertiary: '#8E8EA0',
+  textOnDark: '#F0F0F5',
   textOnPrimary: '#FFFFFF',
-  textOnAccent: '#1A1408',
+  textOnAccent: '#1A1A2E',
 
-  border: '#D9D3C7',
-  borderLight: '#EBE7DE',
-  borderFocus: '#1B7A6C',
-  borderBrass: 'rgba(201, 162, 39, 0.45)',
+  border: '#E8E8EE',
+  borderLight: '#F2F2F7',
+  borderFocus: '#1DB954',
+  borderBrass: 'rgba(255, 149, 0, 0.35)',
 
-  overlay: 'rgba(10, 18, 16, 0.65)',
-  shimmer: '#E8E4DC',
+  overlay: 'rgba(26, 26, 46, 0.4)',
+  shimmer: '#F2F2F7',
 };
 
 export const Gradients = {
-  primary: ['#115E56', '#1B7A6C'] as const,
-  primarySoft: ['#CCFBF1', '#F0FDFA'] as const,
-  hero: ['#061210', '#122420', '#0F2722'] as const,
-  heroWarm: ['#0A1614', '#1A2E28', '#142820'] as const,
-  brass: ['#A67C00', '#D4AF37', '#E8C547'] as const,
-  /** @deprecated Use brass — kept for existing screen references */
-  gold: ['#A67C00', '#D4AF37', '#E8C547'] as const,
-  brassMuted: ['#8B7355', '#C9A227'] as const,
-  success: ['#0F766E', '#14B8A6'] as const,
-  danger: ['#9A3412', '#EA580C'] as const,
-  card: ['#FFFCF7', '#FAF6EF'] as const,
-  warmBg: ['#F2EFE8', '#E8E2D6'] as const,
-  tabBar: ['#0C1815', '#0F221C'] as const,
-  meshAccent: ['rgba(27,122,108,0.35)', 'rgba(201,162,39,0.12)'] as const,
+  primary: ['#1DB954', '#4AD97B'] as const,
+  primarySoft: ['#E8F9EF', '#F5FFF9'] as const,
+  hero: ['#0D0D14', '#151520', '#1A1A28'] as const,
+  heroWarm: ['#0D0D14', '#1A1A28', '#1E1E30'] as const,
+  brass: ['#E08600', '#FF9500', '#FFBB54'] as const,
+  gold: ['#E08600', '#FF9500', '#FFBB54'] as const,
+  brassMuted: ['#CC7A00', '#FF9500'] as const,
+  success: ['#1DB954', '#4AD97B'] as const,
+  danger: ['#E53E3E', '#FC8181'] as const,
+  card: ['#FFFFFF', '#FAFAFA'] as const,
+  warmBg: ['#FFFFFF', '#F5F5F5'] as const,
+  tabBar: ['#0A0A12', '#0D0D14'] as const,
+  meshAccent: ['rgba(29,185,84,0.25)', 'rgba(255,149,0,0.1)'] as const,
 };
 
 export const Spacing = {
@@ -155,42 +154,42 @@ export const Typography = {
 
 export const Shadows = StyleSheet.create({
   sm: {
-    shadowColor: '#041210',
+    shadowColor: '#1A1A2E',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 3,
   },
   md: {
-    shadowColor: '#041210',
+    shadowColor: '#1A1A2E',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 18,
     elevation: 6,
   },
   lg: {
-    shadowColor: '#041210',
+    shadowColor: '#1A1A2E',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.14,
     shadowRadius: 28,
     elevation: 10,
   },
   glow: {
-    shadowColor: '#1B7A6C',
+    shadowColor: '#1DB954',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 16,
     elevation: 10,
   },
   goldGlow: {
-    shadowColor: '#C9A227',
+    shadowColor: '#FF9500',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 14,
     elevation: 8,
   },
   cardLift: {
-    shadowColor: '#1A1408',
+    shadowColor: '#1A1A2E',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07,
     shadowRadius: 12,

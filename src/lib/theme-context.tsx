@@ -54,104 +54,104 @@ export interface ThemeColors {
   dangerGradient: [string, string, ...string[]];
 }
 
-// "Sunlit Parchment" — warm cream, clean whites, teal & brass accents
+// "Clean & Bright" — white backgrounds, friendly green primary
 export const lightPalette: ThemeColors = {
-  bg: '#F5F0E6',
+  bg: '#FFFFFF',
   bgCard: '#FFFFFF',
-  bgSubtle: '#EDE8DC',
-  bgGlass: 'rgba(255,253,247,0.92)',
+  bgSubtle: '#F5F5F5',
+  bgGlass: 'rgba(255,255,255,0.95)',
 
-  text: '#1C2420',
-  textSecondary: '#526059',
-  textTertiary: '#6B7C76',
+  text: '#1A1A2E',
+  textSecondary: '#555770',
+  textTertiary: '#8E8EA0',
   textOnPrimary: '#FFFFFF',
 
-  primary: '#0D9488',
-  primaryLight: '#14B8A6',
-  primaryDark: '#0F766E',
-  primarySurface: '#E6FAF7',
+  primary: '#1DB954',
+  primaryLight: '#4AD97B',
+  primaryDark: '#17A347',
+  primarySurface: '#E8F9EF',
 
-  accent: '#A67C00',
-  accentLight: '#D4AF37',
+  accent: '#FF9500',
+  accentLight: '#FFBB54',
 
-  success: '#059669',
-  successLight: '#34D399',
-  danger: '#DC2626',
-  dangerLight: '#F87171',
+  success: '#1DB954',
+  successLight: '#4AD97B',
+  danger: '#E53E3E',
+  dangerLight: '#FC8181',
 
-  border: '#DDD7C9',
-  borderLight: '#EBE6DA',
+  border: '#E8E8EE',
+  borderLight: '#F2F2F7',
 
-  shadowColor: '#5A4F3B',
-  overlay: 'rgba(28,36,32,0.4)',
+  shadowColor: '#1A1A2E',
+  overlay: 'rgba(26,26,46,0.4)',
 
   tabBarBg: '#FFFFFF',
-  tabBarBorder: '#E8E2D4',
-  tabActive: '#0D9488',
-  tabInactive: '#A8B5B0',
+  tabBarBorder: '#E8E8EE',
+  tabActive: '#1DB954',
+  tabInactive: '#B0B0C0',
 
   statusBarStyle: 'dark-content',
 
-  positive: '#059669',
-  negative: '#DC2626',
-  kicker: '#A67C00',
+  positive: '#1DB954',
+  negative: '#E53E3E',
+  kicker: '#FF9500',
 
-  headerGradient: ['#F5F0E6', '#EDE8DC'],
-  primaryGradient: ['#0D9488', '#14B8A6'],
-  cardGradient: ['#FFFFFF', '#FDFAF3'],
-  accentGradient: ['#A67C00', '#D4AF37', '#E8C547'],
-  successGradient: ['#059669', '#34D399'],
-  dangerGradient: ['#DC2626', '#EF4444'],
+  headerGradient: ['#FFFFFF', '#F5F5F5'],
+  primaryGradient: ['#1DB954', '#4AD97B'],
+  cardGradient: ['#FFFFFF', '#FAFAFA'],
+  accentGradient: ['#FF9500', '#FFBB54', '#FFD080'],
+  successGradient: ['#1DB954', '#4AD97B'],
+  dangerGradient: ['#E53E3E', '#FC8181'],
 };
 
-// "Midnight Ledger" — obsidian depths, brass glow, teal pulse
+// "Night Mode" — clean dark with green accents
 export const darkPalette: ThemeColors = {
-  bg: '#040D0B',
-  bgCard: '#0E1E1A',
-  bgSubtle: '#0B1F1A',
-  bgGlass: 'rgba(255,252,247,0.04)',
+  bg: '#0D0D14',
+  bgCard: '#1A1A28',
+  bgSubtle: '#151520',
+  bgGlass: 'rgba(255,255,255,0.04)',
 
-  text: '#F4F0E8',
-  textSecondary: 'rgba(244,240,232,0.55)',
-  textTertiary: 'rgba(244,240,232,0.35)',
+  text: '#F0F0F5',
+  textSecondary: 'rgba(240,240,245,0.6)',
+  textTertiary: 'rgba(240,240,245,0.38)',
   textOnPrimary: '#FFFFFF',
 
-  primary: '#1B7A6C',
-  primaryLight: '#2DD4BF',
-  primaryDark: '#115E56',
-  primarySurface: 'rgba(27,122,108,0.15)',
+  primary: '#1DB954',
+  primaryLight: '#4AD97B',
+  primaryDark: '#17A347',
+  primarySurface: 'rgba(29,185,84,0.15)',
 
-  accent: '#C9A227',
-  accentLight: '#F5E6A8',
+  accent: '#FF9500',
+  accentLight: '#FFD080',
 
-  success: '#14B8A6',
-  successLight: '#5EEAD4',
-  danger: '#EA580C',
-  dangerLight: '#FDBA74',
+  success: '#4AD97B',
+  successLight: '#76E8A0',
+  danger: '#FC8181',
+  dangerLight: '#FEB2B2',
 
-  border: 'rgba(201,162,39,0.18)',
-  borderLight: 'rgba(201,162,39,0.12)',
+  border: 'rgba(255,255,255,0.1)',
+  borderLight: 'rgba(255,255,255,0.06)',
 
   shadowColor: '#000000',
-  overlay: 'rgba(10,18,16,0.65)',
+  overlay: 'rgba(13,13,20,0.7)',
 
-  tabBarBg: '#060F0D',
-  tabBarBorder: 'rgba(201,162,39,0.15)',
-  tabActive: '#14B8A6',
-  tabInactive: 'rgba(244,240,232,0.3)',
+  tabBarBg: '#0A0A12',
+  tabBarBorder: 'rgba(255,255,255,0.06)',
+  tabActive: '#4AD97B',
+  tabInactive: 'rgba(240,240,245,0.28)',
 
   statusBarStyle: 'light-content',
 
-  positive: '#14B8A6',
-  negative: '#EA580C',
-  kicker: 'rgba(212,175,55,0.6)',
+  positive: '#4AD97B',
+  negative: '#FC8181',
+  kicker: 'rgba(255,149,0,0.7)',
 
-  headerGradient: ['#040D0B', '#0B1F1A', '#0F2722'],
-  primaryGradient: ['#1B7A6C', '#14B8A6'],
-  cardGradient: ['rgba(255,252,247,0.06)', 'rgba(255,252,247,0.02)'],
-  accentGradient: ['#A67C00', '#D4AF37', '#E8C547'],
-  successGradient: ['#0F766E', '#14B8A6'],
-  dangerGradient: ['#9A3412', '#EA580C'],
+  headerGradient: ['#0D0D14', '#151520', '#1A1A28'],
+  primaryGradient: ['#17A347', '#1DB954'],
+  cardGradient: ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)'],
+  accentGradient: ['#E08600', '#FF9500', '#FFBB54'],
+  successGradient: ['#1DB954', '#4AD97B'],
+  dangerGradient: ['#E53E3E', '#FC8181'],
 };
 
 interface ThemeContextValue {

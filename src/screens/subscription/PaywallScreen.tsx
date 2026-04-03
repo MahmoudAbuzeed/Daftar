@@ -669,6 +669,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     // Pricing
     pricingRow: {
       flexDirection: 'row',
+      alignItems: 'stretch',
       marginHorizontal: Spacing.xl,
       gap: Spacing.md,
       marginBottom: Spacing.xxl,
@@ -680,6 +681,8 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       borderRadius: Radius.xl,
       overflow: 'hidden',
       borderWidth: 2,
+      flex: 1,
+      justifyContent: 'center',
     },
     pricingPillSelected: {
       borderColor: 'transparent',
@@ -698,7 +701,9 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       paddingVertical: Spacing.lg,
       paddingHorizontal: Spacing.md,
       alignItems: 'center',
+      justifyContent: 'center',
       gap: Spacing.sm,
+      flex: 1,
     },
     pricingRadio: {
       width: 20,

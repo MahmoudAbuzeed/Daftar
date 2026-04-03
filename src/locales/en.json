@@ -306,9 +306,9 @@
   "subscription": {
     "daftarPro": "Daftar Pro",
     "upgradeTitle": "Upgrade to Pro",
-    "monthlyPrice": "29.99 EGP/month",
-    "yearlyPrice": "199.99 EGP/year",
-    "yearlySavings": "Save 44%",
+    "monthlyPrice": "49.9 EGP/month",
+    "yearlyPrice": "399.9 EGP/year",
+    "yearlySavings": "Save 33%",
     "subscribeButton": "Subscribe Now",
     "subscribing": "Processing...",
     "maybeLater": "Maybe later",

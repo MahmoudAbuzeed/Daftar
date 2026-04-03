@@ -268,9 +268,9 @@ export default function ProfileScreen() {
               </ThemedCard>
             </AnimatedListItem>
 
-            {/* Pro — coming soon */}
+            {/* Pro */}
             <AnimatedListItem index={settingsItems.length + 1}>
-              <BouncyPressable onPress={() => alert.info(t('profile.daftarPro'), t('profile.proComingSoon'))}>
+              <BouncyPressable onPress={() => navigation.navigate('Paywall', { trigger: 'general' })}>
                 <ThemedCard style={styles.settingRowCard}>
                   {isDark && (
                     <LinearGradient

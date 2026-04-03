@@ -189,8 +189,8 @@ function AppStack() {
         component={CreateGroupScreen}
         options={{
           animation: 'slide_from_bottom',
-          title: '',
-          headerShown: false,
+          title: t('groups.create'),
+          presentation: 'modal',
         }}
       />
       <RootStack.Screen
@@ -199,7 +199,7 @@ function AppStack() {
         options={{
           animation: 'slide_from_bottom',
           title: t('groups.join'),
-          headerShown: false,
+          presentation: 'modal',
         }}
       />
       <RootStack.Screen
@@ -221,8 +221,8 @@ function AppStack() {
         component={AddExpenseScreen}
         options={{
           animation: 'slide_from_bottom',
-          title: '',
-          headerShown: false,
+          title: t('expenses.add'),
+          presentation: 'modal',
         }}
       />
       <RootStack.Screen
@@ -230,8 +230,8 @@ function AppStack() {
         component={ScanReceiptScreen}
         options={{
           animation: 'slide_from_bottom',
-          title: '',
-          headerShown: false,
+          title: t('expenses.scan_receipt'),
+          presentation: 'modal',
         }}
       />
       <RootStack.Screen
@@ -253,8 +253,8 @@ function AppStack() {
         component={AddDaftarEntryScreen}
         options={{
           animation: 'slide_from_bottom',
-          title: '',
-          headerShown: false,
+          title: t('daftar.addEntry'),
+          presentation: 'modal',
         }}
       />
       <RootStack.Screen

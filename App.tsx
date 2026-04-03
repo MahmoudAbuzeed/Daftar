@@ -39,9 +39,9 @@ function AppInner() {
   if (!ready) {
     return (
       <View
-        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F0E6' }}
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}
       >
-        <ActivityIndicator size="large" color="#0D9488" />
+        <ActivityIndicator size="large" color="#1DB954" />
       </View>
     );
   }
@@ -81,10 +81,10 @@ export default function App() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#F5F0E6',
+          backgroundColor: '#FFFFFF',
         }}
       >
-        <ActivityIndicator size="large" color="#0D9488" />
+        <ActivityIndicator size="large" color="#1DB954" />
       </View>
     );
   }
