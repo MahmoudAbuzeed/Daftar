@@ -15,6 +15,7 @@ import { AuthProvider } from './src/lib/auth-context';
 import { ThemeProvider, useAppTheme } from './src/lib/theme-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AlertProvider } from './src/hooks/useAlert';
+import { SubscriptionProvider } from './src/lib/subscription-context';
 import './src/lib/i18n';
 import i18n from './src/lib/i18n';
 import { Colors } from './src/theme';
@@ -88,9 +89,11 @@ export default function App() {
       <ThemeProvider>
         <PaperProvider theme={paperTheme}>
           <AuthProvider>
-            <AlertProvider>
-              <AppInner />
-            </AlertProvider>
+            <SubscriptionProvider>
+              <AlertProvider>
+                <AppInner />
+              </AlertProvider>
+            </SubscriptionProvider>
           </AuthProvider>
         </PaperProvider>
       </ThemeProvider>

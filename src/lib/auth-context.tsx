@@ -8,8 +8,10 @@ interface AuthContextType {
   user: SupabaseUser | null;
   profile: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  needsProfile: boolean; // True when user is authenticated but has no profile yet
+  sendOTP: (phone: string) => Promise<void>;
+  verifyOTP: (phone: string, code: string) => Promise<void>;
+  setupProfile: (displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -21,12 +23,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsProfile, setNeedsProfile] = useState(false);
 
-  const ensureProfile = async (id: string, displayName: string, email?: string | null) => {
+  const ensureProfile = async (id: string, displayName: string, phone?: string | null) => {
     const { error } = await supabase.rpc('ensure_user_profile', {
       user_id: id,
       user_display_name: displayName,
-      user_email: email ?? '',
+      user_email: phone ?? '',
     });
     if (error) console.warn('ensure_user_profile RPC failed:', error.message);
   };
@@ -40,25 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (data) {
       setProfile(data);
+      setNeedsProfile(false);
       return;
     }
 
-    // Self-heal: user exists in auth but not in public.users
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) {
-      const displayName =
-        authUser.user_metadata?.display_name ||
-        authUser.email?.split('@')[0] ||
-        'User';
-      await ensureProfile(authUser.id, displayName, authUser.email);
-
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-      setProfile(profile);
-    }
+    // No profile yet — this is a new user who just verified OTP
+    setNeedsProfile(true);
+    setProfile(null);
   };
 
   useEffect(() => {
@@ -78,36 +69,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
+        setNeedsProfile(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, displayName: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { display_name: displayName },
-      },
-    });
+  // Send OTP to phone number
+  const sendOTP = async (phone: string) => {
+    const { error } = await supabase.auth.signInWithOtp({ phone });
     if (error) throw error;
-
-    if (data.user) {
-      await ensureProfile(data.user.id, displayName, email);
-    }
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  // Verify OTP code
+  const verifyOTP = async (phone: string, code: string) => {
+    const { error } = await supabase.auth.verifyOtp({
+      phone,
+      token: code,
+      type: 'sms',
+    });
     if (error) throw error;
+  };
+
+  // Set up profile for new users after OTP verification
+  const setupProfile = async (displayName: string) => {
+    if (!user) throw new Error('No user');
+
+    await ensureProfile(user.id, displayName, user.phone);
+
+    // Update the phone field in users table
+    await supabase
+      .from('users')
+      .update({ display_name: displayName, phone: user.phone })
+      .eq('id', user.id);
+
+    await fetchProfile(user.id);
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     setProfile(null);
+    setNeedsProfile(false);
   };
 
   const refreshProfile = async () => {
@@ -118,7 +122,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signUp, signIn, signOut, refreshProfile }}
+      value={{
+        session, user, profile, loading, needsProfile,
+        sendOTP, verifyOTP, setupProfile, signOut, refreshProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>

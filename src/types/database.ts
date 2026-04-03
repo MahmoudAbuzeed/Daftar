@@ -40,6 +40,7 @@ export interface Expense {
   category: string | null;
   split_type: 'equal' | 'exact' | 'percentage' | 'by_item';
   receipt_image: string | null;
+  notes: string | null;
   ai_parsed: boolean;
   created_by: string;
   created_at: string;
@@ -129,4 +130,122 @@ export interface ParsedReceiptItem {
   quantity: number;
   unit_price: number;
   total: number;
+}
+
+// Subscription & Monetization
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  tier: 'free' | 'pro';
+  billing_period: 'monthly' | 'yearly' | null;
+  platform: 'ios' | 'android' | 'web' | null;
+  store_transaction_id: string | null;
+  store_product_id: string | null;
+  started_at: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsageTracking {
+  id: string;
+  user_id: string;
+  feature: 'receipt_scan' | 'group_create' | 'whatsapp_reminder' | 'data_export';
+  period_start: string;
+  usage_count: number;
+  updated_at: string;
+}
+
+export type FeatureKey = 'receipt_scan' | 'group_create' | 'whatsapp_reminder' | 'data_export';
+
+export interface TierLimits {
+  maxGroups: number;
+  maxReceiptScans: number;
+  maxDaftarContacts: number;
+  maxWhatsAppReminders: number;
+  hasDataExport: boolean;
+  hasAnalytics: boolean;
+  hasRecurringExpenses: boolean;
+  hasProBadge: boolean;
+}
+
+// Collaborative Bill Assignment
+
+export interface SharedBill {
+  id: string;
+  group_id: string;
+  created_by: string;
+  paid_by: string;
+  status: 'pending' | 'finalized' | 'cancelled';
+  receipt_image: string | null;
+  tax: number;
+  service_charge: number;
+  currency: 'EGP' | 'USD';
+  merchant_name: string | null;
+  created_at: string;
+  updated_at: string;
+  finalized_at: string | null;
+  expense_id: string | null;
+  items?: SharedBillItem[];
+  created_by_user?: User;
+  paid_by_user?: User;
+}
+
+export interface SharedBillItem {
+  id: string;
+  bill_id: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  sort_order: number;
+  claims?: SharedBillClaim[];
+}
+
+export interface SharedBillClaim {
+  id: string;
+  item_id: string;
+  user_id: string;
+  claimed_at: string;
+  user?: User;
+}
+
+// Recurring Expenses
+
+export interface RecurringExpense {
+  id: string;
+  group_id: string;
+  created_by: string;
+  description: string;
+  amount: number;
+  currency: 'EGP' | 'USD';
+  category: string | null;
+  split_type: 'equal' | 'exact' | 'percentage';
+  frequency: 'weekly' | 'biweekly' | 'monthly';
+  next_due: string;
+  is_active: boolean;
+  last_created_at: string | null;
+  created_at: string;
+  members?: RecurringExpenseMember[];
+  group?: Group;
+}
+
+export interface RecurringExpenseMember {
+  id: string;
+  recurring_id: string;
+  user_id: string;
+  share_amount: number | null;
+  share_percentage: number | null;
+}
+
+// Currency Conversion
+
+export interface ExchangeRate {
+  from_currency: string;
+  to_currency: string;
+  rate: number;
+  updated_at: string;
 }

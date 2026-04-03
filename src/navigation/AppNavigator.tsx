@@ -10,9 +10,9 @@ import AnimatedTabBar from '../components/AnimatedTabBar';
 import { FontFamily } from '../theme';
 
 // Auth Screens
-import WelcomeScreen from '../screens/auth/WelcomeScreen';
-import SignInScreen from '../screens/auth/SignInScreen';
-import SignUpScreen from '../screens/auth/SignUpScreen';
+import PhoneEntryScreen from '../screens/auth/PhoneEntryScreen';
+import OTPVerifyScreen from '../screens/auth/OTPVerifyScreen';
+import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
 // Main Tab Screens
 import GroupsListScreen from '../screens/groups/GroupsListScreen';
@@ -36,13 +36,30 @@ import AssignItemsScreen from '../screens/scanner/AssignItemsScreen';
 import AddDaftarEntryScreen from '../screens/daftar/AddDaftarEntryScreen';
 import DaftarContactScreen from '../screens/daftar/DaftarContactScreen';
 
+// Subscription
+import PaywallScreen from '../screens/subscription/PaywallScreen';
+
+// Shared Bill
+import SharedBillScreen from '../screens/scanner/SharedBillScreen';
+
+// Friends & Search
+import FriendsScreen from '../screens/friends/FriendsScreen';
+import SearchScreen from '../screens/search/SearchScreen';
+import AddFriendsScreen from '../screens/friends/AddFriendsScreen';
+import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
+import RecurringExpensesScreen from '../screens/groups/RecurringExpensesScreen';
+import AboutScreen from '../screens/legal/AboutScreen';
+import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
+import TermsScreen from '../screens/legal/TermsScreen';
+
 export type AuthStackParamList = {
-  Welcome: undefined;
-  SignIn: undefined;
-  SignUp: undefined;
+  PhoneEntry: undefined;
+  OTPVerify: { phone: string };
+  ProfileSetup: undefined;
 };
 
 export type MainTabParamList = {
+  FriendsTab: undefined;
   GroupsTab: undefined;
   DaftarTab: undefined;
   ActivityTab: undefined;
@@ -55,12 +72,21 @@ export type RootStackParamList = {
   JoinGroup: undefined;
   GroupDetail: { groupId: string };
   GroupBalances: { groupId: string };
-  AddExpense: { groupId: string };
+  AddExpense: { groupId: string; prefillAmount?: number; prefillDescription?: string };
   ScanReceipt: { groupId: string };
   ParsedItems: { groupId: string; receiptData: any };
   AssignItems: { groupId: string; items: any[]; tax: number; serviceCharge: number };
   AddDaftarEntry: undefined;
   DaftarContact: { contactName: string };
+  Paywall: { trigger: string };
+  SharedBill: { billId: string; groupId: string };
+  Search: undefined;
+  AddFriends: undefined;
+  Analytics: { groupId?: string };
+  RecurringExpenses: { groupId: string };
+  About: undefined;
+  PrivacyPolicy: undefined;
+  Terms: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -75,6 +101,11 @@ function MainTabs() {
       tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
+      <Tab.Screen
+        name="FriendsTab"
+        component={FriendsScreen}
+        options={{ tabBarLabel: t('tabs.friends') }}
+      />
       <Tab.Screen
         name="GroupsTab"
         component={GroupsListScreen}
@@ -100,6 +131,8 @@ function MainTabs() {
 }
 
 function AuthNavigator() {
+  const { session, needsProfile } = useAuth();
+
   return (
     <AuthStack.Navigator
       screenOptions={{
@@ -108,9 +141,16 @@ function AuthNavigator() {
         animationDuration: 300,
       }}
     >
-      <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
-      <AuthStack.Screen name="SignIn" component={SignInScreen} />
-      <AuthStack.Screen name="SignUp" component={SignUpScreen} />
+      {session && needsProfile ? (
+        // User verified OTP but has no profile yet — go straight to setup
+        <AuthStack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+      ) : (
+        <>
+          <AuthStack.Screen name="PhoneEntry" component={PhoneEntryScreen} />
+          <AuthStack.Screen name="OTPVerify" component={OTPVerifyScreen} />
+          <AuthStack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+        </>
+      )}
     </AuthStack.Navigator>
   );
 }
@@ -224,12 +264,74 @@ function AppStack() {
           title: '',
         }}
       />
+      <RootStack.Screen
+        name="Paywall"
+        component={PaywallScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
+      <RootStack.Screen
+        name="SharedBill"
+        component={SharedBillScreen}
+        options={{
+          title: t('shared_bill.title'),
+        }}
+      />
+      <RootStack.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{
+          animation: 'fade_from_bottom',
+          headerShown: false,
+          presentation: 'transparentModal',
+        }}
+      />
+      <RootStack.Screen
+        name="AddFriends"
+        component={AddFriendsScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="Analytics"
+        component={AnalyticsScreen}
+        options={{
+          title: t('analytics.title'),
+        }}
+      />
+      <RootStack.Screen
+        name="RecurringExpenses"
+        component={RecurringExpensesScreen}
+        options={{
+          title: t('recurring.title'),
+        }}
+      />
+      <RootStack.Screen
+        name="About"
+        component={AboutScreen}
+        options={{ title: t('legal.about') }}
+      />
+      <RootStack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{ title: t('legal.privacyPolicy') }}
+      />
+      <RootStack.Screen
+        name="Terms"
+        component={TermsScreen}
+        options={{ title: t('legal.terms') }}
+      />
     </RootStack.Navigator>
   );
 }
 
 export default function AppNavigator() {
-  const { session, loading } = useAuth();
+  const { session, loading, needsProfile } = useAuth();
   const { colors } = useAppTheme();
 
   if (loading) {
@@ -242,7 +344,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {session ? <AppStack /> : <AuthNavigator />}
+      {session && !needsProfile ? <AppStack /> : <AuthNavigator />}
     </NavigationContainer>
   );
 }

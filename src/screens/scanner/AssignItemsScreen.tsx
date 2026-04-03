@@ -24,6 +24,7 @@ import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
+import { generatePaymentNotification, shareViaWhatsApp } from '../../utils/whatsapp';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AssignItems'>;
 
@@ -32,8 +33,8 @@ interface AssignableItem extends ParsedReceiptItem {
 }
 
 export default function AssignItemsScreen({ navigation, route }: Props) {
-  const { t } = useTranslation();
-  const { user } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { user, profile } = useAuth();
   const { colors, isDark } = useAppTheme();
   const { groupId, items: rawItems, tax, serviceCharge } = route.params;
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
@@ -212,7 +213,36 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
       if (splitsError) throw splitsError;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.popToTop();
+
+      // Get users who owe money (splits where user_id !== current user)
+      const usersWhoOwe = Array.from(splits.entries()).filter(([userId]) => userId !== user!.id);
+      const payerName = profile?.display_name || 'Someone';
+      const payerPhone = profile?.phone || null;
+
+      if (usersWhoOwe.length > 0) {
+        const lang = i18n.language === 'ar' ? 'ar' : 'en';
+        alert.show('success', t('notify.expenseSaved'), t('notify.notifyFriends'), [
+          {
+            text: t('notify.skip'),
+            style: 'cancel',
+            onPress: () => navigation.popToTop(),
+          },
+          {
+            text: t('notify.notifyViaWhatsApp'),
+            style: 'default',
+            onPress: () => {
+              const [, owedAmount] = usersWhoOwe[0];
+              const message = generatePaymentNotification(
+                payerName, payerPhone, owedAmount, 'EGP', t('scanner.scannedReceipt'), lang
+              );
+              shareViaWhatsApp(message);
+              navigation.popToTop();
+            },
+          },
+        ]);
+      } else {
+        navigation.popToTop();
+      }
     } catch (error: any) {
       alert.error(t('common.error'), error.message);
     } finally {

@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
+import { useSubscription } from '../../lib/subscription-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { ParsedReceipt } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
@@ -36,9 +37,11 @@ export default function ScanReceiptScreen({ navigation, route }: Props) {
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
   const alert = useAlert();
+  const { canPerform, incrementUsage, isPro } = useSubscription();
 
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scansRemaining, setScansRemaining] = useState<number | null>(null);
 
   const iconPulse = useRef(new Animated.Value(1)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -85,6 +88,13 @@ export default function ScanReceiptScreen({ navigation, route }: Props) {
 
   const pickImage = async (useCamera: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const scanCheck = await canPerform('receipt_scan');
+    if (!scanCheck.allowed) {
+      navigation.navigate('Paywall', { trigger: 'receipt_scan_limit' });
+      return;
+    }
+    setScansRemaining(scanCheck.limit - scanCheck.currentUsage);
 
     const permissionResult = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -248,6 +258,7 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
         groupId,
         receiptData: { ...receiptData, receiptImage: fileName },
       });
+      await incrementUsage('receipt_scan');
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       alert.error(t('common.error'), error.message);

@@ -18,6 +18,8 @@ import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { ParsedReceiptItem } from '../../types/database';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
+import { useAuth } from '../../lib/auth-context';
+import { supabase } from '../../lib/supabase';
 import { Spacing, Radius, FontFamily } from '../../theme';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import FunButton from '../../components/FunButton';
@@ -25,12 +27,15 @@ import ThemedCard from '../../components/ThemedCard';
 import ThemedInput from '../../components/ThemedInput';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ParsedItems'>;
 
 export default function ParsedItemsScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const { colors, isDark } = useAppTheme();
+  const { user } = useAuth();
+  const alert = useAlert();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
   const { groupId, receiptData } = route.params;
@@ -41,6 +46,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
     receiptData.service_charge || 0
   );
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
   const total = subtotal + tax + serviceCharge;
@@ -74,6 +80,51 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setItems([...items, { name: '', quantity: 1, unit_price: 0, total: 0 }]);
     setEditingIndex(items.length);
+  };
+
+  const createSharedBill = async () => {
+    if (!user) return;
+    setSharing(true);
+    try {
+      const { data: bill, error: billError } = await supabase
+        .from('shared_bills')
+        .insert({
+          group_id: groupId,
+          created_by: user.id,
+          paid_by: user.id,
+          currency: receiptData.currency || 'EGP',
+          tax: tax,
+          service_charge: serviceCharge,
+          merchant_name: receiptData.merchant_name || null,
+          receipt_image: receiptData.receiptImage || null,
+        })
+        .select()
+        .single();
+
+      if (billError) throw billError;
+
+      const itemInserts = items.map((item, index) => ({
+        bill_id: bill.id,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total,
+        sort_order: index,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('shared_bill_items')
+        .insert(itemInserts);
+
+      if (itemsError) throw itemsError;
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      navigation.replace('SharedBill', { billId: bill.id, groupId });
+    } catch (err: any) {
+      alert.error(t('common.error'), err.message || t('common.error'));
+    } finally {
+      setSharing(false);
+    }
   };
 
   const renderItem = ({
@@ -280,22 +331,28 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
         }
       />
 
-      {/* Next Button */}
-      <FunButton
-        title={t('common.next')}
-        onPress={() =>
-          navigation.replace('AssignItems', {
-            groupId,
-            items,
-            tax,
-            serviceCharge,
-          })
-        }
-        icon={
-          <Ionicons name="arrow-forward-outline" size={20} color="#FFFFFF" />
-        }
-        style={styles.nextButton}
-      />
+      {/* Bottom Buttons */}
+      <View style={styles.bottomButtons}>
+        <FunButton
+          title={t('shared_bill.share_with_group')}
+          onPress={createSharedBill}
+          loading={sharing}
+          icon={<Ionicons name="people-outline" size={18} color="#FFFFFF" />}
+        />
+        <FunButton
+          title={t('shared_bill.assign_myself')}
+          onPress={() =>
+            navigation.replace('AssignItems', {
+              groupId,
+              items,
+              tax,
+              serviceCharge,
+            })
+          }
+          variant="secondary"
+          icon={<Ionicons name="person-outline" size={18} color={colors.primary} />}
+        />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -528,11 +585,12 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.primary,
     },
 
-    /* Next button */
-    nextButton: {
+    /* Bottom buttons */
+    bottomButtons: {
       position: 'absolute',
       bottom: 32,
       left: Spacing.xl,
       right: Spacing.xl,
+      gap: Spacing.sm,
     },
   });

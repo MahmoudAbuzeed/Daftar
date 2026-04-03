@@ -34,6 +34,7 @@ import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { generatePaymentNotification, shareViaWhatsApp } from '../../utils/whatsapp';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
 type SplitType = 'equal' | 'exact' | 'percentage';
@@ -67,16 +68,17 @@ function categorizeExpense(description: string): string | null {
 }
 
 export default function AddExpenseScreen({ route, navigation }: Props) {
-  const { groupId } = route.params;
-  const { t } = useTranslation();
-  const { user } = useAuth();
+  const { groupId, prefillAmount, prefillDescription } = route.params;
+  const { t, i18n } = useTranslation();
+  const { user, profile } = useAuth();
   const { colors, isDark } = useAppTheme();
   const alert = useAlert();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState(prefillDescription || '');
+  const [notes, setNotes] = useState('');
+  const [amount, setAmount] = useState(prefillAmount ? prefillAmount.toString() : '');
   const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
   const [paidBy, setPaidBy] = useState<string>('');
   const [splitType, setSplitType] = useState<SplitType>('equal');
@@ -205,7 +207,8 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
         .insert({
           group_id: groupId, paid_by: paidBy, description: description.trim(),
           total_amount: totalAmount, currency, category, split_type: splitType,
-          receipt_image: null, ai_parsed: false, created_by: user!.id, is_deleted: false,
+          receipt_image: receiptImage || null, notes: notes.trim() || null,
+          ai_parsed: false, created_by: user!.id, is_deleted: false,
         })
         .select().single();
 
@@ -222,7 +225,38 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       if (splitsError) throw splitsError;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.goBack();
+
+      // Get the payer's profile info
+      const payerMember = members.find(m => m.user_id === paidBy);
+      const payerName = (payerMember?.user as any)?.display_name || 'Someone';
+      const payerPhone = profile?.phone || null;
+
+      // Get users who owe money (splits where user_id !== paidBy)
+      const usersWhoOwe = splitsToInsert.filter(s => s.user_id !== paidBy);
+
+      if (usersWhoOwe.length > 0) {
+        const lang = i18n.language === 'ar' ? 'ar' : 'en';
+        alert.show('success', t('notify.expenseSaved'), t('notify.notifyFriends'), [
+          {
+            text: t('notify.skip'),
+            style: 'cancel',
+            onPress: () => navigation.goBack(),
+          },
+          {
+            text: t('notify.notifyViaWhatsApp'),
+            style: 'default',
+            onPress: () => {
+              const message = generatePaymentNotification(
+                payerName, payerPhone, usersWhoOwe[0].amount, currency, description.trim(), lang
+              );
+              shareViaWhatsApp(message);
+              navigation.goBack();
+            },
+          },
+        ]);
+      } else {
+        navigation.goBack();
+      }
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       alert.error(t('common.error'), err.message || t('common.error'));
@@ -230,6 +264,8 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       setSaving(false);
     }
   };
+
+  const [extracting, setExtracting] = useState(false);
 
   const handlePickReceipt = async (useCamera: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -239,11 +275,50 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
     if (!perm.granted) { alert.warning(t('expenses.permissionRequired')); return; }
 
     const result = useCamera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7, base64: true })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, base64: true });
 
     if (!result.canceled && result.assets[0]) {
       setReceiptImage(result.assets[0].uri);
+
+      // Auto-extract total and merchant name from receipt
+      if (result.assets[0].base64) {
+        setExtracting(true);
+        try {
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: 'gpt-4.1',
+              messages: [{
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Extract ONLY the total amount and merchant/restaurant name from this receipt. Return JSON: {"total": number, "merchant": "string"}. If you can\'t read it, return {"total": 0, "merchant": ""}' },
+                  { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${result.assets[0].base64}` } },
+                ],
+              }],
+              max_tokens: 100,
+              temperature: 0,
+            }),
+          });
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || '';
+          const match = content.match(/\{[\s\S]*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            if (parsed.total > 0 && !amount) setAmount(parsed.total.toString());
+            if (parsed.merchant && !description) setDescription(parsed.merchant);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        } catch {
+          // Silent fail — user can still enter manually
+        } finally {
+          setExtracting(false);
+        }
+      }
     }
   };
 
@@ -323,6 +398,17 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
                   containerStyle={styles.field}
                 />
 
+                <ThemedInput
+                  label={t('expenses.notes')}
+                  icon="chatbubble-outline"
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder={t('expenses.notesPlaceholder')}
+                  multiline
+                  numberOfLines={2}
+                  containerStyle={styles.field}
+                />
+
                 <View style={styles.field}>
                   <Text style={styles.label}>{t('expenses.paid_by')}</Text>
                   <BouncyPressable
@@ -364,7 +450,16 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
                     <View style={styles.receiptPreview}>
                       <Image source={{ uri: receiptImage }} style={styles.receiptThumb} />
                       <View style={styles.receiptInfo}>
-                        <Text style={styles.receiptFileName} numberOfLines={1}>{t('expenses.receiptAttached')}</Text>
+                        {extracting ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={[styles.receiptFileName, { color: colors.primary }]}>
+                              {t('expenses.extracting') || 'Extracting...'}
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.receiptFileName} numberOfLines={1}>{t('expenses.receiptAttached')}</Text>
+                        )}
                         <BouncyPressable onPress={() => setReceiptImage(null)} scaleDown={0.95}>
                           <Text style={styles.receiptRemove}>{t('expenses.remove')}</Text>
                         </BouncyPressable>

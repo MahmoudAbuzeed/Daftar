@@ -73,3 +73,23 @@ export function generateInviteMessage(
   }
   return `🎉 Join "${groupName}" on Daftar!\n\nInvite code: ${inviteCode}\n\nDownload the app and enter the code to join. 📱`;
 }
+
+/**
+ * Generate a payment notification after bill assignment
+ */
+export function generatePaymentNotification(
+  payerName: string,
+  payerPhone: string | null,
+  amount: number,
+  currency: string,
+  description: string,
+  lang: 'en' | 'ar' = 'en'
+): string {
+  const formattedAmount = `${amount.toFixed(2)} ${currency === 'EGP' ? (lang === 'ar' ? 'ج.م' : 'EGP') : (lang === 'ar' ? 'دولار' : 'USD')}`;
+  const phoneInfo = payerPhone ? `\n📱 ${payerPhone}` : '';
+
+  if (lang === 'ar') {
+    return `🧾 دفتر: عليك ${formattedAmount} لـ ${payerName} عن "${description}".${phoneInfo}\n\nادفع عن طريق فودافون كاش أو إنستاباي. 💸`;
+  }
+  return `🧾 Daftar: You owe ${formattedAmount} to ${payerName} for "${description}".${phoneInfo}\n\nPay via Vodafone Cash or InstaPay. 💸`;
+}

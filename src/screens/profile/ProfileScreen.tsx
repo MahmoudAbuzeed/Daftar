@@ -31,6 +31,9 @@ import FunButton from '../../components/FunButton';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -41,6 +44,7 @@ export default function ProfileScreen() {
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
   const alert = useAlert();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -301,7 +305,7 @@ export default function ProfileScreen() {
 
             {/* About */}
             <AnimatedListItem index={settingsItems.length + 2}>
-              <BouncyPressable onPress={() => alert.info('Daftar', `${t('profile.version')}\n\n${t('profile.aboutDescription')}`)}>
+              <BouncyPressable onPress={() => navigation.navigate('About')}>
                 <ThemedCard style={styles.settingRowCard}>
                   <View style={styles.settingRow}>
                     <View style={styles.settingLeft}>

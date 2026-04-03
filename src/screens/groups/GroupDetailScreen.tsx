@@ -180,6 +180,12 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.expenseMeta}>
                   {paidByName} {'\u2022'} {dateStr}{item.category ? ` \u2022 ${item.category}` : ''}
                 </Text>
+                {item.notes ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                    <Ionicons name="chatbubble-outline" size={11} color={colors.textTertiary} style={{ marginRight: 4 }} />
+                    <Text style={{ fontFamily: FontFamily.body, fontSize: 12, color: colors.textTertiary }} numberOfLines={1}>{item.notes}</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
             <Text style={styles.expenseAmount}>{formatCurrency(item.total_amount, group?.currency || 'EGP')}</Text>

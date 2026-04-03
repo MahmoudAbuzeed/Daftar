@@ -1,41 +1,47 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   StatusBar,
   Dimensions,
   Animated,
   Easing,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { AuthStackParamList } from '../../navigation/AppNavigator';
-import { useAppTheme } from '../../lib/theme-context';
+import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { Spacing, Radius, FontFamily } from '../../theme';
-import AnimatedListItem from '../../components/AnimatedListItem';
+import { useAuth } from '../../lib/auth-context';
+import { useAlert } from '../../hooks/useAlert';
 import FunButton from '../../components/FunButton';
+import ThemedCard from '../../components/ThemedCard';
 
-type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
+type Props = NativeStackScreenProps<AuthStackParamList, 'PhoneEntry'>;
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
-const FEATURE_EMOJIS = ['💸', '📊', '🧾'];
-
-export default function WelcomeScreen({ navigation }: Props) {
+export default function PhoneEntryScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { colors, isDark } = useAppTheme();
+  const { sendOTP } = useAuth();
+  const alert = useAlert();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
+  const [phone, setPhone] = useState('');
+  const [sending, setSending] = useState(false);
 
   // ── Logo bounce on mount ──
   const logoScale = useRef(new Animated.Value(0)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
-
-  // ── Tagline emoji rotation ──
-  const emojiSpin = useRef(new Animated.Value(0)).current;
 
   // ── Orb drift animations ──
   const orbTealX = useRef(new Animated.Value(0)).current;
@@ -47,8 +53,9 @@ export default function WelcomeScreen({ navigation }: Props) {
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleSlide = useRef(new Animated.Value(24)).current;
 
-  // ── Tagline entrance ──
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  // ── Card entrance ──
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const cardSlide = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     // Logo: spring in with a satisfying bounce
@@ -85,16 +92,6 @@ export default function WelcomeScreen({ navigation }: Props) {
       ]),
     ).start();
 
-    // Tagline emoji: continuous slow spin
-    Animated.loop(
-      Animated.timing(emojiSpin, {
-        toValue: 1,
-        duration: 4000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    ).start();
-
     // Title entrance
     Animated.parallel([
       Animated.timing(titleOpacity, {
@@ -113,14 +110,23 @@ export default function WelcomeScreen({ navigation }: Props) {
       }),
     ]).start();
 
-    // Tagline entrance
-    Animated.timing(taglineOpacity, {
-      toValue: 1,
-      duration: 600,
-      delay: 800,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+    // Card entrance
+    Animated.parallel([
+      Animated.timing(cardOpacity, {
+        toValue: 1,
+        duration: 600,
+        delay: 700,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(cardSlide, {
+        toValue: 0,
+        delay: 700,
+        damping: 16,
+        stiffness: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     // Floating orb drift
     const driftOrb = (
@@ -186,22 +192,29 @@ export default function WelcomeScreen({ navigation }: Props) {
     ],
   };
 
-  const emojiSpinStyle = {
-    transform: [
-      {
-        rotate: emojiSpin.interpolate({
-          inputRange: [0, 1],
-          outputRange: ['0deg', '360deg'],
-        }),
-      },
-    ],
+  const handleContinue = async () => {
+    const trimmed = phone.trim().replace(/\s/g, '');
+    if (trimmed.length < 10) {
+      alert.error(t('auth.error'), t('auth.invalidPhone'));
+      return;
+    }
+
+    setSending(true);
+    try {
+      const fullPhone = `+20${trimmed.startsWith('0') ? trimmed.slice(1) : trimmed}`;
+      await sendOTP(fullPhone);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      navigation.navigate('OTPVerify', { phone: fullPhone });
+    } catch (error: any) {
+      alert.error(t('auth.error'), error.message ?? t('auth.otpFailed'));
+    } finally {
+      setSending(false);
+    }
   };
 
-  const featureKeys = [
-    'featureSplitBills',
-    'featureTrackDebts',
-    'featureScanReceipts',
-  ] as const;
+  const handlePhoneChange = (raw: string) => {
+    setPhone(raw.replace(/\D/g, '').slice(0, 11));
+  };
 
   return (
     <View style={styles.root}>
@@ -236,139 +249,138 @@ export default function WelcomeScreen({ navigation }: Props) {
           backgroundColor={colors.bg}
         />
 
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          <View style={styles.topBarLine} />
-          <Text style={styles.topBarLabel}>{t('auth.est')}</Text>
-          <View style={styles.topBarLine} />
-        </View>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {/* Top bar */}
+          <View style={styles.topBar}>
+            <View style={styles.topBarLine} />
+            <Text style={styles.topBarLabel}>{t('auth.est')}</Text>
+            <View style={styles.topBarLine} />
+          </View>
 
-        <View style={styles.content}>
-          {/* Hero zone */}
-          <View style={styles.heroZone}>
-            {/* Bouncy Logo */}
-            <Animated.View style={[styles.logoWrap, logoAnimStyle]}>
-              <LinearGradient
-                colors={colors.accentGradient}
-                style={styles.logoBorder}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+          <View style={styles.content}>
+            {/* Hero zone */}
+            <View style={styles.heroZone}>
+              {/* Bouncy Logo */}
+              <Animated.View style={[styles.logoWrap, logoAnimStyle]}>
+                <LinearGradient
+                  colors={colors.accentGradient}
+                  style={styles.logoBorder}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View style={styles.logoCore}>
+                    <Text style={styles.logoEmoji}>{'\uD83D\uDCD2'}</Text>
+                  </View>
+                </LinearGradient>
+
+                <View style={styles.logoCornerTL} />
+                <View style={styles.logoCornerBR} />
+              </Animated.View>
+
+              {/* Title stack with entrance */}
+              <Animated.View
+                style={[
+                  styles.titleBlock,
+                  {
+                    opacity: titleOpacity,
+                    transform: [{ translateY: titleSlide }],
+                  },
+                ]}
               >
-                <View style={styles.logoCore}>
-                  <Text style={styles.logoEmoji}>{'\uD83D\uDCD2'}</Text>
+                <Text style={styles.titleMain}>Daftar</Text>
+                <View style={styles.titleDivider}>
+                  <View style={styles.titleDividerLine} />
+                  <View style={styles.titleDividerDiamond} />
+                  <View style={styles.titleDividerLine} />
                 </View>
-              </LinearGradient>
+                <Text style={styles.titleArabic}>{'\u062F\u0641\u062A\u0631'}</Text>
+              </Animated.View>
 
-              <View style={styles.logoCornerTL} />
-              <View style={styles.logoCornerBR} />
-            </Animated.View>
+              <Animated.View
+                style={[styles.taglineRow, { opacity: titleOpacity }]}
+              >
+                <Text style={styles.tagline}>
+                  {t('auth.welcomeTagline')}
+                </Text>
+              </Animated.View>
+            </View>
 
-            {/* Title stack with entrance */}
+            {/* Phone input card */}
             <Animated.View
               style={[
-                styles.titleBlock,
+                styles.cardWrap,
                 {
-                  opacity: titleOpacity,
-                  transform: [{ translateY: titleSlide }],
+                  opacity: cardOpacity,
+                  transform: [{ translateY: cardSlide }],
                 },
               ]}
             >
-              <Text style={styles.titleMain}>Daftar</Text>
-              <View style={styles.titleDivider}>
-                <View style={styles.titleDividerLine} />
-                <View style={styles.titleDividerDiamond} />
-                <View style={styles.titleDividerLine} />
-              </View>
-              <Text style={styles.titleArabic}>{'\u062F\u0641\u062A\u0631'}</Text>
-            </Animated.View>
+              <ThemedCard accent padded style={styles.phoneCard}>
+                <Text style={styles.phoneLabel}>{t('auth.phoneLabel')}</Text>
 
-            {/* Tagline with rotating emoji */}
-            <Animated.View
-              style={[styles.taglineRow, { opacity: taglineOpacity }]}
-            >
-              <Text style={styles.tagline}>{t('auth.welcomeTagline')}</Text>
-              <Animated.Text style={[styles.taglineEmoji, emojiSpinStyle]}>
-                {'\u2728'}
-              </Animated.Text>
-            </Animated.View>
-          </View>
-
-          {/* Feature cards with staggered entrance */}
-          <View style={styles.featureStrip}>
-            {featureKeys.map((key, i) => (
-              <AnimatedListItem key={key} index={i} delay={120}>
-                <View style={styles.featureItem}>
-                  <LinearGradient
-                    colors={[
-                      `rgba(201,162,39,0.25)`,
-                      `rgba(201,162,39,0.05)`,
-                    ]}
-                    style={styles.featureNumBg}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Text style={styles.featureEmoji}>
-                      {FEATURE_EMOJIS[i]}
-                    </Text>
-                  </LinearGradient>
-                  <View style={styles.featureTextWrap}>
-                    <Text style={styles.featureText}>
-                      {t(`auth.${key}`)}
-                    </Text>
+                <View style={styles.phoneRow}>
+                  {/* Country code */}
+                  <View style={styles.countryCode}>
+                    <Text style={styles.flag}>{'\uD83C\uDDEA\uD83C\uDDEC'}</Text>
+                    <Text style={styles.countryText}>+20</Text>
                   </View>
-                  {i < 2 && <View style={styles.featureSep} />}
-                </View>
-              </AnimatedListItem>
-            ))}
-          </View>
 
-          {/* CTA */}
-          <AnimatedListItem index={4} delay={120}>
-            <View style={styles.ctaZone}>
-              <FunButton
-                title={t('auth.signIn')}
-                onPress={() => navigation.navigate('SignIn')}
-                variant="primary"
-                icon={
-                  <Ionicons name="log-in-outline" size={20} color="#FFFFFF" />
-                }
-              />
+                  {/* Divider */}
+                  <View style={styles.phoneDivider} />
 
-              <FunButton
-                title={t('auth.signUp')}
-                onPress={() => navigation.navigate('SignUp')}
-                variant="secondary"
-                icon={
-                  <Ionicons
-                    name="person-add-outline"
-                    size={18}
-                    color={isDark ? colors.primaryLight : colors.primary}
+                  {/* Phone input */}
+                  <TextInput
+                    value={phone}
+                    onChangeText={handlePhoneChange}
+                    keyboardType="number-pad"
+                    maxLength={11}
+                    placeholder={t('auth.phonePlaceholder')}
+                    placeholderTextColor={colors.textTertiary}
+                    style={styles.phoneInput}
+                    editable={!sending}
                   />
-                }
-              />
+                </View>
+              </ThemedCard>
 
-              <View style={styles.ctaFooter}>
-                <View style={styles.ctaFooterDot} />
-                <Text style={styles.ctaFooterText}>
-                  {t('auth.taglineShort')}
-                </Text>
-                <View style={styles.ctaFooterDot} />
+              {/* Continue button */}
+              <View style={styles.ctaZone}>
+                <FunButton
+                  title={t('auth.continue')}
+                  onPress={handleContinue}
+                  loading={sending}
+                  disabled={sending || phone.replace(/\D/g, '').length < 10}
+                  variant="primary"
+                  icon={
+                    !sending ? (
+                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                    ) : undefined
+                  }
+                />
               </View>
-            </View>
-          </AnimatedListItem>
-        </View>
+
+              {/* Terms note */}
+              <Text style={styles.termsNote}>{t('auth.termsNote')}</Text>
+            </Animated.View>
+          </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
 }
 
-function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: boolean) {
+function createStyles(colors: ThemeColors, isDark: boolean) {
   return StyleSheet.create({
     root: {
       flex: 1,
       backgroundColor: colors.bg,
     },
     safeArea: {
+      flex: 1,
+    },
+    flex: {
       flex: 1,
     },
 
@@ -451,15 +463,15 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     // Hero
     heroZone: {
       alignItems: 'center',
-      paddingTop: Spacing.xl,
+      paddingTop: Spacing.lg,
     },
     logoWrap: {
-      marginBottom: 28,
+      marginBottom: 20,
     },
     logoBorder: {
-      width: 110,
-      height: 110,
-      borderRadius: 32,
+      width: 100,
+      height: 100,
+      borderRadius: 30,
       padding: 3,
       shadowColor: colors.accent,
       shadowOffset: { width: 0, height: 6 },
@@ -469,13 +481,13 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     },
     logoCore: {
       flex: 1,
-      borderRadius: 29,
+      borderRadius: 27,
       backgroundColor: isDark ? '#0A1614' : colors.bgCard,
       justifyContent: 'center',
       alignItems: 'center',
     },
     logoEmoji: {
-      fontSize: 48,
+      fontSize: 42,
     },
     logoCornerTL: {
       position: 'absolute',
@@ -504,11 +516,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
 
     titleBlock: {
       alignItems: 'center',
-      marginBottom: Spacing.lg,
+      marginBottom: Spacing.sm,
     },
     titleMain: {
       fontFamily: FontFamily.display,
-      fontSize: 56,
+      fontSize: 48,
       letterSpacing: -3,
       color: colors.text,
       includeFontPadding: false,
@@ -517,24 +529,24 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-      marginVertical: 8,
+      marginVertical: 6,
     },
     titleDividerLine: {
-      width: 32,
+      width: 28,
       height: 1,
       backgroundColor: isDark
         ? 'rgba(201, 162, 39, 0.55)'
         : 'rgba(166, 124, 0, 0.3)',
     },
     titleDividerDiamond: {
-      width: 7,
-      height: 7,
+      width: 6,
+      height: 6,
       backgroundColor: colors.accent,
       transform: [{ rotate: '45deg' }],
     },
     titleArabic: {
       fontFamily: FontFamily.display,
-      fontSize: 32,
+      fontSize: 28,
       color: colors.accentLight,
       letterSpacing: 1,
     },
@@ -543,93 +555,79 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 48,
-      marginTop: Spacing.sm,
-      gap: 8,
+      marginTop: Spacing.xs,
     },
     tagline: {
       fontFamily: FontFamily.body,
-      fontSize: 15,
+      fontSize: 14,
       color: colors.textSecondary,
       textAlign: 'center',
-      lineHeight: 23,
-      flexShrink: 1,
-    },
-    taglineEmoji: {
-      fontSize: 20,
+      lineHeight: 22,
     },
 
-    // Features
-    featureStrip: {
-      marginHorizontal: Spacing.xxl,
-      backgroundColor: isDark
-        ? 'rgba(255, 252, 247, 0.04)'
-        : 'rgba(0,0,0,0.03)',
-      borderRadius: Radius.xl,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
+    // Phone card
+    cardWrap: {
+      paddingHorizontal: Spacing.xxl,
     },
-    featureItem: {
+    phoneCard: {
+      marginBottom: Spacing.lg,
+    },
+    phoneLabel: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      textTransform: 'uppercase',
+      color: isDark ? colors.kicker : colors.textSecondary,
+      marginBottom: Spacing.md,
+    },
+    phoneRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 15,
-      paddingHorizontal: Spacing.xl,
-      gap: Spacing.lg,
+      backgroundColor: isDark ? 'rgba(255,252,247,0.05)' : '#F8F7F5',
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.lg,
     },
-    featureNumBg: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      justifyContent: 'center',
+    countryCode: {
+      flexDirection: 'row',
       alignItems: 'center',
+      gap: 6,
     },
-    featureEmoji: {
-      fontSize: 20,
+    flag: {
+      fontSize: 22,
     },
-    featureTextWrap: {
+    countryText: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 17,
+      color: colors.text,
+      letterSpacing: 0.5,
+    },
+    phoneDivider: {
+      width: 1,
+      height: 24,
+      backgroundColor: colors.border,
+      marginHorizontal: Spacing.md,
+    },
+    phoneInput: {
       flex: 1,
-    },
-    featureText: {
       fontFamily: FontFamily.bodyMedium,
-      fontSize: 14,
-      color: isDark ? 'rgba(244, 240, 232, 0.88)' : colors.text,
-      lineHeight: 20,
-    },
-    featureSep: {
-      position: 'absolute',
-      bottom: 0,
-      left: 70,
-      right: Spacing.xl,
-      height: 1,
-      backgroundColor: colors.borderLight,
+      fontSize: 18,
+      color: colors.text,
+      letterSpacing: 1.5,
+      paddingVertical: 14,
     },
 
     // CTA
     ctaZone: {
-      paddingHorizontal: Spacing.xxl,
-      gap: 12,
+      marginBottom: Spacing.md,
     },
-    ctaFooter: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      marginTop: 6,
-    },
-    ctaFooterDot: {
-      width: 4,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: isDark
-        ? 'rgba(201, 162, 39, 0.4)'
-        : 'rgba(166, 124, 0, 0.25)',
-    },
-    ctaFooterText: {
-      fontFamily: FontFamily.bodyMedium,
-      fontSize: 11,
-      letterSpacing: 1.5,
+    termsNote: {
+      fontFamily: FontFamily.body,
+      fontSize: 12,
       color: colors.textTertiary,
-      textTransform: 'uppercase',
+      textAlign: 'center',
+      lineHeight: 18,
     },
   });
 }
