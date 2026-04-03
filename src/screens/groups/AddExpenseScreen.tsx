@@ -6,14 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   Switch,
   Animated,
-  Easing,
   Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -28,6 +26,14 @@ import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { GroupMember, User } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import FunButton from '../../components/FunButton';
+import ThemedCard from '../../components/ThemedCard';
+import ThemedInput from '../../components/ThemedInput';
+import BouncyPressable from '../../components/BouncyPressable';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
 type SplitType = 'equal' | 'exact' | 'percentage';
@@ -65,6 +71,8 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors, isDark } = useAppTheme();
+  const alert = useAlert();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [description, setDescription] = useState('');
@@ -79,17 +87,19 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
   const [paidByPickerOpen, setPaidByPickerOpen] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
 
-  const entrance = useRef(new Animated.Value(0)).current;
-  const btnScale = useRef(new Animated.Value(1)).current;
+  const entrance = useScreenEntrance();
+  const splitIndicator = useRef(new Animated.Value(0)).current;
 
+  // Animate split type indicator
   useEffect(() => {
-    Animated.timing(entrance, {
-      toValue: 1,
-      duration: 500,
-      easing: Easing.out(Easing.back(1.1)),
+    const idx = splitType === 'equal' ? 0 : splitType === 'exact' ? 1 : 2;
+    Animated.spring(splitIndicator, {
+      toValue: idx,
       useNativeDriver: true,
+      damping: 18,
+      stiffness: 200,
     }).start();
-  }, []);
+  }, [splitType]);
 
   useEffect(() => { fetchGroupData(); }, []);
 
@@ -114,7 +124,7 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       }));
       setMemberSplits(splits);
     } catch (err) {
-      Alert.alert(t('common.error'), t('common.error'));
+      alert.error(t('common.error'), t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -181,7 +191,7 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
 
   const handleSave = async () => {
     const error = getValidationError();
-    if (error) { Alert.alert(t('common.error'), error); return; }
+    if (error) { alert.error(t('common.error'), error); return; }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSaving(true);
@@ -215,7 +225,7 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       navigation.goBack();
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), err.message || t('common.error'));
+      alert.error(t('common.error'), err.message || t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -226,7 +236,7 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
     const perm = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert(t('expenses.permissionRequired')); return; }
+    if (!perm.granted) { alert.warning(t('expenses.permissionRequired')); return; }
 
     const result = useCamera
       ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 })
@@ -243,13 +253,6 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
     return (member?.user as User)?.display_name || t('expenses.select');
   };
 
-  const animateBtnPress = () => {
-    Animated.sequence([
-      Animated.timing(btnScale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
-      Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, damping: 12, stiffness: 200 }),
-    ]).start();
-  };
-
   if (loading) {
     return (
       <View style={styles.root}>
@@ -260,6 +263,9 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       </View>
     );
   }
+
+  const splitTypes: SplitType[] = ['equal', 'exact', 'percentage'];
+  const splitLabelMap: Record<SplitType, string> = { equal: t('expenses.equal'), exact: t('expenses.exact'), percentage: t('expenses.percentage') };
 
   return (
     <View style={styles.root}>
@@ -274,235 +280,228 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
         style={styles.flex}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingTop: insets.top }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={{
-            opacity: entrance,
-            transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-          }}>
+          <Animated.View style={entrance.style}>
             <View style={styles.headerBlock}>
               <Text style={styles.headerKicker}>{t('expenses.addExpenseTitle')}</Text>
               <Text style={styles.headerTitle}>{t('expenses.add')}</Text>
             </View>
 
-            {/* Amount Hero */}
-            <View style={styles.amountCard}>
-              {isDark && <LinearGradient colors={colors.cardGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
-              <View style={styles.amountCardAccent} />
-              <Text style={styles.amountCardLabel}>{t('expenses.amount')}</Text>
-              <View style={styles.amountRow}>
-                <TextInput
-                  style={styles.amountInput}
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="0.00"
-                  placeholderTextColor={colors.textTertiary}
-                  keyboardType="decimal-pad"
-                />
-                <LinearGradient colors={colors.accentGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.currencyBadge}>
-                  <Text style={styles.currencyBadgeText}>{currency}</Text>
-                </LinearGradient>
-              </View>
-            </View>
+            {/* Amount Hero Card */}
+            <AnimatedListItem index={0}>
+              <ThemedCard accent style={styles.amountCard}>
+                <Text style={styles.amountCardLabel}>{t('expenses.amount')}</Text>
+                <View style={styles.amountRow}>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={amount}
+                    onChangeText={setAmount}
+                    placeholder="0.00"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="decimal-pad"
+                  />
+                  <LinearGradient colors={colors.accentGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.currencyBadge}>
+                    <Text style={styles.currencyBadgeText}>{currency}</Text>
+                  </LinearGradient>
+                </View>
+              </ThemedCard>
+            </AnimatedListItem>
 
             {/* Description + Paid By */}
-            <View style={styles.formCard}>
-              {isDark && <LinearGradient colors={colors.cardGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
+            <AnimatedListItem index={1}>
+              <ThemedCard style={styles.formCardSpacing}>
+                <ThemedInput
+                  label={t('expenses.description')}
+                  icon="pencil-outline"
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder={t('expenses.description')}
+                  maxLength={100}
+                  containerStyle={styles.field}
+                />
 
-              <View style={styles.field}>
-                <Text style={styles.label}>{t('expenses.description')}</Text>
-                <View style={styles.inputWrap}>
-                  <Ionicons name="pencil-outline" size={18} color={colors.textTertiary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputWithIcon}
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder={t('expenses.description')}
-                    placeholderTextColor={colors.textTertiary}
-                    maxLength={100}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>{t('expenses.paid_by')}</Text>
-                <TouchableOpacity
-                  style={styles.pickerButton}
-                  activeOpacity={0.7}
-                  onPress={() => { Haptics.selectionAsync(); setPaidByPickerOpen(!paidByPickerOpen); }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="person-outline" size={18} color={colors.textTertiary} style={{ marginRight: 10 }} />
-                    <Text style={styles.pickerButtonText}>{getPaidByName()}</Text>
-                  </View>
-                  <Ionicons name={paidByPickerOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
-                </TouchableOpacity>
-                {paidByPickerOpen && (
-                  <View style={styles.pickerDropdown}>
-                    {members.map((m) => (
-                      <TouchableOpacity
-                        key={m.user_id}
-                        style={[styles.pickerOption, paidBy === m.user_id && styles.pickerOptionActive]}
-                        activeOpacity={0.7}
-                        onPress={() => { Haptics.selectionAsync(); setPaidBy(m.user_id); setPaidByPickerOpen(false); }}
-                      >
-                        <Text style={[styles.pickerOptionText, paidBy === m.user_id && styles.pickerOptionTextActive]}>
-                          {m.user_id === user?.id ? `${(m.user as User)?.display_name} (${t('common.you')})` : (m.user as User)?.display_name || t('common.unknown')}
-                        </Text>
-                        {paidBy === m.user_id && <Ionicons name="checkmark" size={18} color={colors.primary} />}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-              {/* Receipt Attachment */}
-              <View style={styles.fieldLast}>
-                <Text style={styles.label}>{t('expenses.attachReceipt')}</Text>
-                {receiptImage ? (
-                  <View style={styles.receiptPreview}>
-                    <Image source={{ uri: receiptImage }} style={styles.receiptThumb} />
-                    <View style={styles.receiptInfo}>
-                      <Text style={styles.receiptFileName} numberOfLines={1}>{t('expenses.receiptAttached')}</Text>
-                      <TouchableOpacity onPress={() => setReceiptImage(null)}>
-                        <Text style={styles.receiptRemove}>{t('expenses.remove')}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.receiptButtons}>
-                    <TouchableOpacity style={styles.receiptBtn} activeOpacity={0.7} onPress={() => handlePickReceipt(true)}>
-                      <Ionicons name="camera-outline" size={20} color={isDark ? colors.primaryLight : colors.primary} />
-                      <Text style={styles.receiptBtnText}>{t('expenses.camera')}</Text>
-                    </TouchableOpacity>
-                    <View style={styles.receiptBtnDivider} />
-                    <TouchableOpacity style={styles.receiptBtn} activeOpacity={0.7} onPress={() => handlePickReceipt(false)}>
-                      <Ionicons name="images-outline" size={20} color={isDark ? colors.primaryLight : colors.primary} />
-                      <Text style={styles.receiptBtnText}>{t('expenses.gallery')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Split Type */}
-            <View style={styles.formCard}>
-              {isDark && <LinearGradient colors={colors.cardGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />}
-
-              <View style={styles.field}>
-                <Text style={styles.label}>{t('expenses.split_type')}</Text>
-                <View style={styles.splitTypePillContainer}>
-                  {(['equal', 'exact', 'percentage'] as SplitType[]).map((type) => {
-                    const labelMap: Record<SplitType, string> = { equal: t('expenses.equal'), exact: t('expenses.exact'), percentage: t('expenses.percentage') };
-                    const isActive = splitType === type;
-                    return (
-                      <TouchableOpacity
-                        key={type}
-                        style={[styles.splitTypePill, isActive && styles.splitTypePillActive]}
-                        activeOpacity={0.7}
-                        onPress={() => { Haptics.selectionAsync(); setSplitType(type); }}
-                      >
-                        <Text style={[styles.splitTypePillText, isActive && styles.splitTypePillTextActive]}>
-                          {labelMap[type]}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.fieldLast}>
-                <Text style={styles.label}>{t('groups.members')}</Text>
-                <View style={styles.splitsContainer}>
-                  {memberSplits.map((ms, index) => (
-                    <View key={ms.userId} style={[styles.memberSplitRow, index === memberSplits.length - 1 && styles.memberSplitRowLast]}>
-                      {splitType === 'equal' && (
-                        <Switch
-                          value={ms.included}
-                          onValueChange={() => toggleMemberInclusion(ms.userId)}
-                          trackColor={{ false: isDark ? 'rgba(255,255,255,0.1)' : '#D1D5DB', true: `${colors.primary}66` }}
-                          thumbColor={ms.included ? colors.primaryLight : isDark ? '#4A5F59' : '#9CA3AF'}
-                          style={styles.switchStyle}
-                        />
-                      )}
-                      <View style={styles.memberSplitInfo}>
-                        <Text style={[styles.memberSplitName, splitType === 'equal' && !ms.included && styles.memberSplitNameDisabled]} numberOfLines={1}>
-                          {ms.userId === user?.id ? `${ms.displayName} (${t('common.you')})` : ms.displayName}
-                        </Text>
+                <View style={styles.field}>
+                  <Text style={styles.label}>{t('expenses.paid_by')}</Text>
+                  <BouncyPressable
+                    onPress={() => { setPaidByPickerOpen(!paidByPickerOpen); }}
+                    scaleDown={0.98}
+                  >
+                    <View style={styles.pickerButton}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="person-outline" size={18} color={colors.textTertiary} style={{ marginRight: 10 }} />
+                        <Text style={styles.pickerButtonText}>{getPaidByName()}</Text>
                       </View>
-                      {splitType === 'equal' && (
-                        <Text style={styles.memberSplitAmount}>{ms.included ? ms.amount.toFixed(2) : '-'}</Text>
-                      )}
-                      {splitType === 'exact' && (
-                        <TextInput
-                          style={styles.memberSplitInput}
-                          value={ms.amount > 0 ? ms.amount.toString() : ''}
-                          onChangeText={(val) => updateMemberAmount(ms.userId, val)}
-                          keyboardType="decimal-pad"
-                          placeholder="0.00"
-                          placeholderTextColor={colors.textTertiary}
-                        />
-                      )}
-                      {splitType === 'percentage' && (
-                        <View style={styles.percentageInput}>
+                      <Ionicons name={paidByPickerOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textTertiary} />
+                    </View>
+                  </BouncyPressable>
+                  {paidByPickerOpen && (
+                    <View style={styles.pickerDropdown}>
+                      {members.map((m) => (
+                        <BouncyPressable
+                          key={m.user_id}
+                          onPress={() => { setPaidBy(m.user_id); setPaidByPickerOpen(false); }}
+                          scaleDown={0.98}
+                        >
+                          <View style={[styles.pickerOption, paidBy === m.user_id && styles.pickerOptionActive]}>
+                            <Text style={[styles.pickerOptionText, paidBy === m.user_id && styles.pickerOptionTextActive]}>
+                              {m.user_id === user?.id ? `${(m.user as User)?.display_name} (${t('common.you')})` : (m.user as User)?.display_name || t('common.unknown')}
+                            </Text>
+                            {paidBy === m.user_id && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+                          </View>
+                        </BouncyPressable>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                {/* Receipt Attachment */}
+                <View style={styles.fieldLast}>
+                  <Text style={styles.label}>{t('expenses.attachReceipt')}</Text>
+                  {receiptImage ? (
+                    <View style={styles.receiptPreview}>
+                      <Image source={{ uri: receiptImage }} style={styles.receiptThumb} />
+                      <View style={styles.receiptInfo}>
+                        <Text style={styles.receiptFileName} numberOfLines={1}>{t('expenses.receiptAttached')}</Text>
+                        <BouncyPressable onPress={() => setReceiptImage(null)} scaleDown={0.95}>
+                          <Text style={styles.receiptRemove}>{t('expenses.remove')}</Text>
+                        </BouncyPressable>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.receiptButtons}>
+                      <BouncyPressable onPress={() => handlePickReceipt(true)} scaleDown={0.96} style={styles.receiptBtn}>
+                        <View style={styles.receiptBtnInner}>
+                          <Ionicons name="camera-outline" size={20} color={isDark ? colors.primaryLight : colors.primary} />
+                          <Text style={styles.receiptBtnText}>{t('expenses.camera')}</Text>
+                        </View>
+                      </BouncyPressable>
+                      <View style={styles.receiptBtnDivider} />
+                      <BouncyPressable onPress={() => handlePickReceipt(false)} scaleDown={0.96} style={styles.receiptBtn}>
+                        <View style={styles.receiptBtnInner}>
+                          <Ionicons name="images-outline" size={20} color={isDark ? colors.primaryLight : colors.primary} />
+                          <Text style={styles.receiptBtnText}>{t('expenses.gallery')}</Text>
+                        </View>
+                      </BouncyPressable>
+                    </View>
+                  )}
+                </View>
+              </ThemedCard>
+            </AnimatedListItem>
+
+            {/* Split Type + Members */}
+            <AnimatedListItem index={2}>
+              <ThemedCard style={styles.formCardSpacing}>
+                <View style={styles.field}>
+                  <Text style={styles.label}>{t('expenses.split_type')}</Text>
+                  <View style={styles.splitTypePillContainer}>
+                    <Animated.View style={[styles.splitTypeIndicator, {
+                      transform: [{
+                        translateX: splitIndicator.interpolate({
+                          inputRange: [0, 1, 2],
+                          outputRange: [4, 4 + (1 * ((styles.splitTypePillContainer as any).width || 100)), 4 + (2 * ((styles.splitTypePillContainer as any).width || 100))],
+                        }),
+                      }],
+                    }]} />
+                    {splitTypes.map((type) => {
+                      const isActive = splitType === type;
+                      return (
+                        <BouncyPressable
+                          key={type}
+                          onPress={() => { setSplitType(type); }}
+                          scaleDown={0.95}
+                          style={styles.splitTypePill}
+                        >
+                          <View style={[styles.splitTypePillInner, isActive && styles.splitTypePillActive]}>
+                            <Text style={[styles.splitTypePillText, isActive && styles.splitTypePillTextActive]}>
+                              {splitLabelMap[type]}
+                            </Text>
+                          </View>
+                        </BouncyPressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.fieldLast}>
+                  <Text style={styles.label}>{t('groups.members')}</Text>
+                  <View style={styles.splitsContainer}>
+                    {memberSplits.map((ms, index) => (
+                      <View key={ms.userId} style={[styles.memberSplitRow, index === memberSplits.length - 1 && styles.memberSplitRowLast]}>
+                        {splitType === 'equal' && (
+                          <Switch
+                            value={ms.included}
+                            onValueChange={() => toggleMemberInclusion(ms.userId)}
+                            trackColor={{ false: isDark ? 'rgba(255,255,255,0.1)' : '#D1D5DB', true: `${colors.primary}66` }}
+                            thumbColor={ms.included ? colors.primaryLight : isDark ? '#4A5F59' : '#9CA3AF'}
+                            style={styles.switchStyle}
+                          />
+                        )}
+                        <View style={styles.memberSplitInfo}>
+                          <Text style={[styles.memberSplitName, splitType === 'equal' && !ms.included && styles.memberSplitNameDisabled]} numberOfLines={1}>
+                            {ms.userId === user?.id ? `${ms.displayName} (${t('common.you')})` : ms.displayName}
+                          </Text>
+                        </View>
+                        {splitType === 'equal' && (
+                          <Text style={styles.memberSplitAmount}>{ms.included ? ms.amount.toFixed(2) : '-'}</Text>
+                        )}
+                        {splitType === 'exact' && (
                           <TextInput
                             style={styles.memberSplitInput}
-                            value={ms.percentage > 0 ? ms.percentage.toString() : ''}
-                            onChangeText={(val) => updateMemberPercentage(ms.userId, val)}
+                            value={ms.amount > 0 ? ms.amount.toString() : ''}
+                            onChangeText={(val) => updateMemberAmount(ms.userId, val)}
                             keyboardType="decimal-pad"
-                            placeholder="0"
+                            placeholder="0.00"
                             placeholderTextColor={colors.textTertiary}
                           />
-                          <Text style={styles.percentSign}>%</Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                  {splitType === 'exact' && amount ? (
-                    <View style={styles.splitSummary}>
-                      <Text style={styles.splitSummaryText}>
-                        Total: {memberSplits.filter((m) => m.included).reduce((s, m) => s + m.amount, 0).toFixed(2)} / {parseFloat(amount || '0').toFixed(2)} {currency}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {splitType === 'percentage' ? (
-                    <View style={styles.splitSummary}>
-                      <Text style={styles.splitSummaryText}>
-                        Total: {memberSplits.reduce((s, m) => s + m.percentage, 0).toFixed(1)}% / 100%
-                      </Text>
-                    </View>
-                  ) : null}
+                        )}
+                        {splitType === 'percentage' && (
+                          <View style={styles.percentageInput}>
+                            <TextInput
+                              style={styles.memberSplitInput}
+                              value={ms.percentage > 0 ? ms.percentage.toString() : ''}
+                              onChangeText={(val) => updateMemberPercentage(ms.userId, val)}
+                              keyboardType="decimal-pad"
+                              placeholder="0"
+                              placeholderTextColor={colors.textTertiary}
+                            />
+                            <Text style={styles.percentSign}>%</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                    {splitType === 'exact' && amount ? (
+                      <View style={styles.splitSummary}>
+                        <Text style={styles.splitSummaryText}>
+                          Total: {memberSplits.filter((m) => m.included).reduce((s, m) => s + m.amount, 0).toFixed(2)} / {parseFloat(amount || '0').toFixed(2)} {currency}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {splitType === 'percentage' ? (
+                      <View style={styles.splitSummary}>
+                        <Text style={styles.splitSummaryText}>
+                          Total: {memberSplits.reduce((s, m) => s + m.percentage, 0).toFixed(1)}% / 100%
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            </View>
+              </ThemedCard>
+            </AnimatedListItem>
 
-            {/* Save */}
-            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
-              <TouchableOpacity
-                style={[styles.saveButton, (!description.trim() || !amount) && styles.saveButtonDisabled]}
-                activeOpacity={0.85}
-                onPress={() => { animateBtnPress(); handleSave(); }}
-                disabled={saving}
-              >
-                <LinearGradient
-                  colors={description.trim() && amount ? colors.primaryGradient : [colors.primaryDark, colors.primaryDark]}
-                  style={styles.saveBtnGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0.5 }}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                      <Text style={styles.saveButtonText}>{t('expenses.save')}</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
+            {/* Save Button */}
+            <AnimatedListItem index={3}>
+              <FunButton
+                title={t('expenses.save')}
+                onPress={handleSave}
+                loading={saving}
+                disabled={!description.trim() || !amount}
+                icon={<Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
+                style={{ marginTop: Spacing.sm }}
+              />
+            </AnimatedListItem>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -527,15 +526,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
 
     amountCard: {
-      borderRadius: Radius.xl, borderWidth: 1, borderColor: c.border,
-      backgroundColor: isDark ? undefined : c.bgCard,
-      padding: Spacing.xl, marginBottom: Spacing.lg, overflow: 'hidden',
-      shadowColor: c.shadowColor, shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 12, elevation: isDark ? 0 : 4,
-    },
-    amountCardAccent: {
-      position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-      backgroundColor: c.accent, opacity: isDark ? 0.5 : 0.35,
+      marginBottom: Spacing.lg,
     },
     amountCardLabel: {
       fontFamily: FontFamily.bodySemibold, fontSize: 11, letterSpacing: 1.5,
@@ -553,27 +544,14 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     currencyBadgeText: { fontSize: 16, fontFamily: FontFamily.bodyBold, color: '#1A1408' },
 
-    formCard: {
-      borderRadius: Radius.xl, borderWidth: 1, borderColor: c.border,
-      backgroundColor: isDark ? undefined : c.bgCard,
-      padding: Spacing.xl, marginBottom: Spacing.lg, overflow: 'hidden',
-      shadowColor: c.shadowColor, shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0 : 0.06, shadowRadius: 12, elevation: isDark ? 0 : 4,
+    formCardSpacing: {
+      marginBottom: Spacing.lg,
     },
     field: { marginBottom: Spacing.xl },
     fieldLast: { marginBottom: 0 },
     label: {
       fontFamily: FontFamily.bodySemibold, fontSize: 11, letterSpacing: 1.5,
       color: isDark ? c.kicker : c.textSecondary, textTransform: 'uppercase', marginBottom: Spacing.sm,
-    },
-    inputWrap: {
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: isDark ? 'rgba(255,252,247,0.05)' : '#F8F7F5',
-      borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.lg, paddingHorizontal: Spacing.lg,
-    },
-    inputIcon: { marginRight: Spacing.sm },
-    inputWithIcon: {
-      flex: 1, paddingVertical: 14, fontSize: 16, fontFamily: FontFamily.body, color: c.text,
     },
 
     pickerButton: {
@@ -584,7 +562,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     pickerButtonText: { fontSize: 16, fontFamily: FontFamily.body, color: c.text },
     pickerDropdown: {
-      backgroundColor: isDark ? c.bgCard : c.bgCard,
+      backgroundColor: c.bgCard,
       borderRadius: Radius.lg, marginTop: Spacing.sm, overflow: 'hidden',
       borderWidth: 1, borderColor: c.border,
       shadowColor: c.shadowColor, shadowOffset: { width: 0, height: 4 },
@@ -614,7 +592,10 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       backgroundColor: isDark ? 'rgba(27,122,108,0.08)' : '#E6FAF7',
     },
     receiptBtn: {
-      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      flex: 1,
+    },
+    receiptBtnInner: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
       paddingVertical: 14, gap: 8,
     },
     receiptBtnDivider: {
@@ -628,9 +609,14 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     splitTypePillContainer: {
       flexDirection: 'row',
       backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
-      borderRadius: Radius.full, padding: 4,
+      borderRadius: Radius.full, padding: 4, position: 'relative',
     },
-    splitTypePill: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: Radius.full },
+    splitTypeIndicator: {
+      position: 'absolute', top: 4, bottom: 4,
+      backgroundColor: c.primary, borderRadius: Radius.full,
+    },
+    splitTypePill: { flex: 1 },
+    splitTypePillInner: { paddingVertical: 10, alignItems: 'center', borderRadius: Radius.full, zIndex: 1 },
     splitTypePillActive: { backgroundColor: c.primary },
     splitTypePillText: { fontSize: 13, fontFamily: FontFamily.bodySemibold, color: c.textTertiary },
     splitTypePillTextActive: { color: '#FFFFFF' },
@@ -668,17 +654,5 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     splitSummaryText: {
       fontSize: 13, fontFamily: FontFamily.bodySemibold, color: c.primary, textAlign: 'right',
-    },
-
-    saveButton: { borderRadius: Radius.lg, overflow: 'hidden', marginTop: Spacing.sm },
-    saveButtonDisabled: { opacity: 0.5 },
-    saveBtnGradient: {
-      flexDirection: 'row', paddingVertical: 17, alignItems: 'center', justifyContent: 'center',
-      borderRadius: Radius.lg,
-      shadowColor: c.primary, shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.4, shadowRadius: 16, elevation: 10,
-    },
-    saveButtonText: {
-      color: '#FFFFFF', fontFamily: FontFamily.bodyBold, fontSize: 17, letterSpacing: 0.3,
     },
   });

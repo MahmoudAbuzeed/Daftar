@@ -4,20 +4,17 @@ import { I18nManager, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import {
-  Cormorant_600SemiBold,
-  Cormorant_700Bold,
-} from '@expo-google-fonts/cormorant';
-import {
-  Sora_400Regular,
-  Sora_500Medium,
-  Sora_600SemiBold,
-  Sora_700Bold,
-} from '@expo-google-fonts/sora';
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 import { Ionicons } from '@expo/vector-icons';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { AuthProvider } from './src/lib/auth-context';
 import { ThemeProvider, useAppTheme } from './src/lib/theme-context';
 import AppNavigator from './src/navigation/AppNavigator';
+import { AlertProvider } from './src/hooks/useAlert';
 import './src/lib/i18n';
 import i18n from './src/lib/i18n';
 import { Colors } from './src/theme';
@@ -57,12 +54,10 @@ function AppInner() {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    Cormorant_600SemiBold,
-    Cormorant_700Bold,
-    Sora_400Regular,
-    Sora_500Medium,
-    Sora_600SemiBold,
-    Sora_700Bold,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
     ...Ionicons.font,
   });
 
@@ -93,7 +88,9 @@ export default function App() {
       <ThemeProvider>
         <PaperProvider theme={paperTheme}>
           <AuthProvider>
-            <AppInner />
+            <AlertProvider>
+              <AppInner />
+            </AlertProvider>
           </AuthProvider>
         </PaperProvider>
       </ThemeProvider>

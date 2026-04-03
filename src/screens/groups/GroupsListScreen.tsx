@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
@@ -27,7 +28,11 @@ import { MainTabParamList, RootStackParamList } from '../../navigation/AppNaviga
 import { Group } from '../../types/database';
 import { formatCurrency } from '../../utils/balance';
 import { Spacing, Radius, FontFamily } from '../../theme';
-import DailyBanner from '../../components/DailyBanner';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import ThemedCard from '../../components/ThemedCard';
+import BouncyPressable from '../../components/BouncyPressable';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import useFabFloat from '../../hooks/useFabFloat';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'GroupsTab'>,
@@ -41,46 +46,26 @@ interface GroupWithMeta extends Group {
   net_balance: number;
 }
 
-function AnimatedListItem({ children, index }: { children: React.ReactNode; index: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 400,
-      delay: Math.min(index * 70, 350),
-      easing: Easing.out(Easing.back(1.2)),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-  return (
-    <Animated.View
-      style={{
-        opacity: anim,
-        transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
 export default function GroupsListScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const entrance = useScreenEntrance();
+  const fabFloat = useFabFloat();
 
   const [groups, setGroups] = useState<GroupWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fabFloat = useRef(new Animated.Value(0)).current;
+  // Bouncing empty-state icon
+  const emptyBounce = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(fabFloat, { toValue: -5, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(fabFloat, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(emptyBounce, { toValue: -12, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(emptyBounce, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
   }, []);
@@ -148,6 +133,7 @@ export default function GroupsListScreen({ navigation }: Props) {
     if (Math.abs(balance) < 0.01) {
       return (
         <View style={styles.pillSettled}>
+          <Ionicons name="checkmark-circle" size={12} color={colors.textTertiary} style={{ marginRight: 4 }} />
           <Text style={styles.pillSettledText}>{t('groups.settled_up')}</Text>
         </View>
       );
@@ -164,59 +150,49 @@ export default function GroupsListScreen({ navigation }: Props) {
 
   const renderGroupCard = ({ item, index }: { item: GroupWithMeta; index: number }) => (
     <AnimatedListItem index={index}>
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.8}
-        onPress={() => navigation.navigate('GroupDetail', { groupId: item.id })}
-      >
-        {isDark && (
-          <LinearGradient
-            colors={colors.cardGradient}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        )}
-        <View style={styles.cardAccentBar} />
+      <BouncyPressable onPress={() => navigation.navigate('GroupDetail', { groupId: item.id })}>
+        <ThemedCard accent>
+          <View style={styles.cardTop}>
+            <LinearGradient
+              colors={colors.primaryGradient}
+              style={styles.cardIcon}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={styles.cardIconText}>{item.name.charAt(0).toUpperCase()}</Text>
+            </LinearGradient>
 
-        <View style={styles.cardTop}>
-          <LinearGradient
-            colors={colors.primaryGradient}
-            style={styles.cardIcon}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.cardIconText}>{item.name.charAt(0).toUpperCase()}</Text>
-          </LinearGradient>
+            <View style={styles.cardTitleBlock}>
+              <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+              <View style={styles.cardSubRow}>
+                <Ionicons name="people" size={12} color={colors.primaryLight} />
+                <Text style={styles.cardSub}>
+                  {' '}{item.member_count} {t('groups.members').toLowerCase()}
+                </Text>
+              </View>
+            </View>
 
-          <View style={styles.cardTitleBlock}>
-            <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.cardSub}>
-              <Ionicons name="people-outline" size={12} color={colors.textTertiary} />
-              {' '}{item.member_count} {t('groups.members').toLowerCase()}
-            </Text>
+            {renderBalancePill(item.net_balance, item.currency)}
           </View>
 
-          {renderBalancePill(item.net_balance, item.currency)}
-        </View>
-
-        {item.description ? (
-          <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
-        ) : null}
-      </TouchableOpacity>
+          {item.description ? (
+            <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
+          ) : null}
+        </ThemedCard>
+      </BouncyPressable>
     </AnimatedListItem>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconWrap}>
+      <Animated.View style={[styles.emptyIconWrap, { transform: [{ translateY: emptyBounce }] }]}>
         <LinearGradient
           colors={[`${colors.primary}22`, `${colors.primary}08`]}
           style={styles.emptyIconCircle}
         >
-          <Ionicons name="people-outline" size={36} color={colors.primary} />
+          <Ionicons name="people-outline" size={42} color={colors.primary} />
         </LinearGradient>
-      </View>
+      </Animated.View>
       <Text style={styles.emptyTitle}>{t('groups.no_groups')}</Text>
       <Text style={styles.emptySub}>{t('groups.no_groups_subtitle')}</Text>
     </View>
@@ -243,27 +219,25 @@ export default function GroupsListScreen({ navigation }: Props) {
         />
       )}
       <View style={styles.bgOrb} />
+      <View style={styles.bgOrbSmall} />
 
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, entrance.style]}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerKicker}>{t('groups.yourCircles')}</Text>
             <Text style={styles.headerTitle}>{t('groups.title')}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.joinBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('JoinGroup')}
-          >
-            <Ionicons name="enter-outline" size={16} color={colors.accentLight} style={{ marginRight: 4 }} />
-            <Text style={styles.joinBtnText}>{t('groups.join')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <DailyBanner />
+          <BouncyPressable onPress={() => navigation.navigate('JoinGroup')}>
+            <View style={styles.joinBtn}>
+              <Ionicons name="enter-outline" size={16} color={isDark ? colors.accentLight : colors.accent} style={{ marginRight: 4 }} />
+              <Text style={styles.joinBtnText}>{t('groups.join')}</Text>
+            </View>
+          </BouncyPressable>
+        </Animated.View>
 
         {error ? (
           <View style={styles.errorBar}>
+            <Ionicons name="alert-circle" size={16} color={isDark ? '#FDBA74' : colors.danger} style={{ marginRight: 8 }} />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity onPress={fetchGroups}>
               <Text style={styles.retryText}>{t('common.retry')}</Text>
@@ -290,15 +264,11 @@ export default function GroupsListScreen({ navigation }: Props) {
         />
 
         <Animated.View style={[styles.fab, { transform: [{ translateY: fabFloat }] }]}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('CreateGroup')}
-            style={styles.fabInner}
-          >
+          <BouncyPressable onPress={() => navigation.navigate('CreateGroup')}>
             <LinearGradient colors={colors.primaryGradient} style={styles.fabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <Ionicons name="add" size={28} color="#FFFFFF" />
             </LinearGradient>
-          </TouchableOpacity>
+          </BouncyPressable>
         </Animated.View>
       </SafeAreaView>
     </View>
@@ -320,6 +290,15 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       top: -SW * 0.15,
       left: -SW * 0.2,
     },
+    bgOrbSmall: {
+      position: 'absolute',
+      width: SW * 0.35,
+      height: SW * 0.35,
+      borderRadius: SW * 0.175,
+      backgroundColor: isDark ? 'rgba(201,162,39,0.04)' : 'rgba(201,162,39,0.03)',
+      bottom: SW * 0.1,
+      right: -SW * 0.1,
+    },
 
     header: {
       flexDirection: 'row',
@@ -335,6 +314,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 10,
       letterSpacing: 4,
       color: c.kicker,
+      textTransform: 'uppercase',
       marginBottom: Spacing.xs,
     },
     headerTitle: {
@@ -375,7 +355,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       borderWidth: 1,
       borderColor: isDark ? 'rgba(234,88,12,0.25)' : '#FECACA',
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
     },
     errorText: { color: isDark ? '#FDBA74' : c.danger, fontSize: 13, fontFamily: FontFamily.body, flex: 1 },
@@ -394,45 +373,23 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 10,
       letterSpacing: 3,
       color: c.textTertiary,
+      textTransform: 'uppercase',
     },
 
-    list: { paddingHorizontal: Spacing.lg, paddingBottom: 100 },
+    list: { paddingHorizontal: Spacing.lg, paddingBottom: 160, gap: Spacing.md },
     emptyList: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
 
-    card: {
-      borderRadius: Radius.xl,
-      borderWidth: 1,
-      borderColor: isDark ? c.border : c.border,
-      backgroundColor: isDark ? undefined : c.bgCard,
-      padding: Spacing.xl,
-      marginBottom: Spacing.md,
-      overflow: 'hidden',
-      shadowColor: c.shadowColor,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: isDark ? 0 : 0.05,
-      shadowRadius: 10,
-      elevation: isDark ? 0 : 3,
-    },
-    cardAccentBar: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 2,
-      backgroundColor: c.accent,
-      opacity: isDark ? 0.5 : 0.35,
-    },
     cardTop: { flexDirection: 'row', alignItems: 'center' },
     cardIcon: {
-      width: 46,
-      height: 46,
-      borderRadius: 15,
+      width: 48,
+      height: 48,
+      borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
     },
     cardIconText: {
       fontFamily: FontFamily.display,
-      fontSize: 20,
+      fontSize: 22,
       color: '#FFFFFF',
     },
     cardTitleBlock: { flex: 1, marginLeft: Spacing.lg },
@@ -442,21 +399,31 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.text,
       letterSpacing: -0.2,
     },
+    cardSubRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 3,
+    },
     cardSub: {
       fontFamily: FontFamily.bodyMedium,
       fontSize: 12,
-      color: c.textTertiary,
-      marginTop: 2,
+      color: c.textSecondary,
     },
     cardDesc: {
       fontFamily: FontFamily.body,
       fontSize: 13,
-      color: c.textTertiary,
+      color: c.textSecondary,
       marginTop: Spacing.sm,
-      marginLeft: 62,
+      marginLeft: 64,
     },
 
-    pill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.full },
+    pill: {
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: Radius.full,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     pillPos: {
       backgroundColor: isDark ? 'rgba(20,184,166,0.15)' : '#ECFDF5',
       borderWidth: 1,
@@ -468,38 +435,56 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       borderColor: isDark ? 'rgba(234,88,12,0.25)' : '#FECACA',
     },
     pillSettled: {
-      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.bgSubtle,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
       paddingHorizontal: 12,
       paddingVertical: 5,
       borderRadius: Radius.full,
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     pillText: { fontFamily: FontFamily.bodyBold, fontSize: 13, letterSpacing: -0.2 },
-    pillSettledText: { fontFamily: FontFamily.bodySemibold, fontSize: 12, color: c.textTertiary },
+    pillSettledText: { fontFamily: FontFamily.bodySemibold, fontSize: 12, color: c.textSecondary },
 
     emptyContainer: { alignItems: 'center', paddingHorizontal: Spacing.xxxl },
     emptyIconWrap: { marginBottom: Spacing.xl },
     emptyIconCircle: {
-      width: 88,
-      height: 88,
-      borderRadius: 28,
+      width: 96,
+      height: 96,
+      borderRadius: 32,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: isDark ? c.border : c.borderLight,
     },
-    emptyTitle: { fontFamily: FontFamily.bodySemibold, fontSize: 18, color: c.text, marginBottom: Spacing.sm },
-    emptySub: { fontFamily: FontFamily.body, fontSize: 14, color: c.textTertiary, textAlign: 'center', lineHeight: 20 },
+    emptyTitle: {
+      fontFamily: FontFamily.display,
+      fontSize: 20,
+      color: c.text,
+      marginBottom: Spacing.sm,
+    },
+    emptySub: {
+      fontFamily: FontFamily.body,
+      fontSize: 14,
+      color: c.textTertiary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
 
     fab: {
       position: 'absolute',
-      bottom: 24,
-      right: 20,
+      bottom: 100,
+      end: 20,
       shadowColor: c.primary,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.4,
       shadowRadius: 16,
       elevation: 10,
     },
-    fabInner: { width: 60, height: 60, borderRadius: Radius.xl },
-    fabGradient: { width: 60, height: 60, borderRadius: Radius.xl, justifyContent: 'center', alignItems: 'center' },
+    fabGradient: {
+      width: 62,
+      height: 62,
+      borderRadius: Radius.xl,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
   });

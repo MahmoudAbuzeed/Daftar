@@ -18,13 +18,18 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
 import { DaftarEntry } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
-import DailyBanner from '../../components/DailyBanner';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import ThemedCard from '../../components/ThemedCard';
+import BouncyPressable from '../../components/BouncyPressable';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import useFabFloat from '../../hooks/useFabFloat';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const { width: SW } = Dimensions.get('window');
@@ -35,35 +40,14 @@ interface ContactSummary {
   entryCount: number;
 }
 
-function AnimatedListItem({ children, index }: { children: React.ReactNode; index: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 400,
-      delay: Math.min(index * 70, 350),
-      easing: Easing.out(Easing.back(1.2)),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-  return (
-    <Animated.View
-      style={{
-        opacity: anim,
-        transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
 export default function DaftarScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { profile } = useAuth();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const entrance = useScreenEntrance();
+  const fabFloat = useFabFloat();
 
   const [contacts, setContacts] = useState<ContactSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +55,13 @@ export default function DaftarScreen() {
   const [totalOwedToYou, setTotalOwedToYou] = useState(0);
   const [totalYouOwe, setTotalYouOwe] = useState(0);
 
-  const fabFloat = useRef(new Animated.Value(0)).current;
+  // Bouncing empty-state icon
+  const emptyBounce = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(fabFloat, { toValue: -5, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(fabFloat, { toValue: 0, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(emptyBounce, { toValue: -12, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(emptyBounce, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
   }, []);
@@ -132,47 +117,44 @@ export default function DaftarScreen() {
     const isPositive = item.netBalance >= 0;
     return (
       <AnimatedListItem index={index}>
-        <TouchableOpacity
-          style={styles.contactCard}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('DaftarContact', { contactName: item.contactName })}
-        >
-          {isDark && (
-            <LinearGradient
-              colors={colors.cardGradient}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
-          )}
-          <View style={[styles.cardAccent, { backgroundColor: isPositive ? colors.success : colors.danger }]} />
+        <BouncyPressable onPress={() => navigation.navigate('DaftarContact', { contactName: item.contactName })}>
+          <ThemedCard>
+            <View style={[styles.cardAccent, { backgroundColor: isPositive ? colors.success : colors.danger }]} />
 
-          <View style={styles.cardLeft}>
-            <LinearGradient
-              colors={isPositive ? colors.successGradient : colors.dangerGradient}
-              style={styles.contactAvatar}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Text style={styles.contactInitial}>{item.contactName.charAt(0).toUpperCase()}</Text>
-            </LinearGradient>
-            <View style={styles.contactInfo}>
-              <Text style={styles.contactName}>{item.contactName}</Text>
-              <Text style={styles.contactEntries}>
-                {item.entryCount} {item.entryCount === 1 ? t('daftar.entry') : t('daftar.entries')}
-              </Text>
+            <View style={styles.contactRow}>
+              <View style={styles.cardLeft}>
+                <LinearGradient
+                  colors={isPositive ? colors.successGradient : colors.dangerGradient}
+                  style={styles.contactAvatar}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.contactInitial}>{item.contactName.charAt(0).toUpperCase()}</Text>
+                </LinearGradient>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.contactName}>{item.contactName}</Text>
+                  <View style={styles.contactEntriesRow}>
+                    <Ionicons name="document-text-outline" size={11} color={colors.textTertiary} />
+                    <Text style={styles.contactEntries}>
+                      {' '}{item.entryCount} {item.entryCount === 1 ? t('daftar.entry') : t('daftar.entries')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.contactBalance}>
+                <Text style={[styles.balanceAmount, { color: isPositive ? colors.positive : colors.negative }]}>
+                  {formatAmount(item.netBalance)}
+                </Text>
+                <View style={[styles.balanceBadge, { backgroundColor: isPositive ? `${colors.success}18` : `${colors.danger}18` }]}>
+                  <Text style={[styles.balanceLabel, { color: isPositive ? colors.positive : colors.negative }]}>
+                    {isPositive ? t('daftar.owesYou') : t('daftar.youOwe')}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-
-          <View style={styles.contactBalance}>
-            <Text style={[styles.balanceAmount, { color: isPositive ? colors.positive : colors.negative }]}>
-              {formatAmount(item.netBalance)}
-            </Text>
-            <Text style={[styles.balanceLabel, { color: isPositive ? colors.positive : colors.negative }]}>
-              {isPositive ? t('daftar.owesYou') : t('daftar.youOwe')}
-            </Text>
-          </View>
-        </TouchableOpacity>
+          </ThemedCard>
+        </BouncyPressable>
       </AnimatedListItem>
     );
   };
@@ -181,14 +163,14 @@ export default function DaftarScreen() {
     if (loading) return null;
     return (
       <View style={styles.emptyState}>
-        <View style={styles.emptyIconWrap}>
+        <Animated.View style={[styles.emptyIconWrap, { transform: [{ translateY: emptyBounce }] }]}>
           <LinearGradient
             colors={[`${colors.primary}22`, `${colors.primary}08`]}
             style={styles.emptyIconCircle}
           >
-            <Ionicons name="book-outline" size={36} color={colors.primary} />
+            <Ionicons name="book-outline" size={42} color={colors.primary} />
           </LinearGradient>
-        </View>
+        </Animated.View>
         <Text style={styles.emptyTitle}>{t('daftar.emptyTitle')}</Text>
         <Text style={styles.emptySubtitle}>{t('daftar.emptySubtitle')}</Text>
       </View>
@@ -221,9 +203,10 @@ export default function DaftarScreen() {
         />
       )}
       <View style={styles.bgOrb} />
+      <View style={styles.bgOrbSmall} />
 
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, entrance.style]}>
           <View>
             <Text style={styles.headerKicker}>{t('daftar.yourLedger')}</Text>
             <Text style={styles.headerTitle}>{t('daftar.title')}</Text>
@@ -231,20 +214,11 @@ export default function DaftarScreen() {
           <View style={styles.headerDecor}>
             <View style={styles.decorDiamond} />
           </View>
-        </View>
+        </Animated.View>
 
-        <DailyBanner />
-
+        {/* Summary Card */}
         <View style={styles.summaryWrap}>
-          <View style={styles.summaryCard}>
-            {isDark && (
-              <LinearGradient
-                colors={colors.cardGradient}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-            )}
+          <ThemedCard accent>
             <View style={styles.summaryAccent} />
 
             <View style={styles.summaryNet}>
@@ -258,18 +232,28 @@ export default function DaftarScreen() {
 
             <View style={styles.summaryRow}>
               <View style={styles.summaryCol}>
-                <View style={[styles.dot, { backgroundColor: colors.success }]} />
+                <LinearGradient
+                  colors={colors.successGradient}
+                  style={styles.summaryDot}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
                 <Text style={styles.summarySmLabel}>{t('daftar.owedToYou')}</Text>
-                <Text style={styles.summarySmAmount}>{formatAmount(totalOwedToYou)}</Text>
+                <Text style={[styles.summarySmAmount, { color: colors.positive }]}>{formatAmount(totalOwedToYou)}</Text>
               </View>
               <View style={styles.summaryColSep} />
               <View style={styles.summaryCol}>
-                <View style={[styles.dot, { backgroundColor: colors.danger }]} />
+                <LinearGradient
+                  colors={colors.dangerGradient}
+                  style={styles.summaryDot}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
                 <Text style={styles.summarySmLabel}>{t('daftar.youOweTotal')}</Text>
-                <Text style={styles.summarySmAmount}>{formatAmount(totalYouOwe)}</Text>
+                <Text style={[styles.summarySmAmount, { color: colors.negative }]}>{formatAmount(totalYouOwe)}</Text>
               </View>
             </View>
-          </View>
+          </ThemedCard>
         </View>
 
         {contacts.length > 0 && (
@@ -293,11 +277,7 @@ export default function DaftarScreen() {
         />
 
         <Animated.View style={[styles.fab, { transform: [{ translateY: fabFloat }] }]}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('AddDaftarEntry')}
-            style={styles.fabInner}
-          >
+          <BouncyPressable onPress={() => navigation.navigate('AddDaftarEntry')}>
             <LinearGradient
               colors={colors.primaryGradient}
               style={styles.fabGradient}
@@ -306,7 +286,7 @@ export default function DaftarScreen() {
             >
               <Ionicons name="add" size={28} color="#FFFFFF" />
             </LinearGradient>
-          </TouchableOpacity>
+          </BouncyPressable>
         </Animated.View>
       </SafeAreaView>
     </View>
@@ -328,6 +308,15 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       top: -SW * 0.1,
       right: -SW * 0.3,
     },
+    bgOrbSmall: {
+      position: 'absolute',
+      width: SW * 0.35,
+      height: SW * 0.35,
+      borderRadius: SW * 0.175,
+      backgroundColor: isDark ? 'rgba(201,162,39,0.04)' : 'rgba(201,162,39,0.03)',
+      bottom: SW * 0.05,
+      left: -SW * 0.1,
+    },
 
     header: {
       flexDirection: 'row',
@@ -342,6 +331,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 10,
       letterSpacing: 4,
       color: c.kicker,
+      textTransform: 'uppercase',
       marginBottom: Spacing.xs,
     },
     headerTitle: {
@@ -363,19 +353,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       paddingHorizontal: Spacing.lg,
       marginBottom: Spacing.md,
     },
-    summaryCard: {
-      borderRadius: Radius.xl,
-      borderWidth: 1,
-      borderColor: isDark ? c.border : c.border,
-      backgroundColor: isDark ? undefined : c.bgCard,
-      padding: Spacing.xl,
-      overflow: 'hidden',
-      shadowColor: c.shadowColor,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0 : 0.06,
-      shadowRadius: 12,
-      elevation: isDark ? 0 : 4,
-    },
     summaryAccent: {
       position: 'absolute',
       left: 0,
@@ -394,6 +371,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 10,
       letterSpacing: 3,
       color: c.kicker,
+      textTransform: 'uppercase',
       marginBottom: 6,
     },
     summaryNetAmount: {
@@ -420,10 +398,10 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : c.borderLight,
       alignSelf: 'center',
     },
-    dot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+    summaryDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
       marginBottom: 6,
     },
     summarySmLabel: {
@@ -435,7 +413,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     summarySmAmount: {
       fontFamily: FontFamily.bodyBold,
       fontSize: 16,
-      color: c.text,
       letterSpacing: -0.3,
     },
 
@@ -456,10 +433,12 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 10,
       letterSpacing: 3,
       color: c.textTertiary,
+      textTransform: 'uppercase',
     },
     list: {
       paddingHorizontal: Spacing.lg,
-      paddingBottom: 100,
+      paddingBottom: 160,
+      gap: Spacing.md,
     },
     emptyList: {
       flex: 1,
@@ -467,23 +446,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       alignItems: 'center',
     },
 
-    contactCard: {
-      borderRadius: Radius.xl,
-      borderWidth: 1,
-      borderColor: isDark ? c.border : c.border,
-      backgroundColor: isDark ? undefined : c.bgCard,
-      padding: Spacing.xl,
-      marginBottom: Spacing.md,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      overflow: 'hidden',
-      shadowColor: c.shadowColor,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: isDark ? 0 : 0.05,
-      shadowRadius: 10,
-      elevation: isDark ? 0 : 3,
-    },
     cardAccent: {
       position: 'absolute',
       left: 0,
@@ -492,15 +454,20 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       width: 3,
       opacity: 0.7,
     },
+    contactRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
     cardLeft: {
       flexDirection: 'row',
       alignItems: 'center',
       flex: 1,
     },
     contactAvatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 14,
+      width: 46,
+      height: 46,
+      borderRadius: 15,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: Spacing.lg,
@@ -517,11 +484,15 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.text,
       letterSpacing: -0.2,
     },
+    contactEntriesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 3,
+    },
     contactEntries: {
       fontFamily: FontFamily.bodyMedium,
       fontSize: 12,
       color: c.textTertiary,
-      marginTop: 2,
     },
     contactBalance: {
       alignItems: 'flex-end',
@@ -532,27 +503,32 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 16,
       letterSpacing: -0.3,
     },
+    balanceBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: Radius.full,
+      marginTop: 3,
+    },
     balanceLabel: {
-      fontFamily: FontFamily.bodyMedium,
-      fontSize: 11,
-      marginTop: 2,
-      opacity: 0.7,
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 10,
+      letterSpacing: 0.3,
     },
 
     emptyState: { alignItems: 'center', paddingHorizontal: Spacing.xxxl },
     emptyIconWrap: { marginBottom: Spacing.xl },
     emptyIconCircle: {
-      width: 88,
-      height: 88,
-      borderRadius: 28,
+      width: 96,
+      height: 96,
+      borderRadius: 32,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: isDark ? c.border : c.borderLight,
     },
     emptyTitle: {
-      fontFamily: FontFamily.bodySemibold,
-      fontSize: 18,
+      fontFamily: FontFamily.display,
+      fontSize: 20,
       color: c.text,
       marginBottom: Spacing.sm,
     },
@@ -561,27 +537,22 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 14,
       color: c.textTertiary,
       textAlign: 'center',
-      lineHeight: 20,
+      lineHeight: 22,
     },
 
     fab: {
       position: 'absolute',
-      bottom: 24,
-      right: 20,
+      bottom: 100,
+      end: 20,
       shadowColor: c.primary,
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.4,
       shadowRadius: 16,
       elevation: 10,
     },
-    fabInner: {
-      width: 60,
-      height: 60,
-      borderRadius: Radius.xl,
-    },
     fabGradient: {
-      width: 60,
-      height: 60,
+      width: 62,
+      height: 62,
       borderRadius: Radius.xl,
       justifyContent: 'center',
       alignItems: 'center',

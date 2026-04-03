@@ -256,6 +256,8 @@
     "dark": "Dark",
     "light": "Light",
     "pro": "PRO",
+    "proComingSoon": "Pro features are coming soon! Stay tuned for unlimited groups, AI receipt scanning, and more.",
+    "aboutDescription": "Split bills with friends, track personal debts, and scan receipts.\nMade with love in Egypt.",
     "version": "Daftar v1.0.0"
   },
   "common": {

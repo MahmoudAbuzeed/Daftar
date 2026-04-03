@@ -63,7 +63,7 @@ export const lightPalette: ThemeColors = {
 
   text: '#1C2420',
   textSecondary: '#526059',
-  textTertiary: '#8A9690',
+  textTertiary: '#6B7C76',
   textOnPrimary: '#FFFFFF',
 
   primary: '#0D9488',

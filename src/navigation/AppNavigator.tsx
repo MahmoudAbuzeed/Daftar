@@ -105,6 +105,7 @@ function AuthNavigator() {
       screenOptions={{
         headerShown: false,
         animation: 'fade_from_bottom',
+        animationDuration: 300,
       }}
     >
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
@@ -116,30 +117,113 @@ function AuthNavigator() {
 
 function AppStack() {
   const { colors } = useAppTheme();
+  const { t } = useTranslation();
 
   return (
     <RootStack.Navigator
       screenOptions={{
         animation: 'slide_from_right',
+        animationDuration: 280,
         gestureEnabled: true,
-        headerStyle: { backgroundColor: colors.bg },
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: colors.bg,
+        },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: FontFamily.bodySemibold, fontSize: 17 },
+        headerTitleStyle: {
+          fontFamily: FontFamily.bodySemibold,
+          fontSize: 17,
+        },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
+        headerBackButtonDisplayMode: 'minimal',
       }}
     >
-      <RootStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
-      <RootStack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
-      <RootStack.Screen name="JoinGroup" component={JoinGroupScreen} options={{ animation: 'slide_from_bottom' }} />
-      <RootStack.Screen name="GroupDetail" component={GroupDetailScreen} />
-      <RootStack.Screen name="GroupBalances" component={GroupBalancesScreen} />
-      <RootStack.Screen name="AddExpense" component={AddExpenseScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
-      <RootStack.Screen name="ScanReceipt" component={ScanReceiptScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
-      <RootStack.Screen name="ParsedItems" component={ParsedItemsScreen} />
-      <RootStack.Screen name="AssignItems" component={AssignItemsScreen} />
-      <RootStack.Screen name="AddDaftarEntry" component={AddDaftarEntryScreen} options={{ animation: 'slide_from_bottom', title: '' }} />
-      <RootStack.Screen name="DaftarContact" component={DaftarContactScreen} />
+      <RootStack.Screen
+        name="MainTabs"
+        component={MainTabs}
+        options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="CreateGroup"
+        component={CreateGroupScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          title: '',
+          headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="JoinGroup"
+        component={JoinGroupScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          title: t('groups.join'),
+          headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="GroupDetail"
+        component={GroupDetailScreen}
+        options={{
+          title: '',
+        }}
+      />
+      <RootStack.Screen
+        name="GroupBalances"
+        component={GroupBalancesScreen}
+        options={{
+          title: t('groups.balances'),
+        }}
+      />
+      <RootStack.Screen
+        name="AddExpense"
+        component={AddExpenseScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          title: '',
+          headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="ScanReceipt"
+        component={ScanReceiptScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          title: '',
+          headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="ParsedItems"
+        component={ParsedItemsScreen}
+        options={{
+          title: t('scanner.parsed_items'),
+        }}
+      />
+      <RootStack.Screen
+        name="AssignItems"
+        component={AssignItemsScreen}
+        options={{
+          title: t('scanner.assign_items'),
+        }}
+      />
+      <RootStack.Screen
+        name="AddDaftarEntry"
+        component={AddDaftarEntryScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          title: '',
+          headerShown: false,
+        }}
+      />
+      <RootStack.Screen
+        name="DaftarContact"
+        component={DaftarContactScreen}
+        options={{
+          title: '',
+        }}
+      />
     </RootStack.Navigator>
   );
 }

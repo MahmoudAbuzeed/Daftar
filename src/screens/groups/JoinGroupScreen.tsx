@@ -1,37 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import { Spacing, Radius, FontFamily } from '../../theme';
+import FunButton from '../../components/FunButton';
+import ThemedInput from '../../components/ThemedInput';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'JoinGroup'>;
 
 export default function JoinGroupScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { colors, isDark } = useAppTheme();
+  const alert = useAlert();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const entrance = useScreenEntrance();
 
   const isValid = code.trim().length === 6;
 
   const handleJoin = async () => {
     if (!user || !isValid) return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setJoining(true);
     setError(null);
 
@@ -77,17 +90,12 @@ export default function JoinGroupScreen({ navigation }: Props) {
 
       if (joinError) throw joinError;
 
-      Alert.alert(
-        t('groups.join'),
-        `${t('groups.joined_successfully')} "${group.name}"`,
-        [
-          {
-            text: t('common.done'),
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      alert.show('success', t('groups.join'), `${t('groups.joined_successfully')} "${group.name}"`, [
+        { text: t('common.done'), onPress: () => navigation.goBack() },
+      ]);
     } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(err.message || t('common.error'));
     } finally {
       setJoining(false);
@@ -95,146 +103,158 @@ export default function JoinGroupScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-      >
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <Text style={styles.iconText}>🔗</Text>
-          </View>
+    <View style={styles.root}>
+      <StatusBar barStyle={colors.statusBarStyle} />
+      {isDark && (
+        <LinearGradient
+          colors={colors.headerGradient}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.3, y: 1 }}
+        />
+      )}
 
-          <Text style={styles.title}>{t('groups.join')}</Text>
-          <Text style={styles.subtitle}>
-            {t('groups.enter_invite_code')}
-          </Text>
+      <SafeAreaView style={styles.flex}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.flex}
+        >
+          <Animated.View style={[styles.content, entrance.style]}>
+            {/* Gradient icon circle */}
+            <View style={styles.iconContainer}>
+              <LinearGradient
+                colors={colors.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.iconGradient}
+              >
+                <Ionicons name="link-outline" size={32} color="#FFFFFF" />
+              </LinearGradient>
+            </View>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.codeInput}
+            <Text style={styles.title}>{t('groups.join')}</Text>
+            <Text style={styles.subtitle}>
+              {t('groups.enter_invite_code')}
+            </Text>
+
+            {/* Large code input using ThemedInput */}
+            <ThemedInput
               value={code}
               onChangeText={(text) => {
                 setCode(text.toUpperCase());
                 setError(null);
               }}
               placeholder={t('groups.codePlaceholder')}
-              placeholderTextColor="#D1D5DB"
               maxLength={6}
               autoCapitalize="characters"
               autoCorrect={false}
               autoFocus
-              textAlign="center"
+              style={styles.codeInputStyle}
+              containerStyle={styles.inputContainer}
+              error={error || undefined}
             />
-          </View>
 
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons
+                  name="alert-circle"
+                  size={16}
+                  color={colors.danger}
+                  style={{ marginRight: Spacing.sm }}
+                />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-          <TouchableOpacity
-            style={[styles.joinButton, !isValid && styles.joinButtonDisabled]}
-            activeOpacity={0.8}
-            onPress={handleJoin}
-            disabled={!isValid || joining}
-          >
-            {joining ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.joinButtonText}>{t('groups.join')}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            <FunButton
+              title={t('groups.join')}
+              onPress={handleJoin}
+              loading={joining}
+              disabled={!isValid}
+              icon={<Ionicons name="enter-outline" size={20} color="#FFFFFF" />}
+              style={styles.buttonWrapper}
+            />
+          </Animated.View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  iconText: {
-    fontSize: 32,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-    paddingHorizontal: 16,
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  codeInput: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    letterSpacing: 8,
-  },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginBottom: 16,
-    width: '100%',
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  joinButton: {
-    backgroundColor: '#2563EB',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    width: '100%',
-  },
-  joinButtonDisabled: {
-    backgroundColor: '#93C5FD',
-  },
-  joinButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-});
+const createStyles = (c: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    flex: {
+      flex: 1,
+    },
+    content: {
+      flex: 1,
+      padding: Spacing.xxl,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconContainer: {
+      marginBottom: Spacing.xxl,
+    },
+    iconGradient: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: c.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.4,
+      shadowRadius: 18,
+      elevation: 10,
+    },
+    title: {
+      fontFamily: FontFamily.display,
+      fontSize: 28,
+      letterSpacing: -0.6,
+      color: c.text,
+      marginBottom: Spacing.sm,
+    },
+    subtitle: {
+      fontFamily: FontFamily.body,
+      fontSize: 15,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: Spacing.xxxl,
+      paddingHorizontal: Spacing.lg,
+    },
+    inputContainer: {
+      width: '100%',
+      marginBottom: Spacing.lg,
+    },
+    codeInputStyle: {
+      fontSize: 28,
+      fontFamily: FontFamily.bodyBold,
+      letterSpacing: 8,
+      textAlign: 'center',
+      paddingVertical: 18,
+    },
+    errorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(234,88,12,0.12)' : '#FFF7ED',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 10,
+      borderRadius: Radius.md,
+      marginBottom: Spacing.lg,
+      width: '100%',
+    },
+    errorText: {
+      fontFamily: FontFamily.bodySemibold,
+      color: c.danger,
+      fontSize: 14,
+      flex: 1,
+    },
+    buttonWrapper: {
+      width: '100%',
+    },
+  });

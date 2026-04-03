@@ -15,11 +15,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
 import { Spacing, Radius, FontFamily } from '../../theme';
-import DailyBanner from '../../components/DailyBanner';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import ThemedCard from '../../components/ThemedCard';
+import BouncyPressable from '../../components/BouncyPressable';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -34,38 +38,27 @@ interface ActivityItem {
   paidByName: string;
 }
 
-function AnimatedListItem({ children, index }: { children: React.ReactNode; index: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 400,
-      delay: Math.min(index * 60, 350),
-      easing: Easing.out(Easing.back(1.2)),
-      useNativeDriver: true,
-    }).start();
-  }, []);
-  return (
-    <Animated.View
-      style={{
-        opacity: anim,
-        transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
 export default function ActivityScreen() {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const entrance = useScreenEntrance();
 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Bouncing empty-state icon
+  const emptyBounce = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(emptyBounce, { toValue: -12, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(emptyBounce, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ).start();
+  }, []);
 
   const fetchActivity = useCallback(async () => {
     if (!profile) return;
@@ -129,44 +122,66 @@ export default function ActivityScreen() {
     return (
       <AnimatedListItem index={index}>
         <View style={styles.timelineRow}>
+          {/* Timeline track */}
           <View style={styles.timelineTrack}>
-            <View style={[styles.timelineDot, { backgroundColor: isExpense ? colors.primary : colors.primaryLight }]} />
+            <LinearGradient
+              colors={isExpense ? colors.primaryGradient : colors.successGradient}
+              style={styles.timelineDotGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons
+                name={isExpense ? 'receipt' : 'checkmark'}
+                size={10}
+                color="#FFFFFF"
+              />
+            </LinearGradient>
             {index < activities.length - 1 && <View style={styles.timelineLine} />}
           </View>
 
-          <View style={styles.activityCard}>
-            {isDark && (
-              <LinearGradient
-                colors={colors.cardGradient}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-            )}
+          {/* Activity card */}
+          <ThemedCard style={styles.activityCard}>
             <View style={styles.cardRow}>
+              <View style={styles.activityIconWrap}>
+                <LinearGradient
+                  colors={isExpense ? colors.primaryGradient : colors.successGradient}
+                  style={styles.activityIcon}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons
+                    name={isExpense ? 'receipt-outline' : 'swap-horizontal-outline'}
+                    size={16}
+                    color="#FFFFFF"
+                  />
+                </LinearGradient>
+              </View>
+
               <View style={styles.activityInfo}>
                 <Text style={styles.activityDesc} numberOfLines={1}>{item.description}</Text>
                 <View style={styles.activityMeta}>
-                  <Ionicons
-                    name={isExpense ? 'receipt-outline' : 'swap-horizontal-outline'}
-                    size={12}
-                    color={colors.primaryLight}
-                  />
-                  <Text style={styles.activityGroup}>{item.groupName}</Text>
+                  <View style={[styles.groupTag, { backgroundColor: isDark ? `${colors.primary}20` : `${colors.primary}10` }]}>
+                    <Ionicons name="people" size={10} color={colors.primaryLight} />
+                    <Text style={styles.activityGroup}>{item.groupName}</Text>
+                  </View>
                   <Text style={styles.metaDot}>{'\u00B7'}</Text>
                   <Text style={styles.activityTime}>{getTimeAgo(item.createdAt)}</Text>
                 </View>
                 {isExpense && (
-                  <Text style={styles.activityPaidBy}>{t('activity.paidBy')} {item.paidByName}</Text>
+                  <Text style={styles.activityPaidBy}>
+                    <Ionicons name="person-outline" size={10} color={colors.textTertiary} />
+                    {' '}{t('activity.paidBy')} {item.paidByName}
+                  </Text>
                 )}
               </View>
+
               <View style={[styles.amountPill, isExpense ? styles.amountPillExpense : styles.amountPillSettlement]}>
                 <Text style={[styles.amountText, { color: isExpense ? colors.primaryLight : colors.success }]}>
                   {item.amount.toFixed(2)} {item.currency}
                 </Text>
               </View>
             </View>
-          </View>
+          </ThemedCard>
         </View>
       </AnimatedListItem>
     );
@@ -176,12 +191,14 @@ export default function ActivityScreen() {
     if (loading) return null;
     return (
       <View style={styles.emptyState}>
-        <LinearGradient
-          colors={[`${colors.primary}22`, `${colors.primary}08`]}
-          style={styles.emptyIcon}
-        >
-          <Ionicons name="pulse-outline" size={36} color={colors.primary} />
-        </LinearGradient>
+        <Animated.View style={{ transform: [{ translateY: emptyBounce }] }}>
+          <LinearGradient
+            colors={[`${colors.primary}22`, `${colors.primary}08`]}
+            style={styles.emptyIcon}
+          >
+            <Ionicons name="pulse-outline" size={42} color={colors.primary} />
+          </LinearGradient>
+        </Animated.View>
         <Text style={styles.emptyTitle}>{t('activity.emptyTitle')}</Text>
         <Text style={styles.emptySub}>{t('activity.emptySubtitle')}</Text>
       </View>
@@ -209,18 +226,22 @@ export default function ActivityScreen() {
         />
       )}
       <View style={styles.bgOrb} />
+      <View style={styles.bgOrbSmall} />
 
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, entrance.style]}>
           <Text style={styles.headerKicker}>{t('activity.recentTransactions')}</Text>
           <Text style={styles.headerTitle}>{t('activity.title')}</Text>
-        </View>
-
-        <DailyBanner />
+        </Animated.View>
 
         {activities.length > 0 && (
           <View style={styles.countStrip}>
-            <Ionicons name="pulse" size={14} color={colors.primaryLight} />
+            <LinearGradient
+              colors={colors.primaryGradient}
+              style={styles.countDot}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
             <Text style={styles.countText}>{t('activity.itemCount', { count: activities.length })}</Text>
           </View>
         )}
@@ -254,6 +275,15 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       bottom: -SW * 0.1,
       right: -SW * 0.15,
     },
+    bgOrbSmall: {
+      position: 'absolute',
+      width: SW * 0.3,
+      height: SW * 0.3,
+      borderRadius: SW * 0.15,
+      backgroundColor: isDark ? 'rgba(201,162,39,0.04)' : 'rgba(201,162,39,0.03)',
+      top: SW * 0.2,
+      left: -SW * 0.1,
+    },
 
     header: {
       paddingHorizontal: Spacing.xxl,
@@ -265,6 +295,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 10,
       letterSpacing: 4,
       color: c.kicker,
+      textTransform: 'uppercase',
       marginBottom: Spacing.xs,
     },
     headerTitle: {
@@ -281,6 +312,11 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       marginBottom: Spacing.md,
       gap: 8,
     },
+    countDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
     countText: {
       fontFamily: FontFamily.bodyMedium,
       fontSize: 12,
@@ -289,7 +325,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
 
     list: {
       paddingHorizontal: Spacing.lg,
-      paddingBottom: Spacing.xxxl,
+      paddingBottom: 120,
     },
     emptyList: {
       flex: 1,
@@ -302,42 +338,45 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       marginBottom: 0,
     },
     timelineTrack: {
-      width: 28,
+      width: 32,
       alignItems: 'center',
-      paddingTop: 20,
+      paddingTop: 18,
     },
-    timelineDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
+    timelineDotGradient: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      justifyContent: 'center',
+      alignItems: 'center',
       borderWidth: 2,
       borderColor: c.bg,
       zIndex: 1,
     },
     timelineLine: {
       flex: 1,
-      width: 1,
+      width: 2,
       backgroundColor: isDark ? c.borderLight : c.border,
       marginTop: -2,
+      borderRadius: 1,
     },
 
     activityCard: {
       flex: 1,
-      borderRadius: Radius.xl,
-      borderWidth: 1,
-      borderColor: isDark ? c.border : c.border,
-      backgroundColor: isDark ? undefined : c.bgCard,
-      padding: Spacing.lg,
       marginBottom: Spacing.md,
-      overflow: 'hidden',
-      shadowColor: c.shadowColor,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0 : 0.04,
-      shadowRadius: 8,
-      elevation: isDark ? 0 : 2,
+      marginLeft: Spacing.xs,
     },
     cardRow: {
       flexDirection: 'row',
+      alignItems: 'center',
+    },
+    activityIconWrap: {
+      marginRight: Spacing.md,
+    },
+    activityIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      justifyContent: 'center',
       alignItems: 'center',
     },
     activityInfo: { flex: 1 },
@@ -350,12 +389,20 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     activityMeta: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: 4,
+      marginTop: 5,
       gap: 6,
+    },
+    groupTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: Radius.full,
+      gap: 4,
     },
     activityGroup: {
       fontFamily: FontFamily.bodySemibold,
-      fontSize: 12,
+      fontSize: 11,
       color: c.primaryLight,
     },
     metaDot: { fontSize: 12, color: c.textTertiary },
@@ -369,7 +416,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontFamily: FontFamily.body,
       fontSize: 11,
       color: c.textTertiary,
-      marginTop: 2,
+      marginTop: 3,
     },
 
     amountPill: {
@@ -396,15 +443,26 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
 
     emptyState: { alignItems: 'center', paddingHorizontal: Spacing.xxxl },
     emptyIcon: {
-      width: 88,
-      height: 88,
-      borderRadius: 28,
+      width: 96,
+      height: 96,
+      borderRadius: 32,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: isDark ? c.border : c.borderLight,
       marginBottom: Spacing.xl,
     },
-    emptyTitle: { fontFamily: FontFamily.bodySemibold, fontSize: 18, color: c.text, marginBottom: Spacing.sm },
-    emptySub: { fontFamily: FontFamily.body, fontSize: 14, color: c.textTertiary, textAlign: 'center', lineHeight: 20 },
+    emptyTitle: {
+      fontFamily: FontFamily.display,
+      fontSize: 20,
+      color: c.text,
+      marginBottom: Spacing.sm,
+    },
+    emptySub: {
+      fontFamily: FontFamily.body,
+      fontSize: 14,
+      color: c.textTertiary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
   });

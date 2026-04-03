@@ -4,9 +4,8 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  Alert,
   ScrollView,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +18,12 @@ import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { GroupMember, ParsedReceiptItem } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import FunButton from '../../components/FunButton';
+import ThemedCard from '../../components/ThemedCard';
+import BouncyPressable from '../../components/BouncyPressable';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AssignItems'>;
 
@@ -32,6 +37,8 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
   const { colors, isDark } = useAppTheme();
   const { groupId, items: rawItems, tax, serviceCharge } = route.params;
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const entrance = useScreenEntrance();
+  const alert = useAlert();
 
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [items, setItems] = useState<AssignableItem[]>(
@@ -51,21 +58,24 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
     if (data) setMembers(data);
   };
 
-  const toggleAssignment = useCallback((itemIndex: number, userId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setItems((prev) =>
-      prev.map((item, i) => {
-        if (i !== itemIndex) return item;
-        const isAssigned = item.assignedTo.includes(userId);
-        return {
-          ...item,
-          assignedTo: isAssigned
-            ? item.assignedTo.filter((id) => id !== userId)
-            : [...item.assignedTo, userId],
-        };
-      })
-    );
-  }, []);
+  const toggleAssignment = useCallback(
+    (itemIndex: number, userId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setItems((prev) =>
+        prev.map((item, i) => {
+          if (i !== itemIndex) return item;
+          const isAssigned = item.assignedTo.includes(userId);
+          return {
+            ...item,
+            assignedTo: isAssigned
+              ? item.assignedTo.filter((id) => id !== userId)
+              : [...item.assignedTo, userId],
+          };
+        })
+      );
+    },
+    []
+  );
 
   const assignAllToUser = useCallback((userId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -122,14 +132,17 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
   const handleSave = async () => {
     const unassigned = items.filter((item) => item.assignedTo.length === 0);
     if (unassigned.length > 0) {
-      Alert.alert(t('scanner.unassignedItems'), t('scanner.assignAllItems'));
+      alert.warning(t('scanner.unassignedItems'), t('scanner.assignAllItems'));
       return;
     }
 
     setSaving(true);
     try {
       const splits = calculateSplits();
-      const totalAmount = Array.from(splits.values()).reduce((a, b) => a + b, 0);
+      const totalAmount = Array.from(splits.values()).reduce(
+        (a, b) => a + b,
+        0
+      );
 
       const { data: expense, error: expenseError } = await supabase
         .from('expenses')
@@ -185,11 +198,13 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
         if (assignError) throw assignError;
       }
 
-      const splitInserts = Array.from(splits.entries()).map(([userId, amount]) => ({
-        expense_id: expense.id,
-        user_id: userId,
-        amount,
-      }));
+      const splitInserts = Array.from(splits.entries()).map(
+        ([userId, amount]) => ({
+          expense_id: expense.id,
+          user_id: userId,
+          amount,
+        })
+      );
 
       const { error: splitsError } = await supabase
         .from('expense_splits')
@@ -199,7 +214,7 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.popToTop();
     } catch (error: any) {
-      Alert.alert(t('common.error'), error.message);
+      alert.error(t('common.error'), error.message);
     } finally {
       setSaving(false);
     }
@@ -213,84 +228,92 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
 
   const assignedCount = items.filter((i) => i.assignedTo.length > 0).length;
   const totalItems = items.length;
+  const progressPct = totalItems > 0 ? (assignedCount / totalItems) * 100 : 0;
 
   const renderItem = useCallback(
     ({ item, index }: { item: AssignableItem; index: number }) => (
-      <View style={styles.itemCard}>
-        <View style={styles.itemHeader}>
-          <View style={styles.itemNameRow}>
-            <View
-              style={[
-                styles.itemDot,
-                {
-                  backgroundColor:
-                    item.assignedTo.length > 0 ? colors.success : colors.danger,
-                },
-              ]}
-            />
-            <Text style={styles.itemName} numberOfLines={2}>
-              {item.name}
-            </Text>
-          </View>
-          <Text style={styles.itemPrice}>{item.total.toFixed(2)}</Text>
-        </View>
-
-        <View style={styles.assignRow}>
-          {members.map((member) => {
-            const isAssigned = item.assignedTo.includes(member.user_id);
-            const name = (member.user as any)?.display_name || '?';
-            const initial = name.charAt(0).toUpperCase();
-            return (
-              <TouchableOpacity
-                key={member.user_id}
-                activeOpacity={0.7}
-                onPress={() => toggleAssignment(index, member.user_id)}
+      <AnimatedListItem index={index}>
+        <ThemedCard style={styles.itemCard}>
+          {/* Item header */}
+          <View style={styles.itemHeader}>
+            <View style={styles.itemNameRow}>
+              <View
                 style={[
-                  styles.assignChip,
-                  isAssigned && styles.assignChipActive,
+                  styles.itemDot,
+                  {
+                    backgroundColor:
+                      item.assignedTo.length > 0 ? colors.success : colors.danger,
+                  },
                 ]}
-              >
-                {isAssigned ? (
-                  <LinearGradient
-                    colors={colors.primaryGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.assignChipGradient}
-                  >
-                    <Text style={styles.chipInitialActive}>{initial}</Text>
-                    <Text style={styles.assignChipTextActive} numberOfLines={1}>
-                      {name.split(' ')[0]}
-                    </Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.assignChipInner}>
-                    <Text style={styles.chipInitial}>{initial}</Text>
-                    <Text style={styles.assignChipText} numberOfLines={1}>
-                      {name.split(' ')[0]}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+              />
+              <Text style={styles.itemName} numberOfLines={2}>
+                {item.name}
+              </Text>
+            </View>
+            <Text style={styles.itemPrice}>{item.total.toFixed(2)}</Text>
+          </View>
+
+          {/* Assignment chips */}
+          <View style={styles.assignRow}>
+            {members.map((member) => {
+              const isAssigned = item.assignedTo.includes(member.user_id);
+              const name = (member.user as any)?.display_name || '?';
+              const initial = name.charAt(0).toUpperCase();
+
+              return (
+                <BouncyPressable
+                  key={member.user_id}
+                  onPress={() => toggleAssignment(index, member.user_id)}
+                  scaleDown={0.9}
+                >
+                  {isAssigned ? (
+                    <LinearGradient
+                      colors={colors.primaryGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.assignChipGradient}
+                    >
+                      <Text style={styles.chipInitialActive}>{initial}</Text>
+                      <Text
+                        style={styles.assignChipTextActive}
+                        numberOfLines={1}
+                      >
+                        {name.split(' ')[0]}
+                      </Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={styles.assignChipInner}>
+                      <Text style={styles.chipInitial}>{initial}</Text>
+                      <Text style={styles.assignChipText} numberOfLines={1}>
+                        {name.split(' ')[0]}
+                      </Text>
+                    </View>
+                  )}
+                </BouncyPressable>
+              );
+            })}
+          </View>
+        </ThemedCard>
+      </AnimatedListItem>
     ),
     [members, colors, styles, toggleAssignment]
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('scanner.assign_items')}</Text>
-        <Text style={styles.headerSubtitle}>{t('scanner.assign_subtitle')}</Text>
+      {/* Header */}
+      <Animated.View style={[styles.header, entrance.style]}>
+        <Text style={styles.headerKicker}>{t('scanner.assign_items')}</Text>
+        <Text style={styles.headerTitle}>{t('scanner.assign_subtitle')}</Text>
+
+        {/* Progress bar */}
         <View style={styles.progressRow}>
           <View style={styles.progressBarBg}>
             <View
               style={[
                 styles.progressBarFill,
                 {
-                  width: `${totalItems > 0 ? (assignedCount / totalItems) * 100 : 0}%`,
+                  width: `${progressPct}%`,
                   backgroundColor:
                     assignedCount === totalItems ? colors.success : colors.primary,
                 },
@@ -301,8 +324,9 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
             {assignedCount}/{totalItems}
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
+      {/* Quick-assign member avatars */}
       <ScrollView
         horizontal
         style={styles.quickAssignRow}
@@ -313,58 +337,63 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
           const name = (member.user as any)?.display_name || '?';
           const initial = name.charAt(0).toUpperCase();
           const allAssigned = isEveryItemAssignedToUser(member.user_id);
+
           return (
-            <TouchableOpacity
+            <BouncyPressable
               key={member.user_id}
-              activeOpacity={0.7}
               onPress={() =>
                 allAssigned
                   ? unassignAllFromUser(member.user_id)
                   : assignAllToUser(member.user_id)
               }
-              style={[
-                styles.quickChip,
-                allAssigned && styles.quickChipActive,
-              ]}
+              scaleDown={0.92}
             >
-              <LinearGradient
-                colors={
-                  allAssigned
-                    ? colors.primaryGradient
-                    : [colors.bgSubtle, colors.bgSubtle]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.quickChipGradient}
-              >
-                <Text
-                  style={[
-                    styles.quickChipInitial,
-                    allAssigned && { color: '#FFFFFF' },
-                  ]}
+              <View style={styles.quickAvatarColumn}>
+                <LinearGradient
+                  colors={
+                    allAssigned
+                      ? colors.primaryGradient
+                      : isDark
+                      ? [colors.bgSubtle, colors.bgSubtle]
+                      : [colors.borderLight, colors.borderLight]
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.quickAvatarCircle}
                 >
-                  {initial}
-                </Text>
+                  <Text
+                    style={[
+                      styles.quickAvatarInitial,
+                      allAssigned && styles.quickAvatarInitialActive,
+                    ]}
+                  >
+                    {initial}
+                  </Text>
+                </LinearGradient>
                 <Text
                   style={[
-                    styles.quickChipName,
-                    allAssigned && { color: '#FFFFFF' },
+                    styles.quickAvatarName,
+                    allAssigned && { color: colors.primary },
                   ]}
                   numberOfLines={1}
                 >
                   {name.split(' ')[0]}
                 </Text>
-                <Ionicons
-                  name={allAssigned ? 'checkmark-circle' : 'add-circle-outline'}
-                  size={16}
-                  color={allAssigned ? '#FFFFFF' : colors.textTertiary}
-                />
-              </LinearGradient>
-            </TouchableOpacity>
+                {allAssigned && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={14}
+                    color={colors.success}
+                    style={styles.quickCheck}
+                  />
+                )}
+              </View>
+            </BouncyPressable>
           );
         })}
       </ScrollView>
 
+      {/* Item list */}
       <FlatList
         data={items}
         keyExtractor={(_, i) => String(i)}
@@ -373,35 +402,42 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.summaryContainer}>
+      {/* Summary footer */}
+      <ThemedCard style={styles.summaryContainer} accent>
         <Text style={styles.summaryTitle}>{t('scanner.summary')}</Text>
+
         {Array.from(splits.entries()).map(([userId, amount]) => (
           <View key={userId} style={styles.summaryRow}>
-            <Text style={styles.summaryName}>{getMemberName(userId)}</Text>
+            <View style={styles.summaryNameRow}>
+              <LinearGradient
+                colors={colors.primaryGradient}
+                style={styles.summaryDot}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Text style={styles.summaryName}>{getMemberName(userId)}</Text>
+            </View>
             <Text style={styles.summaryAmount}>
               {amount.toFixed(2)} {t('common.egp')}
             </Text>
           </View>
         ))}
 
-        <TouchableOpacity
-          style={[styles.confirmButton, saving && styles.confirmButtonDisabled]}
+        <FunButton
+          title={saving ? t('common.loading') : t('scanner.confirm_split')}
           onPress={handleSave}
+          loading={saving}
           disabled={saving}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={colors.primaryGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0.5 }}
-            style={styles.confirmGradient}
-          >
-            <Text style={styles.confirmButtonText}>
-              {saving ? t('common.loading') : t('scanner.confirm_split')}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+          icon={
+            <Ionicons
+              name="checkmark-done-outline"
+              size={20}
+              color="#FFFFFF"
+            />
+          }
+          style={styles.confirmButton}
+        />
+      </ThemedCard>
     </View>
   );
 }
@@ -412,21 +448,25 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       flex: 1,
       backgroundColor: c.bg,
     },
+
+    /* Header */
     header: {
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing.lg,
+    },
+    headerKicker: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 10,
+      letterSpacing: 4,
+      color: c.kicker,
+      textTransform: 'uppercase',
+      marginBottom: Spacing.xs,
     },
     headerTitle: {
       fontFamily: FontFamily.display,
       fontSize: 26,
       color: c.text,
       letterSpacing: -0.5,
-    },
-    headerSubtitle: {
-      fontFamily: FontFamily.body,
-      fontSize: 14,
-      color: c.textTertiary,
-      marginTop: 4,
     },
     progressRow: {
       flexDirection: 'row',
@@ -451,51 +491,56 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.textSecondary,
     },
 
+    /* Quick-assign avatars */
     quickAssignRow: {
-      maxHeight: 54,
-      marginTop: Spacing.sm,
+      maxHeight: 90,
+      marginTop: Spacing.md,
     },
     quickAssignContent: {
       paddingHorizontal: Spacing.lg,
-      gap: Spacing.sm,
+      gap: Spacing.lg,
     },
-    quickChip: {
-      borderRadius: Radius.full,
-      overflow: 'hidden',
-    },
-    quickChipActive: {},
-    quickChipGradient: {
-      flexDirection: 'row',
+    quickAvatarColumn: {
       alignItems: 'center',
-      paddingHorizontal: 14,
-      paddingVertical: 8,
+      width: 60,
+    },
+    quickAvatarCircle: {
+      width: 48,
+      height: 48,
       borderRadius: Radius.full,
-      gap: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
-    quickChipInitial: {
+    quickAvatarInitial: {
       fontFamily: FontFamily.bodyBold,
-      fontSize: 14,
-      color: c.text,
-    },
-    quickChipName: {
-      fontFamily: FontFamily.bodyMedium,
-      fontSize: 13,
+      fontSize: 18,
       color: c.textSecondary,
-      maxWidth: 80,
+    },
+    quickAvatarInitialActive: {
+      color: '#FFFFFF',
+    },
+    quickAvatarName: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 11,
+      color: c.textTertiary,
+      marginTop: 4,
+    },
+    quickCheck: {
+      position: 'absolute',
+      top: 0,
+      right: 4,
     },
 
+    /* List */
     list: {
       paddingHorizontal: Spacing.lg,
       paddingTop: Spacing.sm,
       paddingBottom: Spacing.sm,
     },
+
+    /* Item cards */
     itemCard: {
-      backgroundColor: c.bgCard,
-      borderRadius: Radius.lg,
-      padding: Spacing.md,
       marginBottom: Spacing.sm,
-      borderWidth: 1,
-      borderColor: c.borderLight,
     },
     itemHeader: {
       flexDirection: 'row',
@@ -525,17 +570,14 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.text,
       marginLeft: Spacing.sm,
     },
+
+    /* Assignment chips */
     assignRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       marginTop: Spacing.sm,
       gap: 6,
     },
-    assignChip: {
-      borderRadius: Radius.full,
-      overflow: 'hidden',
-    },
-    assignChipActive: {},
     assignChipGradient: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -574,19 +616,13 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: '#FFFFFF',
     },
 
+    /* Summary footer */
     summaryContainer: {
-      backgroundColor: c.bgCard,
+      borderRadius: 0,
       borderTopLeftRadius: Radius.xl,
       borderTopRightRadius: Radius.xl,
-      padding: Spacing.lg,
+      borderBottomWidth: 0,
       paddingBottom: 36,
-      borderTopWidth: 1,
-      borderColor: c.borderLight,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 0.06,
-      shadowRadius: 12,
-      elevation: 8,
     },
     summaryTitle: {
       fontFamily: FontFamily.bodySemibold,
@@ -599,7 +635,18 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     summaryRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      alignItems: 'center',
       paddingVertical: 4,
+    },
+    summaryNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    summaryDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
     },
     summaryName: {
       fontFamily: FontFamily.body,
@@ -612,22 +659,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.text,
     },
     confirmButton: {
-      borderRadius: Radius.lg,
-      overflow: 'hidden',
       marginTop: Spacing.md,
-    },
-    confirmButtonDisabled: {
-      opacity: 0.6,
-    },
-    confirmGradient: {
-      paddingVertical: 15,
-      alignItems: 'center',
-      borderRadius: Radius.lg,
-    },
-    confirmButtonText: {
-      color: '#FFFFFF',
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 16,
-      letterSpacing: 0.3,
     },
   });

@@ -1,31 +1,40 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   Modal,
-  TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StatusBar,
   ScrollView,
+  Animated,
+  I18nManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
-import { Balance, User, Settlement } from '../../types/database';
+import { Balance, User } from '../../types/database';
 import { simplifyDebts, formatCurrency } from '../../utils/balance';
-import { Colors, Gradients, Spacing, Radius, Typography, Shadows, CommonStyles } from '../../theme';
+import { Spacing, Radius, FontFamily } from '../../theme';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import FunButton from '../../components/FunButton';
+import ThemedCard from '../../components/ThemedCard';
+import ThemedInput from '../../components/ThemedInput';
+import BouncyPressable from '../../components/BouncyPressable';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupBalances'>;
 
@@ -36,17 +45,20 @@ interface SimplifiedDebt extends Balance {
   to_user_data?: User;
 }
 
-const PAYMENT_METHODS: { key: PaymentMethod; labelKey: string }[] = [
-  { key: 'cash', labelKey: 'settlements.cash' },
-  { key: 'vodafone_cash', labelKey: 'settlements.vodafone_cash' },
-  { key: 'instapay', labelKey: 'settlements.instapay' },
-  { key: 'bank', labelKey: 'settlements.bank' },
+const PAYMENT_METHODS: { key: PaymentMethod; labelKey: string; icon: string }[] = [
+  { key: 'cash', labelKey: 'settlements.cash', icon: 'cash-outline' },
+  { key: 'vodafone_cash', labelKey: 'settlements.vodafone_cash', icon: 'phone-portrait-outline' },
+  { key: 'instapay', labelKey: 'settlements.instapay', icon: 'flash-outline' },
+  { key: 'bank', labelKey: 'settlements.bank', icon: 'business-outline' },
 ];
 
 export default function GroupBalancesScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { colors, isDark } = useAppTheme();
+  const alert = useAlert();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [debts, setDebts] = useState<SimplifiedDebt[]>([]);
   const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
@@ -58,6 +70,8 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   const [selectedDebt, setSelectedDebt] = useState<SimplifiedDebt | null>(null);
   const [settlementAmount, setSettlementAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+
+  const entrance = useScreenEntrance();
 
   const fetchBalances = useCallback(async () => {
     if (!user) return;
@@ -81,7 +95,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
       const userMap = new Map<string, User>();
       for (const m of members || []) {
         if (m.user) {
-          userMap.set(m.user_id, m.user as User);
+          userMap.set(m.user_id, m.user as unknown as User);
         }
       }
 
@@ -144,6 +158,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   );
 
   const openSettleModal = (debt: SimplifiedDebt) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedDebt(debt);
     setSettlementAmount(debt.net_amount.toFixed(2));
     setPaymentMethod('cash');
@@ -155,10 +170,11 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
     const amount = parseFloat(settlementAmount);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert(t('common.error'), t('groups.invalidAmount'));
+      alert.error(t('common.error'), t('groups.invalidAmount'));
       return;
     }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSettling(true);
 
     try {
@@ -174,11 +190,13 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
       if (error) throw error;
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setModalVisible(false);
       setSelectedDebt(null);
       fetchBalances();
     } catch (err: any) {
-      Alert.alert(t('common.error'), err.message || t('common.error'));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      alert.error(t('common.error'), err.message || t('common.error'));
     } finally {
       setSettling(false);
     }
@@ -189,75 +207,71 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
     return userData?.display_name || t('common.unknown');
   };
 
-  const renderDebtRow = ({ item }: { item: SimplifiedDebt }) => {
+  const renderDebtRow = ({ item, index }: { item: SimplifiedDebt; index: number }) => {
     const fromName = getUserName(item.from_user, item.from_user_data);
     const toName = getUserName(item.to_user, item.to_user_data);
     const canSettle =
       item.from_user === user?.id || item.to_user === user?.id;
 
     return (
-      <View style={styles.debtRow}>
-        <View style={styles.debtRowLeft}>
-          <View style={styles.avatarRow}>
-            <LinearGradient
-              colors={Gradients.danger}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatar}
-            >
-              <Text style={styles.avatarText}>
-                {(item.from_user_data?.display_name || '?').charAt(0).toUpperCase()}
-              </Text>
-            </LinearGradient>
-            <View style={styles.arrowContainer}>
-              <Text style={styles.arrowText}>{'\u2192'}</Text>
+      <AnimatedListItem index={index}>
+        <ThemedCard style={styles.debtRow}>
+          <View style={styles.debtRowLeft}>
+            <View style={styles.avatarRow}>
+              <LinearGradient
+                colors={colors.dangerGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatar}
+              >
+                <Text style={styles.avatarText}>
+                  {(item.from_user_data?.display_name || '?').charAt(0).toUpperCase()}
+                </Text>
+              </LinearGradient>
+              <View style={styles.arrowCircle}>
+                <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
+              </View>
+              <LinearGradient
+                colors={colors.successGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatar}
+              >
+                <Text style={styles.avatarText}>
+                  {(item.to_user_data?.display_name || '?').charAt(0).toUpperCase()}
+                </Text>
+              </LinearGradient>
             </View>
-            <LinearGradient
-              colors={Gradients.success}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatar}
-            >
-              <Text style={styles.avatarText}>
-                {(item.to_user_data?.display_name || '?').charAt(0).toUpperCase()}
-              </Text>
-            </LinearGradient>
+            <Text style={styles.debtRowText}>
+              <Text style={styles.debtRowName}>{fromName}</Text>
+              {` ${t('groups.owes')} `}
+              <Text style={styles.debtRowName}>{toName}</Text>
+            </Text>
+            <Text style={styles.debtRowAmount}>
+              {formatCurrency(item.net_amount, currency)}
+            </Text>
           </View>
-          <Text style={styles.debtRowText}>
-            <Text style={styles.debtRowName}>{fromName}</Text>
-            {` ${t('groups.owes')} `}
-            <Text style={styles.debtRowName}>{toName}</Text>
-          </Text>
-          <Text style={styles.debtRowAmount}>
-            {formatCurrency(item.net_amount, currency)}
-          </Text>
-        </View>
-        {canSettle && (
-          <TouchableOpacity
-            style={styles.settleButton}
-            activeOpacity={0.7}
-            onPress={() => openSettleModal(item)}
-          >
-            <LinearGradient
-              colors={Gradients.success}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.settleButtonGradient}
-            >
-              <Text style={styles.settleButtonText}>{t('daftar.settle')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-      </View>
+          {canSettle && (
+            <FunButton
+              title={t('daftar.settle')}
+              onPress={() => openSettleModal(item)}
+              variant="primary"
+              size="small"
+              icon={<Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />}
+              style={styles.settleButtonWrap}
+            />
+          )}
+        </ThemedCard>
+      </AnimatedListItem>
     );
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={Colors.bg} />
+        <StatusBar barStyle={colors.statusBarStyle} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -265,20 +279,22 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.bgDark} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} />
 
       <LinearGradient
-        colors={Gradients.hero}
+        colors={colors.headerGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerBar}
       >
-        <Text style={styles.headerTitle}>{t('groups.balances')}</Text>
-        <Text style={styles.headerSubtitle}>
-          {debts.length === 0
-            ? t('groups.settled_up')
-            : `${debts.length} ${debts.length === 1 ? t('groups.payment') : t('groups.payments')}`}
-        </Text>
+        <Animated.View style={entrance.style}>
+          <Text style={styles.headerTitle}>{t('groups.balances')}</Text>
+          <Text style={styles.headerSubtitle}>
+            {debts.length === 0
+              ? t('groups.settled_up')
+              : `${debts.length} ${debts.length === 1 ? t('groups.payment') : t('groups.payments')}`}
+          </Text>
+        </Animated.View>
       </LinearGradient>
 
       <FlatList
@@ -290,7 +306,14 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>{'\uD83C\uDF89'}</Text>
+            <LinearGradient
+              colors={colors.successGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emptyIconCircle}
+            >
+              <Ionicons name="checkmark-done-outline" size={36} color="#FFFFFF" />
+            </LinearGradient>
             <Text style={styles.emptyTitle}>{t('groups.settled_up')}</Text>
             <Text style={styles.emptySubtitle}>
               {t('groups.settled_up')}
@@ -322,7 +345,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
               {selectedDebt && (
                 <View style={styles.modalDirectionRow}>
                   <LinearGradient
-                    colors={Gradients.danger}
+                    colors={colors.dangerGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.modalAvatar}
@@ -331,9 +354,11 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
                       {(selectedDebt.from_user_data?.display_name || '?').charAt(0).toUpperCase()}
                     </Text>
                   </LinearGradient>
-                  <Text style={styles.modalArrow}>{'\u2192'}</Text>
+                  <View style={styles.modalArrow}>
+                    <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
+                  </View>
                   <LinearGradient
-                    colors={Gradients.success}
+                    colors={colors.successGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.modalAvatar}
@@ -345,7 +370,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
                   <View style={styles.modalDirectionNames}>
                     <Text style={styles.modalSubtitle}>
                       {getUserName(selectedDebt.from_user, selectedDebt.from_user_data)}
-                      {' \u2192 '}
+                      {I18nManager.isRTL ? ' \u2190 ' : ' \u2192 '}
                       {getUserName(selectedDebt.to_user, selectedDebt.to_user_data)}
                     </Text>
                   </View>
@@ -353,19 +378,17 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
               )}
 
               {/* Amount */}
-              <View style={styles.modalField}>
-                <Text style={styles.modalLabel}>{t('settlements.amount')}</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={settlementAmount}
-                  onChangeText={setSettlementAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                  placeholderTextColor={Colors.textTertiary}
-                />
-              </View>
+              <ThemedInput
+                label={t('settlements.amount')}
+                value={settlementAmount}
+                onChangeText={setSettlementAmount}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                containerStyle={styles.modalField}
+                style={styles.amountInputStyle}
+              />
 
-              {/* Payment Method */}
+              {/* Payment Method pills */}
               <View style={styles.modalField}>
                 <Text style={styles.modalLabel}>{t('settlements.method')}</Text>
                 <ScrollView
@@ -374,51 +397,56 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
                   contentContainerStyle={styles.methodRow}
                 >
                   {PAYMENT_METHODS.map((m) => (
-                    <TouchableOpacity
+                    <BouncyPressable
                       key={m.key}
-                      style={[
-                        styles.methodChip,
-                        paymentMethod === m.key && styles.methodChipActive,
-                      ]}
-                      activeOpacity={0.7}
-                      onPress={() => setPaymentMethod(m.key)}
+                      onPress={() => {
+                        setPaymentMethod(m.key);
+                      }}
+                      scaleDown={0.93}
                     >
-                      <Text
+                      <View
                         style={[
-                          styles.methodChipText,
-                          paymentMethod === m.key && styles.methodChipTextActive,
+                          styles.methodChip,
+                          paymentMethod === m.key && styles.methodChipActive,
                         ]}
                       >
-                        {t(m.labelKey)}
-                      </Text>
-                    </TouchableOpacity>
+                        <Ionicons
+                          name={m.icon as any}
+                          size={14}
+                          color={paymentMethod === m.key ? '#FFFFFF' : colors.textTertiary}
+                          style={{ marginRight: 6 }}
+                        />
+                        <Text
+                          style={[
+                            styles.methodChipText,
+                            paymentMethod === m.key && styles.methodChipTextActive,
+                          ]}
+                        >
+                          {t(m.labelKey)}
+                        </Text>
+                      </View>
+                    </BouncyPressable>
                   ))}
                 </ScrollView>
               </View>
 
               {/* Confirm Button */}
-              <TouchableOpacity
-                style={styles.confirmButton}
-                activeOpacity={0.8}
+              <FunButton
+                title={t('settlements.confirm')}
                 onPress={handleSettle}
-                disabled={settling}
-              >
-                {settling ? (
-                  <ActivityIndicator color={Colors.textOnPrimary} size="small" />
-                ) : (
-                  <Text style={styles.confirmButtonText}>
-                    {t('settlements.confirm')}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                loading={settling}
+                icon={<Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />}
+                style={{ marginTop: Spacing.sm }}
+              />
 
-              <TouchableOpacity
-                style={styles.cancelButton}
-                activeOpacity={0.7}
+              <BouncyPressable
                 onPress={() => setModalVisible(false)}
+                scaleDown={0.97}
               >
-                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
+                <View style={styles.cancelButton}>
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+                </View>
+              </BouncyPressable>
             </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
@@ -427,252 +455,251 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bg,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Gradient header
-  headerBar: {
-    paddingHorizontal: Spacing.xxl,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-  },
-  headerTitle: {
-    ...Typography.screenTitle,
-    color: Colors.textOnDark,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: Colors.textOnDark,
-    opacity: 0.7,
-    marginTop: Spacing.xs,
-    fontWeight: '500',
-  },
-  // List
-  list: {
-    padding: Spacing.xl,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xxxl,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: Spacing.lg,
-  },
-  emptyTitle: {
-    ...Typography.sectionTitle,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
-    ...Typography.body,
-    textAlign: 'center',
-  },
-  // Debt row card
-  debtRow: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    ...Shadows.md,
-  },
-  debtRowLeft: {
-    flex: 1,
-    marginRight: Spacing.md,
-  },
-  avatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textOnPrimary,
-  },
-  arrowContainer: {
-    width: 24,
-    alignItems: 'center',
-  },
-  arrowText: {
-    fontSize: 18,
-    color: Colors.textTertiary,
-    fontWeight: '600',
-  },
-  debtRowText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  debtRowName: {
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  debtRowAmount: {
-    ...Typography.amount,
-    color: Colors.danger,
-  },
-  // Settle button
-  settleButton: {
-    borderRadius: Radius.md,
-    overflow: 'hidden',
-    shadowColor: Colors.success,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  settleButtonGradient: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.md,
-  },
-  settleButtonText: {
-    color: Colors.textOnPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Colors.overlay,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.bgCard,
-    borderTopLeftRadius: Radius.xxl,
-    borderTopRightRadius: Radius.xxl,
-    padding: Spacing.xxl,
-    paddingBottom: 40,
-    ...Shadows.lg,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.border,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: Spacing.xl,
-  },
-  modalTitle: {
-    ...Typography.sectionTitle,
-    marginBottom: Spacing.md,
-  },
-  modalDirectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.xxl,
-    gap: Spacing.sm,
-  },
-  modalAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalAvatarText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textOnPrimary,
-  },
-  modalArrow: {
-    fontSize: 16,
-    color: Colors.textTertiary,
-    fontWeight: '600',
-  },
-  modalDirectionNames: {
-    flex: 1,
-    marginLeft: Spacing.sm,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  modalField: {
-    marginBottom: Spacing.xl,
-  },
-  modalLabel: {
-    ...Typography.label,
-    marginBottom: Spacing.sm,
-  },
-  modalInput: {
-    backgroundColor: '#F8F7F5',
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 14,
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.3,
-  },
-  methodRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  methodChip: {
-    backgroundColor: Colors.borderLight,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 10,
-  },
-  methodChipActive: {
-    backgroundColor: Colors.primary,
-  },
-  methodChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textTertiary,
-  },
-  methodChipTextActive: {
-    color: Colors.textOnPrimary,
-  },
-  confirmButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-    ...Shadows.glow,
-  },
-  confirmButtonText: {
-    color: Colors.textOnPrimary,
-    ...Typography.button,
-  },
-  cancelButton: {
-    alignItems: 'center',
-    paddingVertical: 14,
-    marginTop: Spacing.xs,
-  },
-  cancelButtonText: {
-    color: Colors.textSecondary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});
+const createStyles = (c: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    // Gradient header
+    headerBar: {
+      paddingHorizontal: Spacing.xxl,
+      paddingTop: Spacing.xl,
+      paddingBottom: Spacing.xxl,
+    },
+    headerTitle: {
+      fontFamily: FontFamily.display,
+      fontSize: 28,
+      letterSpacing: -0.6,
+      color: c.text,
+    },
+    headerSubtitle: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 14,
+      color: c.textSecondary,
+      opacity: 0.7,
+      marginTop: Spacing.xs,
+    },
+    // List
+    list: {
+      padding: Spacing.xl,
+    },
+    emptyList: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      paddingHorizontal: Spacing.xxxl,
+    },
+    emptyIconCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.lg,
+      shadowColor: c.success,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.3,
+      shadowRadius: 14,
+      elevation: 8,
+    },
+    emptyTitle: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 18,
+      letterSpacing: -0.3,
+      color: c.text,
+      marginBottom: Spacing.sm,
+    },
+    emptySubtitle: {
+      fontFamily: FontFamily.body,
+      fontSize: 15,
+      color: c.textSecondary,
+      lineHeight: 22,
+      textAlign: 'center',
+    },
+    // Debt row card
+    debtRow: {
+      marginBottom: Spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    debtRowLeft: {
+      flex: 1,
+      marginRight: Spacing.md,
+    },
+    avatarRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+      gap: Spacing.sm,
+    },
+    avatar: {
+      width: 38,
+      height: 38,
+      borderRadius: Radius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarText: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 15,
+      color: c.textOnPrimary,
+    },
+    arrowCircle: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    debtRowText: {
+      fontFamily: FontFamily.body,
+      fontSize: 14,
+      color: c.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    debtRowName: {
+      fontFamily: FontFamily.bodyBold,
+      color: c.text,
+    },
+    debtRowAmount: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 24,
+      letterSpacing: -0.5,
+      color: c.danger,
+    },
+    // Settle button
+    settleButtonWrap: {
+      // Wrapper for FunButton
+    },
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: c.overlay,
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: c.bgCard,
+      borderTopLeftRadius: Radius.xxl,
+      borderTopRightRadius: Radius.xxl,
+      padding: Spacing.xxl,
+      paddingBottom: 40,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: c.border,
+      shadowColor: c.shadowColor,
+      shadowOffset: { width: 0, height: -12 },
+      shadowOpacity: 0.14,
+      shadowRadius: 28,
+      elevation: 10,
+    },
+    modalHandle: {
+      width: 40,
+      height: 4,
+      backgroundColor: c.border,
+      borderRadius: 2,
+      alignSelf: 'center',
+      marginBottom: Spacing.xl,
+    },
+    modalTitle: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 20,
+      letterSpacing: -0.3,
+      color: c.text,
+      marginBottom: Spacing.md,
+    },
+    modalDirectionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: Spacing.xxl,
+      gap: Spacing.sm,
+    },
+    modalAvatar: {
+      width: 34,
+      height: 34,
+      borderRadius: Radius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalAvatarText: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 13,
+      color: c.textOnPrimary,
+    },
+    modalArrow: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalDirectionNames: {
+      flex: 1,
+      marginLeft: Spacing.sm,
+    },
+    modalSubtitle: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 14,
+      color: c.textSecondary,
+    },
+    modalField: {
+      marginBottom: Spacing.xl,
+    },
+    modalLabel: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 11,
+      color: isDark ? c.kicker : c.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 1.2,
+      marginBottom: Spacing.sm,
+    },
+    amountInputStyle: {
+      fontSize: 20,
+      fontFamily: FontFamily.bodyBold,
+      letterSpacing: -0.3,
+    },
+    methodRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    methodChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.borderLight,
+      borderRadius: Radius.full,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 10,
+    },
+    methodChipActive: {
+      backgroundColor: c.primary,
+    },
+    methodChipText: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 14,
+      color: c.textTertiary,
+    },
+    methodChipTextActive: {
+      color: c.textOnPrimary,
+    },
+    cancelButton: {
+      alignItems: 'center',
+      paddingVertical: 14,
+      marginTop: Spacing.xs,
+    },
+    cancelButtonText: {
+      fontFamily: FontFamily.bodySemibold,
+      color: c.textSecondary,
+      fontSize: 15,
+    },
+  });

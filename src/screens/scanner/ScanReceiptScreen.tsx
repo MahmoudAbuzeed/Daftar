@@ -3,9 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Image,
   Animated,
   Easing,
@@ -17,11 +15,15 @@ import { useTranslation } from 'react-i18next';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { ParsedReceipt } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import FunButton from '../../components/FunButton';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScanReceipt'>;
 const { width: SW } = Dimensions.get('window');
@@ -30,28 +32,33 @@ export default function ScanReceiptScreen({ navigation, route }: Props) {
   const { t } = useTranslation();
   const { groupId } = route.params;
   const { colors, isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const entrance = useScreenEntrance();
+  const alert = useAlert();
 
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const entrance = useRef(new Animated.Value(0)).current;
   const iconPulse = useRef(new Animated.Value(1)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(entrance, {
-      toValue: 1,
-      duration: 600,
-      easing: Easing.out(Easing.back(1.2)),
-      useNativeDriver: true,
-    }).start();
-
     Animated.loop(
       Animated.sequence([
-        Animated.timing(iconPulse, { toValue: 1.08, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(iconPulse, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
+        Animated.timing(iconPulse, {
+          toValue: 1.08,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(iconPulse, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
     ).start();
   }, []);
 
@@ -59,9 +66,19 @@ export default function ScanReceiptScreen({ navigation, route }: Props) {
     if (loading) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(scanLineAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(scanLineAnim, { toValue: 0, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ]),
+          Animated.timing(scanLineAnim, {
+            toValue: 1,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(scanLineAnim, {
+            toValue: 0,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ])
       ).start();
     }
   }, [loading]);
@@ -74,13 +91,24 @@ export default function ScanReceiptScreen({ navigation, route }: Props) {
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissionResult.granted) {
-      Alert.alert(t('scanner.permissionRequired'), t('scanner.permissionMessage'));
+      alert.warning(
+        t('scanner.permissionRequired'),
+        t('scanner.permissionMessage')
+      );
       return;
     }
 
     const result = useCamera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, base64: true })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, base64: true });
+      ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 0.8,
+          base64: true,
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.8,
+          base64: true,
+        });
 
     if (!result.canceled && result.assets[0]) {
       setImage(result.assets[0].uri);
@@ -88,13 +116,18 @@ export default function ScanReceiptScreen({ navigation, route }: Props) {
     }
   };
 
-  const parseReceiptWithOpenAI = async (base64: string): Promise<ParsedReceipt> => {
+  const parseReceiptWithOpenAI = async (
+    base64: string
+  ): Promise<ParsedReceipt> => {
     const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
     if (!apiKey) throw new Error(t('scanner.apiKeyMissing'));
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
         model: 'gpt-4.1',
         messages: [
@@ -107,15 +140,15 @@ CRITICAL RULES:
 1. Read the receipt character by character. Do NOT guess or hallucinate items or prices.
 2. Item names MUST be exactly as printed on the receipt (Arabic or English). Keep the original language.
 3. quantity defaults to 1 if not explicitly shown. unit_price = total / quantity.
-4. If an item shows "2x", "x2", "×2", "٢×", or a qty column, set quantity accordingly.
-5. Currency is EGP unless you see "$", "USD", "€", or "EUR" printed on the receipt.
-6. Tax lines: look for "ضريبة", "Tax", "VAT", "ض.ق.م", "ضريبه", "14%" → put in "tax" field.
-7. Service charge lines: look for "خدمة", "Service", "Svc", "سرفيس", "سيرفيس", "12%" → put in "service_charge" field.
-8. Discount lines: look for "خصم", "Discount", "Disc" → subtract from subtotal, do NOT include as item.
-9. Do NOT include tax, service charge, subtotal, total, or discount as items — they go in their own fields.
+4. If an item shows "2x", "x2", "\u00d72", "\u0662\u00d7", or a qty column, set quantity accordingly.
+5. Currency is EGP unless you see "$", "USD", "\u20ac", or "EUR" printed on the receipt.
+6. Tax lines: look for "\u0636\u0631\u064a\u0628\u0629", "Tax", "VAT", "\u0636.\u0642.\u0645", "\u0636\u0631\u064a\u0628\u0647", "14%" \u2192 put in "tax" field.
+7. Service charge lines: look for "\u062e\u062f\u0645\u0629", "Service", "Svc", "\u0633\u0631\u0641\u064a\u0633", "\u0633\u064a\u0631\u0641\u064a\u0633", "12%" \u2192 put in "service_charge" field.
+8. Discount lines: look for "\u062e\u0635\u0645", "Discount", "Disc" \u2192 subtract from subtotal, do NOT include as item.
+9. Do NOT include tax, service charge, subtotal, total, or discount as items \u2014 they go in their own fields.
 10. "total" = subtotal + tax + service_charge - discount. Cross-check with the receipt total.
 11. If the receipt has Arabic text, read right-to-left. Numbers are always left-to-right.
-12. If prices use Arabic numerals (٠١٢٣٤٥٦٧٨٩), convert them to standard digits.
+12. If prices use Arabic numerals (\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669), convert them to standard digits.
 13. Watch out for dot vs comma as decimal separator. "12,50" means 12.50.
 14. If receipt is blurry, extract only what you can read confidently. Never invent data.
 
@@ -133,8 +166,17 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
           {
             role: 'user',
             content: [
-              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}`, detail: 'high' } },
-              { type: 'text', text: 'Parse this receipt image. Read every line carefully and extract all food/drink items with exact names and prices as printed. Be extremely precise with numbers.' },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64}`,
+                  detail: 'high',
+                },
+              },
+              {
+                type: 'text',
+                text: 'Parse this receipt image. Read every line carefully and extract all food/drink items with exact names and prices as printed. Be extremely precise with numbers.',
+              },
             ],
           },
         ],
@@ -146,7 +188,9 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `OpenAI API error (${response.status})`);
+      throw new Error(
+        err.error?.message || `OpenAI API error (${response.status})`
+      );
     }
 
     const data = await response.json();
@@ -156,8 +200,12 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
     if (!parsed.tax) parsed.tax = 0;
     if (!parsed.service_charge) parsed.service_charge = 0;
     if (!parsed.currency) parsed.currency = 'EGP';
-    parsed.subtotal = parsed.items.reduce((s: number, i: any) => s + (i.total || i.unit_price * i.quantity), 0);
-    if (!parsed.total) parsed.total = parsed.subtotal + parsed.tax + parsed.service_charge;
+    parsed.subtotal = parsed.items.reduce(
+      (s: number, i: any) => s + (i.total || i.unit_price * i.quantity),
+      0
+    );
+    if (!parsed.total)
+      parsed.total = parsed.subtotal + parsed.tax + parsed.service_charge;
 
     return parsed as ParsedReceipt;
   };
@@ -170,15 +218,19 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
         .from('receipts')
         .upload(fileName, decode(base64), { contentType: 'image/jpeg' })
         .then(({ error: uploadError }) => {
-          if (uploadError) console.warn('Upload error (non-blocking):', uploadError.message);
+          if (uploadError)
+            console.warn('Upload error (non-blocking):', uploadError.message);
         });
 
       let receiptData: ParsedReceipt;
 
       try {
-        const { data, error } = await supabase.functions.invoke('scan-receipt', {
-          body: { image: base64 },
-        });
+        const { data, error } = await supabase.functions.invoke(
+          'scan-receipt',
+          {
+            body: { image: base64 },
+          }
+        );
         if (error) throw error;
         receiptData = data;
       } catch {
@@ -186,7 +238,7 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
       }
 
       if (!receiptData.items || receiptData.items.length === 0) {
-        Alert.alert(t('scanner.no_items'));
+        alert.warning(t('scanner.no_items'));
         setImage(null);
         return;
       }
@@ -198,28 +250,37 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
       });
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), error.message);
+      alert.error(t('common.error'), error.message);
       setImage(null);
     } finally {
       setLoading(false);
     }
   };
 
+  /* ---------- Loading overlay ---------- */
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         {image && <Image source={{ uri: image }} style={styles.previewImage} />}
         <View style={styles.loadingOverlay}>
-          <Animated.View style={{
-            transform: [{
-              translateY: scanLineAnim.interpolate({ inputRange: [0, 1], outputRange: [-80, 80] }),
-            }],
-          }}>
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  translateY: scanLineAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-80, 80],
+                  }),
+                },
+              ],
+            }}
+          >
             <LinearGradient
               colors={['transparent', `${colors.primaryLight}88`, 'transparent']}
               style={styles.scanLine}
             />
           </Animated.View>
+
           <View style={styles.loadingBadge}>
             <ActivityIndicator size="small" color={colors.primaryLight} />
             <Text style={styles.loadingText}>{t('scanner.scanning')}</Text>
@@ -229,19 +290,29 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
     );
   }
 
+  /* ---------- Main screen ---------- */
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
       {isDark && (
-        <LinearGradient colors={colors.headerGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} />
+        <LinearGradient
+          colors={colors.headerGradient}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.3, y: 1 }}
+        />
       )}
 
-      <Animated.View style={[styles.content, {
-        opacity: entrance,
-        transform: [{ scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }],
-      }]}>
-        <Animated.View style={[styles.iconWrapper, { transform: [{ scale: iconPulse }] }]}>
+      <Animated.View style={[styles.content, entrance.style]}>
+        {/* Pulsing icon */}
+        <Animated.View
+          style={[styles.iconWrapper, { transform: [{ scale: iconPulse }] }]}
+        >
           <LinearGradient
-            colors={isDark ? ['rgba(27,122,108,0.2)', 'rgba(20,184,166,0.08)'] : ['rgba(13,148,136,0.12)', 'rgba(13,148,136,0.04)']}
+            colors={
+              isDark
+                ? ['rgba(27,122,108,0.2)', 'rgba(20,184,166,0.08)']
+                : ['rgba(13,148,136,0.12)', 'rgba(13,148,136,0.04)']
+            }
             style={styles.iconCircleOuter}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -259,33 +330,30 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
         <Text style={styles.title}>{t('scanner.title')}</Text>
         <Text style={styles.subtitle}>{t('scanner.edit_items')}</Text>
 
+        {/* Buttons */}
         <View style={styles.buttonsContainer}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            activeOpacity={0.85}
+          <FunButton
+            title={t('scanner.take_photo')}
             onPress={() => pickImage(true)}
-          >
-            <LinearGradient
-              colors={colors.primaryGradient}
-              style={styles.btnGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0.5 }}
-            >
-              <Ionicons name="camera-outline" size={22} color="#FFFFFF" style={{ marginRight: 10 }} />
-              <Text style={styles.primaryButtonText}>{t('scanner.take_photo')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            activeOpacity={0.85}
+            icon={
+              <Ionicons name="camera-outline" size={22} color="#FFFFFF" />
+            }
+          />
+          <FunButton
+            title={t('scanner.choose_photo')}
             onPress={() => pickImage(false)}
-          >
-            <Ionicons name="images-outline" size={22} color={isDark ? colors.primaryLight : colors.primary} style={{ marginRight: 10 }} />
-            <Text style={styles.secondaryButtonText}>{t('scanner.choose_photo')}</Text>
-          </TouchableOpacity>
+            variant="secondary"
+            icon={
+              <Ionicons
+                name="images-outline"
+                size={22}
+                color={isDark ? colors.primaryLight : colors.primary}
+              />
+            }
+          />
         </View>
 
+        {/* Hint */}
         <View style={styles.hintRow}>
           <Ionicons name="bulb-outline" size={14} color={colors.accent} />
           <Text style={styles.hintText}>{t('scanner.tip')}</Text>
@@ -296,7 +364,8 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
 }
 
 function decode(base64: string): Uint8Array {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const bufferLength = base64.length * 0.75;
   const bytes = new Uint8Array(bufferLength);
   let p = 0;
@@ -322,6 +391,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       paddingHorizontal: Spacing.xxxl,
     },
 
+    /* Pulsing icon */
     iconWrapper: {
       width: 140,
       height: 140,
@@ -366,41 +436,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
 
     buttonsContainer: { width: '100%', gap: Spacing.md },
-    primaryButton: { borderRadius: Radius.lg, overflow: 'hidden' },
-    btnGradient: {
-      flexDirection: 'row',
-      paddingVertical: 17,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: Radius.lg,
-      shadowColor: c.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.4,
-      shadowRadius: 16,
-      elevation: 10,
-    },
-    primaryButtonText: {
-      color: '#FFFFFF',
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 17,
-      letterSpacing: 0.3,
-    },
-    secondaryButton: {
-      flexDirection: 'row',
-      backgroundColor: isDark ? 'rgba(27,122,108,0.12)' : '#E6FAF7',
-      borderRadius: Radius.lg,
-      paddingVertical: 17,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: isDark ? 'rgba(27,122,108,0.25)' : 'rgba(13,148,136,0.2)',
-    },
-    secondaryButtonText: {
-      color: isDark ? c.primaryLight : c.primary,
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 17,
-      letterSpacing: 0.3,
-    },
 
     hintRow: {
       flexDirection: 'row',
@@ -416,7 +451,11 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontStyle: 'italic',
     },
 
-    loadingContainer: { flex: 1, backgroundColor: isDark ? '#040D0B' : '#0A1210' },
+    /* Loading overlay */
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: isDark ? '#040D0B' : '#0A1210',
+    },
     previewImage: { flex: 1, resizeMode: 'contain' },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,

@@ -1,85 +1,162 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
-  TouchableOpacity,
   StatusBar,
-  Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Dimensions,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth-context';
 import { AuthStackParamList } from '../../navigation/AppNavigator';
-import { Colors, Gradients, Spacing, Radius, Shadows, FontFamily } from '../../theme';
+import { useAppTheme } from '../../lib/theme-context';
+import { Spacing, FontFamily } from '../../theme';
+import ThemedInput from '../../components/ThemedInput';
+import ThemedCard from '../../components/ThemedCard';
+import FunButton from '../../components/FunButton';
+import BouncyPressable from '../../components/BouncyPressable';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
-const { width: SW } = Dimensions.get('window');
+
+const FIELD_ICONS: Record<string, string> = {
+  displayName: 'person-outline',
+  email: 'mail-outline',
+  password: 'lock-closed-outline',
+  confirmPassword: 'shield-checkmark-outline',
+};
 
 export default function SignUpScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { signUp } = useAuth();
+  const { colors, isDark } = useAppTheme();
+  const alert = useAlert();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const entrance = useScreenEntrance(100);
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // ── Party popper bounce on mount ──
+  const partyScale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(partyScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      damping: 6,
+      stiffness: 180,
+      mass: 0.8,
+      delay: 300,
+    }).start();
+  }, []);
+
+  const partyStyle = {
+    transform: [
+      {
+        scale: partyScale.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 1],
+        }),
+      },
+    ],
+  };
 
   const handleSignUp = async () => {
     const trimmedName = displayName.trim();
     const trimmedEmail = email.trim();
     if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
-      Alert.alert(t('auth.error'), t('auth.fillAllFields'));
+      alert.error(t('auth.error'), t('auth.fillAllFields'));
       return;
     }
     if (password.length < 6) {
-      Alert.alert(t('auth.error'), t('auth.passwordTooShort'));
+      alert.error(t('auth.error'), t('auth.passwordTooShort'));
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert(t('auth.error'), t('auth.passwordsDoNotMatch'));
+      alert.error(t('auth.error'), t('auth.passwordsDoNotMatch'));
       return;
     }
     setLoading(true);
     try {
       await signUp(trimmedEmail, password, trimmedName);
     } catch (error: any) {
-      Alert.alert(t('auth.error'), error.message ?? t('auth.signUpFailed'));
+      alert.error(t('auth.error'), error.message ?? t('auth.signUpFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const fields = [
-    { key: 'displayName', label: t('auth.displayName'), placeholder: t('auth.displayNamePlaceholder'), value: displayName, onChange: setDisplayName, caps: 'words' as const, kb: 'default' as const },
-    { key: 'email', label: t('auth.email'), placeholder: t('auth.emailPlaceholder'), value: email, onChange: setEmail, caps: 'none' as const, kb: 'email-address' as const },
-    { key: 'password', label: t('auth.password'), placeholder: t('auth.passwordPlaceholder'), value: password, onChange: setPassword, secure: true },
-    { key: 'confirmPassword', label: t('auth.confirmPassword'), placeholder: t('auth.confirmPasswordPlaceholder'), value: confirmPassword, onChange: setConfirmPassword, secure: true },
+    {
+      key: 'displayName',
+      label: t('auth.displayName'),
+      placeholder: t('auth.displayNamePlaceholder'),
+      value: displayName,
+      onChange: setDisplayName,
+      caps: 'words' as const,
+      kb: 'default' as const,
+      secure: false,
+    },
+    {
+      key: 'email',
+      label: t('auth.email'),
+      placeholder: t('auth.emailPlaceholder'),
+      value: email,
+      onChange: setEmail,
+      caps: 'none' as const,
+      kb: 'email-address' as const,
+      secure: false,
+    },
+    {
+      key: 'password',
+      label: t('auth.password'),
+      placeholder: t('auth.passwordPlaceholder'),
+      value: password,
+      onChange: setPassword,
+      caps: 'none' as const,
+      kb: 'default' as const,
+      secure: true,
+    },
+    {
+      key: 'confirmPassword',
+      label: t('auth.confirmPassword'),
+      placeholder: t('auth.confirmPasswordPlaceholder'),
+      value: confirmPassword,
+      onChange: setConfirmPassword,
+      caps: 'none' as const,
+      kb: 'default' as const,
+      secure: true,
+    },
   ];
 
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={['#040D0B', '#0B1F1A', '#0A1916']}
+        colors={colors.headerGradient}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       />
-      <View style={styles.orbTeal} />
-      <View style={styles.orbBrass} />
 
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="light-content" backgroundColor="#040D0B" />
+        <StatusBar
+          barStyle={colors.statusBarStyle}
+          backgroundColor={colors.bg}
+        />
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -89,75 +166,94 @@ export default function SignUpScreen({ navigation }: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <TouchableOpacity
-              style={styles.backBtn}
+            {/* Back button */}
+            <BouncyPressable
               onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
+              style={styles.backBtn}
             >
-              <Text style={styles.backArrow}>{'\u2190'}</Text>
-            </TouchableOpacity>
+              <View style={styles.backBtnInner}>
+                <Ionicons
+                  name="arrow-back"
+                  size={20}
+                  color={colors.accentLight}
+                />
+              </View>
+            </BouncyPressable>
 
-            <View style={styles.headerBlock}>
-              <Text style={styles.headerKicker}>{t('auth.joinDaftar')}</Text>
+            {/* Header with bouncy party emoji */}
+            <Animated.View style={[styles.headerBlock, entrance.style]}>
+              <View style={styles.headerRow}>
+                <Text style={styles.headerKicker}>
+                  {t('auth.joinDaftar')}
+                </Text>
+                <Animated.Text style={[styles.partyEmoji, partyStyle]}>
+                  {'\uD83C\uDF89'}
+                </Animated.Text>
+              </View>
               <Text style={styles.headerTitle}>{t('auth.signUp')}</Text>
-              <Text style={styles.headerSub}>{t('auth.signUpSubtitle')}</Text>
-            </View>
+              <Text style={styles.headerSub}>
+                {t('auth.signUpSubtitle')}
+              </Text>
+            </Animated.View>
 
-            <View style={styles.formCard}>
-              <LinearGradient
-                colors={['rgba(255,252,247,0.06)', 'rgba(255,252,247,0.02)']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-              <View style={styles.formAccentBar} />
+            {/* Form card with staggered fields */}
+            <Animated.View style={entrance.style}>
+              <ThemedCard
+                accent
+                padded
+                style={styles.formCard}
+              >
+                <View style={styles.formInner}>
+                  {fields.map((f, i) => (
+                    <AnimatedListItem key={f.key} index={i} delay={80}>
+                      <ThemedInput
+                        label={f.label}
+                        icon={FIELD_ICONS[f.key]}
+                        placeholder={f.placeholder}
+                        value={f.value}
+                        onChangeText={f.onChange}
+                        keyboardType={f.kb}
+                        autoCapitalize={f.caps}
+                        autoCorrect={false}
+                        secureTextEntry={f.secure}
+                        editable={!loading}
+                      />
+                    </AnimatedListItem>
+                  ))}
 
-              {fields.map((f) => (
-                <View key={f.key} style={styles.inputGroup}>
-                  <Text style={styles.label}>{f.label}</Text>
-                  <TextInput
-                    style={[styles.input, focusedField === f.key && styles.inputFocused]}
-                    value={f.value}
-                    onChangeText={f.onChange}
-                    placeholder={f.placeholder}
-                    placeholderTextColor="rgba(244,240,232,0.25)"
-                    keyboardType={f.kb || 'default'}
-                    autoCapitalize={f.caps || 'none'}
-                    autoCorrect={false}
-                    secureTextEntry={f.secure}
-                    editable={!loading}
-                    onFocus={() => setFocusedField(f.key)}
-                    onBlur={() => setFocusedField(null)}
-                  />
+                  <AnimatedListItem index={fields.length} delay={80}>
+                    <FunButton
+                      title={t('auth.signUp')}
+                      onPress={handleSignUp}
+                      loading={loading}
+                      disabled={loading}
+                      variant="primary"
+                      icon={
+                        !loading ? (
+                          <Ionicons
+                            name="rocket-outline"
+                            size={20}
+                            color="#FFFFFF"
+                          />
+                        ) : undefined
+                      }
+                      style={styles.submitSpacing}
+                    />
+                  </AnimatedListItem>
                 </View>
-              ))}
+              </ThemedCard>
+            </Animated.View>
 
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={handleSignUp}
+            {/* Footer */}
+            <Animated.View style={[styles.footer, entrance.style]}>
+              <Text style={styles.footerText}>{t('auth.hasAccount')}</Text>
+              <BouncyPressable
+                onPress={() => navigation.replace('SignIn')}
                 disabled={loading}
               >
-                <LinearGradient
-                  colors={loading ? ['#0F5249', '#0F5249'] : ['#1B7A6C', '#14B8A6']}
-                  style={[styles.submitBtn, Shadows.glow]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0.5 }}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.submitText}>{t('auth.signUp')}</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>{t('auth.hasAccount')}</Text>
-              <TouchableOpacity onPress={() => navigation.replace('SignIn')} disabled={loading}>
                 <Text style={styles.footerLink}>{t('auth.signIn')}</Text>
-              </TouchableOpacity>
-            </View>
+              </BouncyPressable>
+            </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -165,146 +261,92 @@ export default function SignUpScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#040D0B' },
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1, paddingBottom: 40 },
+function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: boolean) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    safe: { flex: 1 },
+    flex: { flex: 1 },
+    scroll: { flexGrow: 1, paddingBottom: 40 },
 
-  orbTeal: {
-    position: 'absolute',
-    width: SW * 0.7,
-    height: SW * 0.7,
-    borderRadius: SW * 0.35,
-    backgroundColor: 'rgba(27,122,108,0.08)',
-    top: '20%',
-    left: -SW * 0.25,
-  },
-  orbBrass: {
-    position: 'absolute',
-    width: SW * 0.4,
-    height: SW * 0.4,
-    borderRadius: SW * 0.2,
-    backgroundColor: 'rgba(201,162,39,0.05)',
-    bottom: '15%',
-    right: -SW * 0.1,
-  },
+    backBtn: {
+      marginLeft: Spacing.xxl,
+      marginTop: Spacing.lg,
+      alignSelf: 'flex-start',
+    },
+    backBtnInner: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: isDark
+        ? 'rgba(255,255,255,0.06)'
+        : 'rgba(0,0,0,0.04)',
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(201,162,39,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: Spacing.xxl,
-    marginTop: Spacing.lg,
-  },
-  backArrow: {
-    fontFamily: FontFamily.bodySemibold,
-    fontSize: 20,
-    color: Colors.accentLight,
-  },
+    headerBlock: {
+      paddingHorizontal: Spacing.xxl,
+      paddingTop: 28,
+      paddingBottom: 24,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: Spacing.sm,
+    },
+    headerKicker: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 10,
+      letterSpacing: 4,
+      color: colors.kicker,
+      textTransform: 'uppercase',
+    },
+    partyEmoji: {
+      fontSize: 22,
+    },
+    headerTitle: {
+      fontFamily: FontFamily.display,
+      fontSize: 44,
+      letterSpacing: -2,
+      color: colors.text,
+      marginBottom: Spacing.sm,
+    },
+    headerSub: {
+      fontFamily: FontFamily.body,
+      fontSize: 15,
+      color: colors.textSecondary,
+      lineHeight: 22,
+    },
 
-  headerBlock: {
-    paddingHorizontal: Spacing.xxl,
-    paddingTop: 28,
-    paddingBottom: 24,
-  },
-  headerKicker: {
-    fontFamily: FontFamily.bodySemibold,
-    fontSize: 10,
-    letterSpacing: 4,
-    color: 'rgba(212,175,55,0.6)',
-    marginBottom: Spacing.sm,
-  },
-  headerTitle: {
-    fontFamily: FontFamily.display,
-    fontSize: 44,
-    letterSpacing: -2,
-    color: '#F4F0E8',
-    marginBottom: Spacing.sm,
-  },
-  headerSub: {
-    fontFamily: FontFamily.body,
-    fontSize: 15,
-    color: 'rgba(244,240,232,0.5)',
-    lineHeight: 22,
-  },
+    formCard: {
+      marginHorizontal: Spacing.xxl,
+    },
+    formInner: {
+      gap: 18,
+    },
+    submitSpacing: {
+      marginTop: Spacing.xs,
+    },
 
-  formCard: {
-    marginHorizontal: Spacing.xxl,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(201,162,39,0.2)',
-    padding: Spacing.xxl,
-    gap: 18,
-    overflow: 'hidden',
-  },
-  formAccentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: Colors.accent,
-    opacity: 0.7,
-  },
-
-  inputGroup: { gap: Spacing.sm },
-  label: {
-    fontFamily: FontFamily.bodySemibold,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    color: 'rgba(212,175,55,0.65)',
-    textTransform: 'uppercase',
-  },
-  input: {
-    backgroundColor: 'rgba(255,252,247,0.05)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 15,
-    fontSize: 16,
-    fontFamily: FontFamily.body,
-    color: '#F4F0E8',
-  },
-  inputFocused: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(27,122,108,0.1)',
-  },
-
-  submitBtn: {
-    borderRadius: Radius.lg,
-    paddingVertical: 17,
-    alignItems: 'center',
-    marginTop: Spacing.xs,
-  },
-  submitText: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 17,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 28,
-    gap: 6,
-  },
-  footerText: {
-    fontFamily: FontFamily.body,
-    fontSize: 15,
-    color: 'rgba(244,240,232,0.45)',
-  },
-  footerLink: {
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 15,
-    color: Colors.primaryLight,
-  },
-});
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 28,
+      gap: 6,
+    },
+    footerText: {
+      fontFamily: FontFamily.body,
+      fontSize: 15,
+      color: colors.textSecondary,
+    },
+    footerLink: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 15,
+      color: colors.primaryLight,
+    },
+  });
+}

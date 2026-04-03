@@ -1,24 +1,31 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   StatusBar,
   RefreshControl,
-  Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useAuth } from '../../lib/auth-context';
+import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
 import { DaftarEntry } from '../../types/database';
-import { Colors, Gradients, Spacing, Radius, Typography, Shadows, CommonStyles } from '../../theme';
+import { Spacing, Radius, FontFamily } from '../../theme';
+import AnimatedListItem from '../../components/AnimatedListItem';
+import FunButton from '../../components/FunButton';
+import ThemedCard from '../../components/ThemedCard';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DaftarContact'>;
 
@@ -26,6 +33,10 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
   const { contactName } = route.params;
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const entrance = useScreenEntrance();
+  const alert = useAlert();
 
   const [entries, setEntries] = useState<DaftarEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,13 +87,15 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
   const handleSettle = () => {
     if (netBalance === 0) return;
 
-    Alert.alert(
+    alert.confirm(
       t('daftar.settleTitle'),
-      t('daftar.settleConfirm', { name: contactName, amount: Math.abs(netBalance).toFixed(2) }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('daftar.settle'), onPress: performSettle },
-      ]
+      t('daftar.settleConfirm', {
+        name: contactName,
+        amount: Math.abs(netBalance).toFixed(2),
+      }),
+      performSettle,
+      t('daftar.settle'),
+      t('common.cancel'),
     );
   };
 
@@ -92,8 +105,8 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
     setSettling(true);
 
     try {
-      // Create a counter-entry to zero out the balance
-      const direction: 'i_owe' | 'they_owe' = netBalance > 0 ? 'i_owe' : 'they_owe';
+      const direction: 'i_owe' | 'they_owe' =
+        netBalance > 0 ? 'i_owe' : 'they_owe';
 
       const { error } = await supabase.from('daftar_entries').insert({
         user_id: profile.id,
@@ -109,7 +122,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
       await fetchEntries();
     } catch (err) {
       console.error('Failed to settle:', err);
-      Alert.alert(t('common.error'), t('daftar.settleFailed'));
+      alert.error(t('common.error'), t('daftar.settleFailed'));
     } finally {
       setSettling(false);
     }
@@ -128,41 +141,57 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
     });
   };
 
-  const renderEntry = ({ item }: { item: DaftarEntry }) => {
+  const renderEntry = ({ item, index }: { item: DaftarEntry; index: number }) => {
     const isTheyOwe = item.direction === 'they_owe';
 
     return (
-      <View style={[styles.entryCard, item.is_settled && styles.entryCardSettled]}>
-        <View style={styles.entryRow}>
-          {/* Gradient circle badge */}
-          <LinearGradient
-            colors={isTheyOwe ? [...Gradients.success] : [...Gradients.danger]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.directionBadge}
-          >
-            <Text style={styles.directionIcon}>
-              {isTheyOwe ? '\u2193' : '\u2191'}
-            </Text>
-          </LinearGradient>
+      <AnimatedListItem index={index}>
+        <ThemedCard
+          style={[styles.entryCard, item.is_settled && styles.entryCardSettled]}
+        >
+          <View style={styles.entryRow}>
+            {/* Gradient direction badge */}
+            <LinearGradient
+              colors={
+                isTheyOwe ? colors.successGradient : colors.dangerGradient
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.directionBadge}
+            >
+              <Ionicons
+                name={isTheyOwe ? 'arrow-down' : 'arrow-up'}
+                size={18}
+                color="#FFFFFF"
+              />
+            </LinearGradient>
 
-          <View style={styles.entryInfo}>
-            <Text style={styles.entryDirection}>
-              {isTheyOwe ? t('daftar.theyOweYou') : t('daftar.youOweThem')}
-            </Text>
-            {item.note ? (
-              <Text style={styles.entryNote} numberOfLines={1}>
-                {item.note}
+            <View style={styles.entryInfo}>
+              <Text style={styles.entryDirection}>
+                {isTheyOwe ? t('daftar.theyOweYou') : t('daftar.youOweThem')}
               </Text>
-            ) : null}
-            <Text style={styles.entryDate}>{formatDate(item.created_at)}</Text>
-          </View>
+              {item.note ? (
+                <Text style={styles.entryNote} numberOfLines={1}>
+                  {item.note}
+                </Text>
+              ) : null}
+              <Text style={styles.entryDate}>
+                {formatDate(item.created_at)}
+              </Text>
+            </View>
 
-          <Text style={[styles.entryAmount, isTheyOwe ? styles.greenText : styles.redText]}>
-            {isTheyOwe ? '+' : '-'}{formatAmount(item.amount)}
-          </Text>
-        </View>
-      </View>
+            <Text
+              style={[
+                styles.entryAmount,
+                { color: isTheyOwe ? colors.positive : colors.negative },
+              ]}
+            >
+              {isTheyOwe ? '+' : '-'}
+              {formatAmount(item.amount)}
+            </Text>
+          </View>
+        </ThemedCard>
+      </AnimatedListItem>
     );
   };
 
@@ -170,7 +199,18 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
     if (loading) return null;
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyIcon}>📝</Text>
+        <View style={styles.emptyIconWrap}>
+          <LinearGradient
+            colors={[`${colors.primary}22`, `${colors.primary}08`]}
+            style={styles.emptyIconCircle}
+          >
+            <Ionicons
+              name="document-text-outline"
+              size={36}
+              color={colors.primary}
+            />
+          </LinearGradient>
+        </View>
         <Text style={styles.emptyTitle}>{t('daftar.noEntries')}</Text>
       </View>
     );
@@ -179,8 +219,9 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar barStyle={colors.statusBarStyle} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -190,231 +231,235 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.bgDark} />
+      <StatusBar barStyle={colors.statusBarStyle} />
 
-      {/* Gradient Hero Balance Card */}
-      <LinearGradient
-        colors={[...Gradients.hero]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.balanceCard}
-      >
-        <Text style={styles.balanceLabel}>{t('daftar.netBalance')}</Text>
-        <Text style={[
-          styles.balanceAmount,
-          netBalance === 0
-            ? styles.balanceAmountNeutral
-            : isPositive
-            ? styles.balanceAmountPositive
-            : styles.balanceAmountNegative,
-        ]}>
-          {formatAmount(Math.abs(netBalance))}
-        </Text>
-        <Text style={styles.balanceDirection}>
-          {netBalance === 0
-            ? t('daftar.settledUp')
-            : isPositive
-            ? t('daftar.owesYou')
-            : t('daftar.youOwe')}
-        </Text>
-      </LinearGradient>
-
-      {/* Action Buttons */}
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={[styles.settleButton, netBalance === 0 && styles.settleButtonDisabled]}
-          activeOpacity={0.7}
-          onPress={handleSettle}
-          disabled={netBalance === 0 || settling}
+      <Animated.View style={entrance.style}>
+        {/* Gradient Hero Balance Card */}
+        <LinearGradient
+          colors={colors.headerGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.balanceCard}
         >
-          {settling ? (
-            <ActivityIndicator color={Colors.textOnPrimary} size="small" />
-          ) : (
-            <Text style={styles.settleButtonText}>{t('daftar.settle')}</Text>
-          )}
-        </TouchableOpacity>
+          <Text style={styles.balanceLabel}>{t('daftar.netBalance')}</Text>
+          <Text
+            style={[
+              styles.balanceAmount,
+              netBalance === 0
+                ? styles.balanceAmountNeutral
+                : isPositive
+                ? styles.balanceAmountPositive
+                : styles.balanceAmountNegative,
+            ]}
+          >
+            {formatAmount(Math.abs(netBalance))}
+          </Text>
+          <Text style={styles.balanceDirection}>
+            {netBalance === 0
+              ? t('daftar.settledUp')
+              : isPositive
+              ? t('daftar.owesYou')
+              : t('daftar.youOwe')}
+          </Text>
+        </LinearGradient>
 
-        <TouchableOpacity
-          style={styles.addEntryButton}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('AddDaftarEntry')}
-        >
-          <Text style={styles.addEntryButtonText}>{t('daftar.addEntry')}</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Action Buttons */}
+        <View style={styles.actionRow}>
+          <FunButton
+            title={t('daftar.settle')}
+            onPress={handleSettle}
+            loading={settling}
+            disabled={netBalance === 0}
+            style={styles.actionBtn}
+            icon={
+              <Ionicons
+                name="checkmark-done-outline"
+                size={18}
+                color="#FFFFFF"
+              />
+            }
+          />
+          <FunButton
+            title={t('daftar.addEntry')}
+            onPress={() => navigation.navigate('AddDaftarEntry')}
+            variant="secondary"
+            style={styles.actionBtn}
+            icon={
+              <Ionicons
+                name="add-circle-outline"
+                size={18}
+                color={isDark ? colors.primaryLight : colors.primary}
+              />
+            }
+          />
+        </View>
+      </Animated.View>
 
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
         renderItem={renderEntry}
-        contentContainerStyle={entries.length === 0 ? styles.emptyList : styles.list}
+        contentContainerStyle={
+          entries.length === 0 ? styles.emptyList : styles.list
+        }
         ListEmptyComponent={renderEmpty}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bg,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  balanceCard: {
-    marginHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-    borderRadius: Radius.xl,
-    padding: Spacing.xxl,
-    alignItems: 'center',
-    ...Shadows.lg,
-  },
-  balanceLabel: {
-    ...Typography.label,
-    color: Colors.textTertiary,
-    marginBottom: Spacing.sm,
-  },
-  balanceAmount: {
-    ...Typography.amountLarge,
-  },
-  balanceAmountPositive: {
-    color: Colors.accentLight,
-  },
-  balanceAmountNegative: {
-    color: Colors.dangerLight,
-  },
-  balanceAmountNeutral: {
-    color: Colors.textOnDark,
-  },
-  balanceDirection: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: Spacing.sm,
-    color: Colors.textOnDark,
-    opacity: 0.8,
-  },
-  greenText: {
-    color: Colors.success,
-  },
-  redText: {
-    color: Colors.danger,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.md,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
-  settleButton: {
-    flex: 1,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    paddingVertical: 14,
-    alignItems: 'center',
-    ...Shadows.glow,
-  },
-  settleButtonDisabled: {
-    backgroundColor: Colors.primaryLight,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  settleButtonText: {
-    color: Colors.textOnPrimary,
-    ...Typography.button,
-    fontSize: 15,
-  },
-  addEntryButton: {
-    flex: 1,
-    backgroundColor: Colors.primarySurface,
-    borderRadius: Radius.lg,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  addEntryButtonText: {
-    color: Colors.primary,
-    ...Typography.button,
-    fontSize: 15,
-  },
-  list: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xxxl,
-  },
-  emptyList: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  entryCard: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.sm,
-    ...Shadows.md,
-  },
-  entryCardSettled: {
-    opacity: 0.5,
-  },
-  entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  directionBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  directionIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textOnPrimary,
-  },
-  entryInfo: {
-    flex: 1,
-  },
-  entryDirection: {
-    ...Typography.bodyBold,
-  },
-  entryNote: {
-    ...Typography.caption,
-    marginTop: 2,
-  },
-  entryDate: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    marginTop: 4,
-  },
-  entryAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginLeft: Spacing.sm,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xxxl,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: Spacing.md,
-  },
-  emptyTitle: {
-    ...Typography.body,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-});
+const createStyles = (c: ThemeColors, isDark: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.bg,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    /* Hero balance */
+    balanceCard: {
+      marginHorizontal: Spacing.lg,
+      marginTop: Spacing.lg,
+      borderRadius: Radius.xl,
+      padding: Spacing.xxl,
+      alignItems: 'center',
+      shadowColor: c.shadowColor,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: isDark ? 0 : 0.14,
+      shadowRadius: 28,
+      elevation: isDark ? 0 : 10,
+    },
+    balanceLabel: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.6)',
+      textTransform: 'uppercase',
+      letterSpacing: 1.2,
+      marginBottom: Spacing.sm,
+    },
+    balanceAmount: {
+      fontFamily: FontFamily.display,
+      fontSize: 34,
+      letterSpacing: -1,
+    },
+    balanceAmountPositive: {
+      color: isDark ? '#F5E6A8' : c.accentLight,
+    },
+    balanceAmountNegative: {
+      color: c.dangerLight,
+    },
+    balanceAmountNeutral: {
+      color: '#FFFFFF',
+    },
+    balanceDirection: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 14,
+      marginTop: Spacing.sm,
+      color: 'rgba(255,255,255,0.8)',
+    },
+
+    /* Action buttons */
+    actionRow: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.lg,
+      gap: Spacing.md,
+      marginTop: Spacing.lg,
+      marginBottom: Spacing.sm,
+    },
+    actionBtn: {
+      flex: 1,
+    },
+
+    /* List */
+    list: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.xxxl,
+    },
+    emptyList: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    /* Entry cards */
+    entryCard: {
+      marginBottom: Spacing.sm,
+    },
+    entryCardSettled: {
+      opacity: 0.5,
+    },
+    entryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    directionBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: Spacing.md,
+    },
+    entryInfo: {
+      flex: 1,
+    },
+    entryDirection: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 15,
+      color: c.text,
+    },
+    entryNote: {
+      fontFamily: FontFamily.body,
+      fontSize: 13,
+      color: c.textTertiary,
+      marginTop: 2,
+    },
+    entryDate: {
+      fontFamily: FontFamily.body,
+      fontSize: 12,
+      color: c.textTertiary,
+      marginTop: 4,
+    },
+    entryAmount: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 16,
+      marginLeft: Spacing.sm,
+    },
+
+    /* Empty state */
+    emptyState: {
+      alignItems: 'center',
+      paddingHorizontal: Spacing.xxxl,
+    },
+    emptyIconWrap: {
+      marginBottom: Spacing.xl,
+    },
+    emptyIconCircle: {
+      width: 88,
+      height: 88,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: isDark ? c.border : c.borderLight,
+    },
+    emptyTitle: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 18,
+      color: c.textSecondary,
+    },
+  });

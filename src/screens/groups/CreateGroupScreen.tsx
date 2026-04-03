@@ -1,18 +1,13 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   Animated,
-  Easing,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +19,13 @@ import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import FunButton from '../../components/FunButton';
+import ThemedCard from '../../components/ThemedCard';
+import ThemedInput from '../../components/ThemedInput';
+import BouncyPressable from '../../components/BouncyPressable';
+import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { useAlert } from '../../hooks/useAlert';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateGroup'>;
 
@@ -42,6 +44,8 @@ export default function CreateGroupScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { colors, isDark } = useAppTheme();
+  const alert = useAlert();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [name, setName] = useState('');
@@ -49,17 +53,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
   const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
   const [saving, setSaving] = useState(false);
 
-  const entrance = useRef(new Animated.Value(0)).current;
-  const btnScale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.timing(entrance, {
-      toValue: 1,
-      duration: 500,
-      easing: Easing.out(Easing.back(1.1)),
-      useNativeDriver: true,
-    }).start();
-  }, []);
+  const entrance = useScreenEntrance();
 
   const isValid = name.trim().length > 0;
 
@@ -95,17 +89,10 @@ export default function CreateGroupScreen({ navigation }: Props) {
       navigation.goBack();
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), err.message || t('common.error'));
+      alert.error(t('common.error'), err.message || t('common.error'));
     } finally {
       setSaving(false);
     }
-  };
-
-  const animateBtnPress = () => {
-    Animated.sequence([
-      Animated.timing(btnScale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
-      Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, damping: 12, stiffness: 200 }),
-    ]).start();
   };
 
   return (
@@ -121,52 +108,38 @@ export default function CreateGroupScreen({ navigation }: Props) {
         style={styles.flex}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingTop: insets.top }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={{
-            opacity: entrance,
-            transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-          }}>
+          <Animated.View style={entrance.style}>
             <View style={styles.headerBlock}>
               <Text style={styles.headerKicker}>{t('groups.newCircle')}</Text>
               <Text style={styles.headerTitle}>{t('groups.create')}</Text>
             </View>
 
-            <View style={styles.formCard}>
-              {isDark && (
-                <LinearGradient colors={colors.cardGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-              )}
-              <View style={styles.cardAccent} />
+            <ThemedCard accent style={styles.formCard}>
+              <ThemedInput
+                label={t('groups.name')}
+                value={name}
+                onChangeText={setName}
+                placeholder={t('groups.name')}
+                maxLength={50}
+                autoFocus
+                containerStyle={styles.field}
+              />
 
-              <View style={styles.field}>
-                <Text style={styles.label}>{t('groups.name')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder={t('groups.name')}
-                  placeholderTextColor={colors.textTertiary}
-                  maxLength={50}
-                  autoFocus
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>{t('groups.description')}</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder={t('groups.description')}
-                  placeholderTextColor={colors.textTertiary}
-                  multiline
-                  numberOfLines={3}
-                  maxLength={200}
-                  textAlignVertical="top"
-                />
-              </View>
+              <ThemedInput
+                label={t('groups.description')}
+                value={description}
+                onChangeText={setDescription}
+                placeholder={t('groups.description')}
+                multiline
+                numberOfLines={3}
+                maxLength={200}
+                style={styles.textArea}
+                containerStyle={styles.field}
+              />
 
               <View style={styles.fieldLast}>
                 <Text style={styles.label}>{t('groups.currency')}</Text>
@@ -174,14 +147,13 @@ export default function CreateGroupScreen({ navigation }: Props) {
                   {CURRENCIES.map((cur) => {
                     const isActive = currency === cur;
                     return (
-                      <TouchableOpacity
+                      <BouncyPressable
                         key={cur}
-                        style={styles.currencyOption}
-                        activeOpacity={0.7}
                         onPress={() => {
-                          Haptics.selectionAsync();
                           setCurrency(cur);
                         }}
+                        scaleDown={0.94}
+                        style={styles.currencyOption}
                       >
                         {isActive ? (
                           <LinearGradient
@@ -202,37 +174,20 @@ export default function CreateGroupScreen({ navigation }: Props) {
                             </Text>
                           </View>
                         )}
-                      </TouchableOpacity>
+                      </BouncyPressable>
                     );
                   })}
                 </View>
               </View>
-            </View>
+            </ThemedCard>
 
-            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
-              <TouchableOpacity
-                style={[styles.createButton, !isValid && styles.createButtonDisabled]}
-                activeOpacity={0.85}
-                onPress={() => { animateBtnPress(); handleCreate(); }}
-                disabled={!isValid || saving}
-              >
-                <LinearGradient
-                  colors={isValid ? colors.primaryGradient : [colors.primaryDark, colors.primaryDark]}
-                  style={styles.createBtnGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0.5 }}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                      <Text style={styles.createButtonText}>{t('groups.create')}</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
+            <FunButton
+              title={t('groups.create')}
+              onPress={handleCreate}
+              loading={saving}
+              disabled={!isValid}
+              icon={<Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />}
+            />
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -262,27 +217,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
 
     formCard: {
-      borderRadius: Radius.xl,
-      borderWidth: 1,
-      borderColor: c.border,
-      backgroundColor: isDark ? undefined : c.bgCard,
-      padding: Spacing.xl,
       marginBottom: Spacing.xl,
-      overflow: 'hidden',
-      shadowColor: c.shadowColor,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0 : 0.06,
-      shadowRadius: 12,
-      elevation: isDark ? 0 : 4,
-    },
-    cardAccent: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 3,
-      backgroundColor: c.accent,
-      opacity: isDark ? 0.5 : 0.35,
     },
     field: { marginBottom: Spacing.xl },
     fieldLast: { marginBottom: 0 },
@@ -294,18 +229,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       textTransform: 'uppercase',
       marginBottom: Spacing.sm,
     },
-    input: {
-      backgroundColor: isDark ? 'rgba(255,252,247,0.05)' : '#F8F7F5',
-      borderWidth: 1.5,
-      borderColor: c.border,
-      borderRadius: Radius.lg,
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: 14,
-      fontSize: 16,
-      fontFamily: FontFamily.body,
-      color: c.text,
-    },
-    textArea: { minHeight: 80, paddingTop: 14 },
+    textArea: { minHeight: 80, textAlignVertical: 'top' },
 
     currencyRow: { flexDirection: 'row', gap: Spacing.md },
     currencyOption: { flex: 1, borderRadius: Radius.lg, overflow: 'hidden' },
@@ -333,26 +257,5 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 15,
       fontFamily: FontFamily.bodyBold,
       color: '#FFFFFF',
-    },
-
-    createButton: { borderRadius: Radius.lg, overflow: 'hidden' },
-    createButtonDisabled: { opacity: 0.5 },
-    createBtnGradient: {
-      flexDirection: 'row',
-      paddingVertical: 17,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: Radius.lg,
-      shadowColor: c.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.4,
-      shadowRadius: 16,
-      elevation: 10,
-    },
-    createButtonText: {
-      color: '#FFFFFF',
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 17,
-      letterSpacing: 0.3,
     },
   });
