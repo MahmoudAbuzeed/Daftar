@@ -90,6 +90,7 @@
     "owes_you": "owes you",
     "owes": "owes",
     "settled_up": "Settled",
+    "allClear": "All settled up!",
     "yourCircles": "YOUR CIRCLES",
     "groupCount": "{{count}} GROUPS",
     "newCircle": "NEW CIRCLE",
@@ -135,6 +136,8 @@
     "notes": "Notes",
     "notesPlaceholder": "Add a note...",
     "attachPhoto": "Attach photo",
+    "tapToAdd": "Tap + to add the first expense",
+    "extracting": "Extracting from receipt...",
     "categories": {
       "food": "Food & Dining",
       "transport": "Transport",
@@ -325,6 +328,7 @@
     "errorBody": "Something went wrong. Please try again.",
     "scansRemaining": "{{count}} scans left",
     "groupsRemaining": "{{count}} group slots left",
+    "noActiveSubscription": "No active subscriptions found",
     "features": {
       "unlimitedGroups": "Unlimited groups",
       "unlimitedScans": "Unlimited AI receipt scans",
@@ -348,7 +352,8 @@
     "noFriendsSubtitle": "Add expenses with friends to see balances here",
     "addExpense": "Add expense",
     "inGroups": "in {{count}} groups",
-    "selectGroup": "Select a group"
+    "selectGroup": "Select a group",
+    "howToAdd": "How do you want to add the expense?"
   },
   "search": {
     "title": "Search",
@@ -429,6 +434,30 @@
     "terms": "Terms of Service",
     "contactUs": "Contact Us",
     "madeInEgypt": "Made with love in Egypt",
-    "version": "Version"
-  }
+    "version": "Version",
+    "description": "Split bills with friends, track personal debts, and scan receipts with AI. Daftar makes it easy to keep track of shared expenses."
+  },
+  "terms": {
+    "heading": "Terms of Service for Daftar",
+    "updated": "Last updated: April 2026",
+    "serviceDescription": { "title": "1. Service Description", "body": "Daftar is a bill splitting and personal debt tracking application." },
+    "account": { "title": "2. Account", "body": "- You must provide a valid phone number to create an account\n- You are responsible for all activity on your account" },
+    "acceptableUse": { "title": "3. Acceptable Use", "body": "- You agree to use Daftar only for lawful purposes\n- You will not attempt to manipulate expense records fraudulently" },
+    "subscriptions": { "title": "4. Subscriptions", "body": "- Daftar Pro is available as a monthly or yearly subscription\n- Subscriptions are managed through Apple App Store or Google Play Store\n- You can cancel anytime through your store account settings" },
+    "liability": { "title": "5. Limitation of Liability", "body": "- Daftar is provided \"as is\" without warranties\n- We are not responsible for disputes between users about expenses\n- We are not a financial institution or payment processor" },
+    "governingLaw": { "title": "6. Governing Law", "body": "- These terms are governed by the laws of Egypt" },
+    "changes": { "title": "7. Changes", "body": "- We may update these terms from time to time\n- Continued use constitutes acceptance of updated terms" },
+    "contact": { "title": "8. Contact", "body": "- Email: support@daftar.app" }
+  },
+  "privacy": {
+    "heading": "Privacy Policy for Daftar",
+    "updated": "Last updated: April 2026",
+    "infoCollect": { "title": "1. Information We Collect", "body": "- Phone number (for authentication)\n- Display name (your chosen name)\n- Expense and payment data you enter\n- Receipt images you scan\n- Contacts (only when you choose to invite friends)" },
+    "howWeUse": { "title": "2. How We Use Your Information", "body": "- To provide bill splitting and debt tracking services\n- To authenticate your account via SMS verification\n- To process receipt images using AI for item extraction\n- To send notifications about shared expenses" },
+    "thirdParty": { "title": "3. Third-Party Services", "body": "- Supabase: Authentication, database, and file storage\n- OpenAI: Receipt image processing (images are processed and not stored by OpenAI)" },
+    "dataStorage": { "title": "4. Data Storage and Security", "body": "- Your data is stored securely on Supabase servers\n- We use row-level security to ensure you can only access your own data\n- Receipt images are stored in private buckets" },
+    "dataDeletion": { "title": "5. Data Deletion", "body": "- You can delete your account and all associated data by contacting us\n- Deleting the app does not delete your server-side data" },
+    "childrenPrivacy": { "title": "6. Children's Privacy", "body": "- Daftar is not intended for children under 13" },
+    "contact": { "title": "7. Contact", "body": "- Email: support@daftar.app" }
+  },
 }

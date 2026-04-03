@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { useAuth } from './auth-context';
+import { identifyUser, checkProStatus } from './purchases';
 import { Subscription, TierLimits, FeatureKey } from '../types/database';
 
 const SUB_CACHE_KEY = '@daftar/subscription';
@@ -99,6 +100,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setSubscription(null);
         await AsyncStorage.removeItem(SUB_CACHE_KEY);
       }
+
+      // Also sync with RevenueCat
+      try {
+        await identifyUser(user.id);
+        const rcPro = await checkProStatus();
+        // If RevenueCat says Pro but Supabase doesn't, sync
+        if (rcPro && (!data || data.tier !== 'pro')) {
+          // Will be synced on next purchase webhook
+        }
+      } catch {}
     } catch {
       // Use cached value if available
     } finally {

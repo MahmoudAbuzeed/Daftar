@@ -16,6 +16,7 @@ import { ThemeProvider, useAppTheme } from './src/lib/theme-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AlertProvider } from './src/hooks/useAlert';
 import { SubscriptionProvider } from './src/lib/subscription-context';
+import { initPurchases } from './src/lib/purchases';
 import './src/lib/i18n';
 import i18n from './src/lib/i18n';
 import { Colors } from './src/theme';
@@ -61,6 +62,10 @@ export default function App() {
     Poppins_700Bold,
     ...Ionicons.font,
   });
+
+  useEffect(() => {
+    initPurchases();
+  }, []);
 
   useEffect(() => {
     const isRTL = i18n.language === 'ar';

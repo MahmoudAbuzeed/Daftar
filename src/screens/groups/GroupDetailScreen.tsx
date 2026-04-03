@@ -346,7 +346,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 </LinearGradient>
               </View>
               <Text style={styles.emptyTitle}>{t('expenses.no_expenses')}</Text>
-              <Text style={styles.emptySubtitle}>Tap + to add the first expense</Text>
+              <Text style={styles.emptySubtitle}>{t('expenses.tapToAdd')}</Text>
             </View>
           }
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
@@ -366,7 +366,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 </LinearGradient>
               </View>
               <Text style={styles.emptyTitle}>{t('groups.settled_up')}</Text>
-              <Text style={styles.emptySubtitle}>All clear, habibi!</Text>
+              <Text style={styles.emptySubtitle}>{t('groups.allClear')}</Text>
             </View>
           }
           ListFooterComponent={debts.length > 0 ? (

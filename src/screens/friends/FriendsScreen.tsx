@@ -28,6 +28,7 @@ import AnimatedListItem from '../../components/AnimatedListItem';
 import FunButton from '../../components/FunButton';
 import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
+import { useAlert } from '../../hooks/useAlert';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import useFabFloat from '../../hooks/useFabFloat';
 import { useAuth } from '../../lib/auth-context';
@@ -100,6 +101,7 @@ function getInitials(name: string): string {
 export default function FriendsScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  const alert = useAlert();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
@@ -365,21 +367,41 @@ export default function FriendsScreen({ navigation }: Props) {
       return;
     }
     if (userGroups.length === 1) {
-      // Only one group — go directly
-      navigation.navigate('AddExpense', { groupId: userGroups[0].id });
+      // Show choice for single group too
+      alert.show('info', t('friends.addExpense'), t('friends.howToAdd') || 'How do you want to add?', [
+        {
+          text: t('expenses.add') || 'Add manually',
+          onPress: () => navigation.navigate('AddExpense', { groupId: userGroups[0].id }),
+        },
+        {
+          text: t('expenses.scan_receipt') || 'Scan receipt',
+          onPress: () => navigation.navigate('ScanReceipt', { groupId: userGroups[0].id }),
+        },
+      ]);
       return;
     }
     // Multiple groups — show picker
     setPickerVisible(true);
-  }, [userGroups, navigation]);
+  }, [userGroups, navigation, alert, t]);
 
   const handlePickGroup = useCallback(
     (groupId: string) => {
       setPickerVisible(false);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      navigation.navigate('AddExpense', { groupId });
+
+      // Show manual vs scan choice
+      alert.show('info', t('friends.addExpense'), t('friends.howToAdd') || 'How do you want to add?', [
+        {
+          text: t('expenses.add') || 'Add manually',
+          onPress: () => navigation.navigate('AddExpense', { groupId }),
+        },
+        {
+          text: t('expenses.scan_receipt') || 'Scan receipt',
+          onPress: () => navigation.navigate('ScanReceipt', { groupId }),
+        },
+      ]);
     },
-    [navigation],
+    [navigation, alert, t],
   );
 
   const handleFriendPress = useCallback(() => {
@@ -500,16 +522,9 @@ export default function FriendsScreen({ navigation }: Props) {
         <FunButton
           title={t('friends.addFriends')}
           onPress={handleAddFriends}
-          variant="secondary"
-          size="small"
-          icon={
-            <Ionicons
-              name="share-social-outline"
-              size={16}
-              color={isDark ? colors.primaryLight : colors.primary}
-            />
-          }
-          style={{ marginTop: Spacing.xxl, paddingHorizontal: Spacing.xl }}
+          variant="primary"
+          icon={<Ionicons name="person-add-outline" size={18} color="#FFFFFF" />}
+          style={{ marginTop: Spacing.xxl, alignSelf: 'center', paddingHorizontal: Spacing.xl }}
         />
       </View>
     );

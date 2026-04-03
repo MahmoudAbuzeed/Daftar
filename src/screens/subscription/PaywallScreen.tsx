@@ -17,7 +17,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
-import { FREE_LIMITS } from '../../lib/subscription-context';
+import { FREE_LIMITS, useSubscription } from '../../lib/subscription-context';
+import { getPackages, purchasePackage, restorePurchases } from '../../lib/purchases';
 import { useAlert } from '../../hooks/useAlert';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { Spacing, Radius, FontFamily } from '../../theme';
@@ -49,7 +50,14 @@ export default function PaywallScreen({ navigation, route }: Props) {
   const alert = useAlert();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
+  const { refreshSubscription } = useSubscription();
   const [selectedPlan, setSelectedPlan] = useState<PlanInterval>('yearly');
+  const [subscribing, setSubscribing] = useState(false);
+  const [packages, setPackages] = useState<any[]>([]);
+
+  useEffect(() => {
+    getPackages().then(setPackages);
+  }, []);
 
   // ── Entrance animations ──────────────────────────────────────
   const entrance = useScreenEntrance();
@@ -139,14 +147,51 @@ export default function PaywallScreen({ navigation, route }: Props) {
   }, [trigger, t]);
 
   // ── Handlers ─────────────────────────────────────────────────
-  const handleSubscribe = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    alert.success(t('subscription.successTitle'), t('subscription.successBody'));
+  const handleSubscribe = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setSubscribing(true);
+    try {
+      // Find the matching package
+      const pkg = packages.find(p =>
+        selectedPlan === 'yearly'
+          ? p.packageType === 'ANNUAL'
+          : p.packageType === 'MONTHLY'
+      ) || packages[0];
+
+      if (!pkg) {
+        // Fallback: no packages available (not configured yet)
+        alert.info(t('subscription.successTitle'), t('subscription.successBody'));
+        navigation.goBack();
+        return;
+      }
+
+      const result = await purchasePackage(pkg);
+      if (result.success) {
+        await refreshSubscription();
+        alert.success(t('subscription.successTitle'), t('subscription.successBody'));
+        navigation.goBack();
+      }
+    } catch (err: any) {
+      alert.error(t('subscription.errorTitle'), err.message || t('subscription.errorBody'));
+    } finally {
+      setSubscribing(false);
+    }
   };
 
-  const handleRestore = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    alert.info(t('subscription.restorePurchases'), '');
+  const handleRestore = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const result = await restorePurchases();
+      if (result.success) {
+        await refreshSubscription();
+        alert.success(t('subscription.successTitle'), t('subscription.successBody'));
+        navigation.goBack();
+      } else {
+        alert.info(t('subscription.restorePurchases'), t('subscription.noActiveSubscription'));
+      }
+    } catch {
+      alert.error(t('subscription.errorTitle'), t('subscription.errorBody'));
+    }
   };
 
   const handleMaybeLater = () => {

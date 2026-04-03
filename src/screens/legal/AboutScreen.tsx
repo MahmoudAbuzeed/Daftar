@@ -60,10 +60,7 @@ export default function AboutScreen({ navigation }: Props) {
         </LinearGradient>
         <Text style={styles.appName}>Daftar</Text>
         <Text style={styles.version}>{t('legal.version')} 1.0.0</Text>
-        <Text style={styles.description}>{t('legal.description') !== 'legal.description'
-          ? t('legal.description')
-          : 'Split bills with friends, track personal debts, and scan receipts with AI. Daftar makes it easy to keep track of shared expenses.'
-        }</Text>
+        <Text style={styles.description}>{t('legal.description')}</Text>
       </View>
 
       {/* Link Rows */}
@@ -82,10 +79,7 @@ export default function AboutScreen({ navigation }: Props) {
       </ThemedCard>
 
       {/* Footer */}
-      <Text style={styles.footer}>{t('legal.madeInEgypt') !== 'legal.madeInEgypt'
-        ? t('legal.madeInEgypt')
-        : 'Made with love in Egypt'
-      }</Text>
+      <Text style={styles.footer}>{t('legal.madeInEgypt')}</Text>
     </ScrollView>
   );
 }

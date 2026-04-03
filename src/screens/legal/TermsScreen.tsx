@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -12,54 +13,13 @@ import { Spacing, FontFamily } from '../../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Terms'>;
 
-const sections = [
-  {
-    title: '1. Service Description',
-    body: 'Daftar is a bill splitting and personal debt tracking application.',
-  },
-  {
-    title: '2. Account',
-    body:
-      '- You must provide a valid phone number to create an account\n' +
-      '- You are responsible for all activity on your account',
-  },
-  {
-    title: '3. Acceptable Use',
-    body:
-      '- You agree to use Daftar only for lawful purposes\n' +
-      '- You will not attempt to manipulate expense records fraudulently',
-  },
-  {
-    title: '4. Subscriptions',
-    body:
-      '- Daftar Pro is available as a monthly or yearly subscription\n' +
-      '- Subscriptions are managed through Apple App Store or Google Play Store\n' +
-      '- You can cancel anytime through your store account settings',
-  },
-  {
-    title: '5. Limitation of Liability',
-    body:
-      '- Daftar is provided "as is" without warranties\n' +
-      '- We are not responsible for disputes between users about expenses\n' +
-      '- We are not a financial institution or payment processor',
-  },
-  {
-    title: '6. Governing Law',
-    body: '- These terms are governed by the laws of Egypt',
-  },
-  {
-    title: '7. Changes',
-    body:
-      '- We may update these terms from time to time\n' +
-      '- Continued use constitutes acceptance of updated terms',
-  },
-  {
-    title: '8. Contact',
-    body: '- Email: support@daftar.app',
-  },
+const SECTION_KEYS = [
+  'serviceDescription', 'account', 'acceptableUse', 'subscriptions',
+  'liability', 'governingLaw', 'changes', 'contact',
 ];
 
 export default function TermsScreen(_props: Props) {
+  const { t } = useTranslation();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
@@ -69,13 +29,13 @@ export default function TermsScreen(_props: Props) {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.heading}>Terms of Service for Daftar</Text>
-      <Text style={styles.updated}>Last updated: April 2026</Text>
+      <Text style={styles.heading}>{t('terms.heading')}</Text>
+      <Text style={styles.updated}>{t('terms.updated')}</Text>
 
-      {sections.map((section, index) => (
+      {SECTION_KEYS.map((key, index) => (
         <View key={index} style={styles.section}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
-          <Text style={styles.sectionBody}>{section.body}</Text>
+          <Text style={styles.sectionTitle}>{t(`terms.${key}.title`)}</Text>
+          <Text style={styles.sectionBody}>{t(`terms.${key}.body`)}</Text>
         </View>
       ))}
     </ScrollView>
