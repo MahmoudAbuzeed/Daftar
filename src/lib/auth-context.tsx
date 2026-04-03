@@ -28,7 +28,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select('*')
       .eq('id', userId)
       .single();
-    setProfile(data);
+
+    if (data) {
+      setProfile(data);
+      return;
+    }
+
+    // Self-heal: user exists in auth but not in public.users
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const displayName =
+        authUser.user_metadata?.display_name ||
+        authUser.email?.split('@')[0] ||
+        'User';
+      const { data: created } = await supabase
+        .from('users')
+        .upsert({
+          id: authUser.id,
+          display_name: displayName,
+          email: authUser.email,
+        })
+        .select()
+        .single();
+      setProfile(created);
+    }
   };
 
   useEffect(() => {
@@ -65,11 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
 
     if (data.user) {
-      await supabase.from('users').upsert({
+      const { error: profileError } = await supabase.from('users').upsert({
         id: data.user.id,
         display_name: displayName,
         email,
       });
+      if (profileError) console.warn('Failed to create user profile:', profileError.message);
     }
   };
 

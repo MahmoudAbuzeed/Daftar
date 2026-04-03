@@ -1,61 +1,65 @@
 import { Platform, StyleSheet } from 'react-native';
+import { FontFamily } from './fonts';
 
 // ── Daftar Design System ──────────────────────────────────────
-// "Papyrus & Indigo" — Egyptian heritage meets modern fintech
+// "Midnight ledger & brass" — obsidian teal, warm metal, cream paper
 
 export const Colors = {
-  // Core palette
-  primary: '#4F46E5',        // Deep indigo
-  primaryLight: '#818CF8',   // Soft indigo
-  primaryDark: '#3730A3',    // Dark indigo
-  primarySurface: '#EEF2FF', // Indigo tint
+  primary: '#1B7A6C',
+  primaryLight: '#2DD4BF',
+  primaryDark: '#115E56',
+  primarySurface: '#CCFBF1',
 
-  accent: '#F59E0B',         // Amber gold
-  accentLight: '#FDE68A',    // Soft gold
-  accentDark: '#D97706',     // Deep gold
+  accent: '#C9A227',
+  accentLight: '#F5E6A8',
+  accentDark: '#8B6914',
 
-  // Semantic
-  success: '#059669',        // Emerald
-  successLight: '#D1FAE5',
-  successSurface: '#ECFDF5',
-  danger: '#E11D48',         // Rose
-  dangerLight: '#FECDD3',
-  dangerSurface: '#FFF1F2',
+  success: '#0D9488',
+  successLight: '#5EEAD4',
+  successSurface: '#ECFEFF',
 
-  // Backgrounds
-  bg: '#FAF9F7',             // Warm parchment
-  bgCard: '#FFFFFF',
+  danger: '#C2410C',
+  dangerLight: '#FDBA74',
+  dangerSurface: '#FFF7ED',
+
+  bg: '#F2EFE8',
+  bgCard: '#FFFCF7',
   bgElevated: '#FFFFFF',
-  bgDark: '#1E1B4B',        // Deep indigo surface (for hero sections)
-  bgDarkCard: '#2E2A5E',    // Elevated dark card
+  bgDark: '#0A1210',
+  bgDarkMid: '#122420',
+  bgDarkCard: '#1A2E28',
 
-  // Text
-  textPrimary: '#1E1B4B',
-  textSecondary: '#64748B',
-  textTertiary: '#94A3B8',
-  textOnDark: '#F8FAFC',
+  textPrimary: '#0F1A17',
+  textSecondary: '#4A5F59',
+  textTertiary: '#7A9189',
+  textOnDark: '#F4F0E8',
   textOnPrimary: '#FFFFFF',
-  textOnAccent: '#1E1B4B',
+  textOnAccent: '#1A1408',
 
-  // Borders & Dividers
-  border: '#E8E5E0',
-  borderLight: '#F3F0EB',
-  borderFocus: '#818CF8',
+  border: '#D9D3C7',
+  borderLight: '#EBE7DE',
+  borderFocus: '#1B7A6C',
+  borderBrass: 'rgba(201, 162, 39, 0.45)',
 
-  // Misc
-  overlay: 'rgba(30, 27, 75, 0.6)',
-  shimmer: '#F5F3EF',
+  overlay: 'rgba(10, 18, 16, 0.65)',
+  shimmer: '#E8E4DC',
 };
 
 export const Gradients = {
-  primary: ['#4F46E5', '#7C3AED'] as const,       // Indigo → Purple
-  hero: ['#1E1B4B', '#312E81'] as const,           // Deep navy
-  heroWarm: ['#1E1B4B', '#3B1E5E'] as const,       // Navy → Plum
-  gold: ['#F59E0B', '#FBBF24'] as const,           // Amber → Gold
-  success: ['#059669', '#10B981'] as const,         // Emerald gradient
-  danger: ['#E11D48', '#F43F5E'] as const,          // Rose gradient
-  card: ['#FFFFFF', '#FEFCF9'] as const,            // Warm white
-  warmBg: ['#FAF9F7', '#F5F0EB'] as const,          // Parchment
+  primary: ['#115E56', '#1B7A6C'] as const,
+  primarySoft: ['#CCFBF1', '#F0FDFA'] as const,
+  hero: ['#061210', '#122420', '#0F2722'] as const,
+  heroWarm: ['#0A1614', '#1A2E28', '#142820'] as const,
+  brass: ['#A67C00', '#D4AF37', '#E8C547'] as const,
+  /** @deprecated Use brass — kept for existing screen references */
+  gold: ['#A67C00', '#D4AF37', '#E8C547'] as const,
+  brassMuted: ['#8B7355', '#C9A227'] as const,
+  success: ['#0F766E', '#14B8A6'] as const,
+  danger: ['#9A3412', '#EA580C'] as const,
+  card: ['#FFFCF7', '#FAF6EF'] as const,
+  warmBg: ['#F2EFE8', '#E8E2D6'] as const,
+  tabBar: ['#0C1815', '#0F221C'] as const,
+  meshAccent: ['rgba(27,122,108,0.35)', 'rgba(201,162,39,0.12)'] as const,
 };
 
 export const Spacing = {
@@ -80,107 +84,120 @@ export const Radius = {
 
 export const Typography = {
   heroTitle: {
-    fontSize: 36,
-    fontWeight: '800' as const,
-    letterSpacing: -1.2,
+    fontFamily: FontFamily.display,
+    fontSize: 40,
+    letterSpacing: -1.4,
     color: Colors.textOnDark,
   },
   screenTitle: {
+    fontFamily: FontFamily.display,
     fontSize: 28,
-    fontWeight: '800' as const,
-    letterSpacing: -0.8,
+    letterSpacing: -0.6,
     color: Colors.textPrimary,
   },
+  screenSubtitle: {
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 14,
+    letterSpacing: 0.4,
+    color: 'rgba(244, 240, 232, 0.55)',
+  },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    letterSpacing: -0.4,
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 18,
+    letterSpacing: -0.3,
     color: Colors.textPrimary,
   },
   cardTitle: {
+    fontFamily: FontFamily.bodySemibold,
     fontSize: 17,
-    fontWeight: '700' as const,
+    letterSpacing: -0.2,
     color: Colors.textPrimary,
   },
   body: {
+    fontFamily: FontFamily.body,
     fontSize: 15,
-    fontWeight: '400' as const,
     color: Colors.textSecondary,
     lineHeight: 22,
   },
   bodyBold: {
+    fontFamily: FontFamily.bodySemibold,
     fontSize: 15,
-    fontWeight: '600' as const,
     color: Colors.textPrimary,
   },
   caption: {
+    fontFamily: FontFamily.bodyMedium,
     fontSize: 13,
-    fontWeight: '500' as const,
     color: Colors.textTertiary,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600' as const,
+    fontFamily: FontFamily.bodySemibold,
+    fontSize: 11,
     color: Colors.textSecondary,
     textTransform: 'uppercase' as const,
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
   },
   amount: {
+    fontFamily: FontFamily.bodyBold,
     fontSize: 24,
-    fontWeight: '800' as const,
     letterSpacing: -0.5,
   },
   amountLarge: {
-    fontSize: 36,
-    fontWeight: '800' as const,
+    fontFamily: FontFamily.display,
+    fontSize: 34,
     letterSpacing: -1,
   },
   button: {
+    fontFamily: FontFamily.bodyBold,
     fontSize: 16,
-    fontWeight: '700' as const,
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
   },
 };
 
 export const Shadows = StyleSheet.create({
   sm: {
-    shadowColor: '#1E1B4B',
+    shadowColor: '#041210',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
   md: {
-    shadowColor: '#1E1B4B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowColor: '#041210',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 6,
   },
   lg: {
-    shadowColor: '#1E1B4B',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowColor: '#041210',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.14,
+    shadowRadius: 28,
+    elevation: 10,
   },
   glow: {
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: '#1B7A6C',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
   },
   goldGlow: {
-    shadowColor: '#F59E0B',
+    shadowColor: '#C9A227',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  cardLift: {
+    shadowColor: '#1A1408',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.07,
     shadowRadius: 12,
-    elevation: 6,
+    elevation: 4,
   },
 });
 
-// Common component styles
 export const CommonStyles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -190,16 +207,19 @@ export const CommonStyles = StyleSheet.create({
     backgroundColor: Colors.bgCard,
     borderRadius: Radius.xl,
     padding: Spacing.xl,
-    ...Shadows.md,
+    borderWidth: 1,
+    borderColor: Colors.borderBrass,
+    ...Shadows.cardLift,
   },
   inputField: {
-    backgroundColor: '#F8F7F5',
+    backgroundColor: '#F7F4ED',
     borderWidth: 1.5,
     borderColor: Colors.border,
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.lg,
     paddingVertical: 14,
     fontSize: 16,
+    fontFamily: FontFamily.body,
     color: Colors.textPrimary,
   },
   inputFieldFocused: {
@@ -219,16 +239,16 @@ export const CommonStyles = StyleSheet.create({
     ...Typography.button,
   },
   secondaryButton: {
-    backgroundColor: Colors.primarySurface,
+    backgroundColor: 'transparent',
     borderRadius: Radius.lg,
     paddingVertical: 16,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderWidth: 1.5,
-    borderColor: Colors.primaryLight,
+    borderColor: Colors.borderBrass,
   },
   secondaryButtonText: {
-    color: Colors.primary,
+    color: Colors.primaryDark,
     ...Typography.button,
   },
   fab: {
@@ -246,7 +266,7 @@ export const CommonStyles = StyleSheet.create({
   fabText: {
     color: Colors.textOnPrimary,
     fontSize: 28,
-    fontWeight: '500' as const,
+    fontFamily: FontFamily.bodyMedium,
     marginTop: -2,
   },
   chip: {
@@ -257,11 +277,13 @@ export const CommonStyles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.primary,
+    fontFamily: FontFamily.bodySemibold,
+    color: Colors.primaryDark,
   },
   divider: {
     height: 1,
     backgroundColor: Colors.borderLight,
   },
 });
+
+export { FontFamily };
