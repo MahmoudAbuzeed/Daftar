@@ -29,7 +29,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateGroup'>;
 
-const CURRENCIES: Array<'EGP' | 'USD'> = ['EGP', 'USD'];
+import { CurrencyCode } from '../../types/database';
+
+const CURRENCIES: CurrencyCode[] = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'INR', 'PKR', 'TRY', 'CAD', 'AUD', 'BRL'];
 
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -50,7 +52,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
+  const [currency, setCurrency] = useState<CurrencyCode>('EGP');
   const [saving, setSaving] = useState(false);
 
   const entrance = useScreenEntrance();
@@ -143,7 +145,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
 
               <View style={styles.fieldLast}>
                 <Text style={styles.label}>{t('groups.currency')}</Text>
-                <View style={styles.currencyRow}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.currencyRow}>
                   {CURRENCIES.map((cur) => {
                     const isActive = currency === cur;
                     return (
@@ -164,20 +166,20 @@ export default function CreateGroupScreen({ navigation }: Props) {
                           >
                             <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
                             <Text style={styles.currencyTextActive}>
-                              {cur === 'EGP' ? `${t('common.egp')} (E\u00A3)` : `${t('common.usd')} ($)`}
+                              {cur}
                             </Text>
                           </LinearGradient>
                         ) : (
                           <View style={styles.currencyOptionInnerInactive}>
                             <Text style={styles.currencyText}>
-                              {cur === 'EGP' ? `${t('common.egp')} (E\u00A3)` : `${t('common.usd')} ($)`}
+                              {cur}
                             </Text>
                           </View>
                         )}
                       </BouncyPressable>
                     );
                   })}
-                </View>
+                </ScrollView>
               </View>
             </ThemedCard>
 

@@ -1,51 +1,82 @@
 /**
  * Auto-categorize an expense based on description keywords.
- * Supports both English and Arabic/Egyptian terms.
+ * Supports English, Arabic/Egyptian, and common global brands.
  */
 
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   food: [
-    // English
+    // Global
     'restaurant', 'food', 'lunch', 'dinner', 'breakfast', 'cafe', 'coffee',
-    'pizza', 'burger', 'chicken', 'sushi', 'steak', 'meal',
+    'pizza', 'burger', 'chicken', 'sushi', 'steak', 'meal', 'snack',
+    'bakery', 'dessert', 'ice cream', 'juice', 'drink', 'bar', 'grill', 'bbq',
+    'mcdonald', 'kfc', 'starbucks', 'subway', 'domino', 'papa john',
     // Arabic/Egyptian
     'مطعم', 'أكل', 'غداء', 'عشاء', 'فطار', 'قهوة', 'كافيه',
     'كشري', 'شاورما', 'فول', 'طعمية', 'حواوشي', 'فطير',
-    // Egyptian delivery apps
+    // Delivery apps (global + regional)
+    'uber eats', 'doordash', 'grubhub', 'deliveroo', 'just eat',
     'talabat', 'طلبات', 'elmenus', 'المنيوز', 'breadfast',
+    'zomato', 'swiggy', 'hungerstation', 'carriage', 'toters',
   ],
   transport: [
-    'uber', 'careem', 'كريم', 'taxi', 'تاكسي', 'microbus', 'ميكروباص',
-    'metro', 'مترو', 'bus', 'اتوبيس', 'gas', 'بنزين', 'fuel', 'parking',
-    'swvl', 'indriver',
+    // Global
+    'uber', 'lyft', 'taxi', 'bus', 'metro', 'train', 'subway',
+    'fuel', 'gas', 'petrol', 'parking', 'toll', 'ride',
+    'bolt', 'grab', 'gojek', 'didi',
+    // Regional
+    'careem', 'كريم', 'تاكسي', 'ميكروباص', 'مترو', 'اتوبيس',
+    'بنزين', 'swvl', 'indriver',
   ],
   shopping: [
-    'shopping', 'تسوق', 'clothes', 'هدوم', 'shoes', 'جزم',
-    'mall', 'مول', 'amazon', 'jumia', 'جوميا', 'noon', 'نون',
+    // Global
+    'shopping', 'clothes', 'shoes', 'electronics', 'gift', 'present', 'mall',
+    'amazon', 'ebay', 'walmart', 'target', 'ikea', 'zara', 'h&m',
+    // Regional
+    'تسوق', 'هدوم', 'جزم', 'مول',
+    'noon', 'نون', 'jumia', 'جوميا', 'namshi', 'shein',
   ],
   bills: [
-    'electricity', 'كهربا', 'water', 'ميه', 'gas', 'غاز',
-    'internet', 'نت', 'phone', 'موبايل', 'rent', 'إيجار', 'ايجار',
+    // Global
+    'electricity', 'water', 'gas', 'internet', 'wifi', 'phone', 'mobile',
+    'rent', 'subscription', 'netflix', 'spotify', 'youtube', 'apple',
+    'insurance', 'utility',
+    // Regional
+    'كهربا', 'ميه', 'غاز', 'نت', 'موبايل', 'إيجار', 'ايجار',
     'we', 'orange', 'vodafone', 'فودافون', 'etisalat', 'اتصالات',
+    'stc', 'du', 'zain',
   ],
   entertainment: [
-    'movie', 'فيلم', 'cinema', 'سينما', 'netflix', 'spotify',
-    'game', 'لعبة', 'concert', 'حفلة', 'club', 'pool', 'حمام سباحة',
+    // Global
+    'movie', 'cinema', 'game', 'concert', 'ticket', 'party',
+    'club', 'pool', 'bowling', 'karaoke', 'museum', 'theater', 'show',
+    // Regional
+    'فيلم', 'سينما', 'لعبة', 'حفلة', 'حمام سباحة',
   ],
   health: [
-    'pharmacy', 'صيدلية', 'doctor', 'دكتور', 'hospital', 'مستشفى',
-    'medicine', 'دوا', 'clinic', 'عيادة', 'lab', 'معمل', 'تحاليل',
+    // Global
+    'pharmacy', 'medicine', 'doctor', 'hospital', 'clinic', 'dental',
+    'gym', 'health', 'medical', 'lab', 'therapy', 'vitamin',
+    // Regional
+    'صيدلية', 'دوا', 'دكتور', 'مستشفى', 'عيادة', 'معمل', 'تحاليل',
   ],
   travel: [
-    'hotel', 'فندق', 'flight', 'طيران', 'airbnb', 'booking',
-    'sahel', 'ساحل', 'gouna', 'جونة', 'sharm', 'شرم', 'hurghada', 'غردقة',
-    'marsa', 'مرسى', 'ain sokhna', 'العين السخنة',
+    // Global
+    'hotel', 'flight', 'airbnb', 'booking', 'resort', 'hostel',
+    'airport', 'airline', 'cruise', 'vacation', 'trip',
+    // Regional
+    'فندق', 'طيران',
+    'sahel', 'ساحل', 'gouna', 'جونة', 'sharm', 'شرم',
+    'hurghada', 'غردقة', 'dubai', 'دبي',
   ],
   groceries: [
-    'supermarket', 'سوبر', 'grocery', 'بقالة', 'vegetables', 'خضار',
-    'fruit', 'فاكهة', 'meat', 'لحمة', 'chicken', 'فراخ',
+    // Global
+    'supermarket', 'grocery', 'vegetables', 'fruit', 'meat',
+    'chicken', 'milk', 'bread', 'eggs', 'organic',
+    'costco', 'aldi', 'lidl', 'whole foods', 'trader joe',
+    // Regional
+    'سوبر', 'بقالة', 'خضار', 'فاكهة', 'لحمة', 'فراخ',
     'carrefour', 'كارفور', 'kazyon', 'كازيون', 'seoudi', 'سعودي',
-    'oscar', 'خير زمان',
+    'خير زمان', 'lulu', 'لولو', 'panda', 'باندا',
   ],
 };
 

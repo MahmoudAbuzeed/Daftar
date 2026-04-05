@@ -143,7 +143,7 @@ export default function ScanReceiptScreen({ navigation, route }: Props) {
         messages: [
           {
             role: 'system',
-            content: `You are an expert receipt OCR parser for Daftar, an Egyptian bill-splitting app.
+            content: `You are an expert receipt OCR parser for Daftar, a bill-splitting app. You can read receipts in any language including Arabic, English, and others.
 Your job is to extract EVERY line item from a receipt image with maximum accuracy.
 
 CRITICAL RULES:

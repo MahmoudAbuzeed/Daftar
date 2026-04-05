@@ -10,6 +10,9 @@ import {
   Easing,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -29,6 +32,38 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'PhoneEntry'>;
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
+interface Country { code: string; dial: string; flag: string; name: string; maxLen: number }
+
+const COUNTRIES: Country[] = [
+  { code: 'EG', dial: '+20', flag: '🇪🇬', name: 'Egypt', maxLen: 11 },
+  { code: 'SA', dial: '+966', flag: '🇸🇦', name: 'Saudi Arabia', maxLen: 10 },
+  { code: 'AE', dial: '+971', flag: '🇦🇪', name: 'UAE', maxLen: 9 },
+  { code: 'KW', dial: '+965', flag: '🇰🇼', name: 'Kuwait', maxLen: 8 },
+  { code: 'QA', dial: '+974', flag: '🇶🇦', name: 'Qatar', maxLen: 8 },
+  { code: 'BH', dial: '+973', flag: '🇧🇭', name: 'Bahrain', maxLen: 8 },
+  { code: 'OM', dial: '+968', flag: '🇴🇲', name: 'Oman', maxLen: 8 },
+  { code: 'JO', dial: '+962', flag: '🇯🇴', name: 'Jordan', maxLen: 10 },
+  { code: 'LB', dial: '+961', flag: '🇱🇧', name: 'Lebanon', maxLen: 8 },
+  { code: 'IQ', dial: '+964', flag: '🇮🇶', name: 'Iraq', maxLen: 10 },
+  { code: 'MA', dial: '+212', flag: '🇲🇦', name: 'Morocco', maxLen: 10 },
+  { code: 'TN', dial: '+216', flag: '🇹🇳', name: 'Tunisia', maxLen: 8 },
+  { code: 'DZ', dial: '+213', flag: '🇩🇿', name: 'Algeria', maxLen: 10 },
+  { code: 'LY', dial: '+218', flag: '🇱🇾', name: 'Libya', maxLen: 10 },
+  { code: 'SD', dial: '+249', flag: '🇸🇩', name: 'Sudan', maxLen: 9 },
+  { code: 'US', dial: '+1', flag: '🇺🇸', name: 'United States', maxLen: 10 },
+  { code: 'GB', dial: '+44', flag: '🇬🇧', name: 'United Kingdom', maxLen: 11 },
+  { code: 'DE', dial: '+49', flag: '🇩🇪', name: 'Germany', maxLen: 12 },
+  { code: 'FR', dial: '+33', flag: '🇫🇷', name: 'France', maxLen: 10 },
+  { code: 'TR', dial: '+90', flag: '🇹🇷', name: 'Turkey', maxLen: 10 },
+  { code: 'IN', dial: '+91', flag: '🇮🇳', name: 'India', maxLen: 10 },
+  { code: 'PK', dial: '+92', flag: '🇵🇰', name: 'Pakistan', maxLen: 11 },
+  { code: 'NG', dial: '+234', flag: '🇳🇬', name: 'Nigeria', maxLen: 11 },
+  { code: 'ZA', dial: '+27', flag: '🇿🇦', name: 'South Africa', maxLen: 10 },
+  { code: 'BR', dial: '+55', flag: '🇧🇷', name: 'Brazil', maxLen: 11 },
+  { code: 'CA', dial: '+1', flag: '🇨🇦', name: 'Canada', maxLen: 10 },
+  { code: 'AU', dial: '+61', flag: '🇦🇺', name: 'Australia', maxLen: 10 },
+];
+
 export default function PhoneEntryScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { colors, isDark } = useAppTheme();
@@ -37,6 +72,8 @@ export default function PhoneEntryScreen({ navigation }: Props) {
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState<Country>(COUNTRIES[0]); // Default Egypt
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
   // ── Logo bounce on mount ──
@@ -194,14 +231,15 @@ export default function PhoneEntryScreen({ navigation }: Props) {
 
   const handleContinue = async () => {
     const trimmed = phone.trim().replace(/\s/g, '');
-    if (trimmed.length < 10) {
+    if (trimmed.length < 6) {
       alert.error(t('auth.error'), t('auth.invalidPhone'));
       return;
     }
 
     setSending(true);
     try {
-      const fullPhone = `+20${trimmed.startsWith('0') ? trimmed.slice(1) : trimmed}`;
+      const digits = trimmed.startsWith('0') ? trimmed.slice(1) : trimmed;
+      const fullPhone = `${country.dial}${digits}`;
       await sendOTP(fullPhone);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.navigate('OTPVerify', { phone: fullPhone });
@@ -213,7 +251,7 @@ export default function PhoneEntryScreen({ navigation }: Props) {
   };
 
   const handlePhoneChange = (raw: string) => {
-    setPhone(raw.replace(/\D/g, '').slice(0, 11));
+    setPhone(raw.replace(/\D/g, '').slice(0, country.maxLen));
   };
 
   return (
@@ -322,11 +360,16 @@ export default function PhoneEntryScreen({ navigation }: Props) {
                 <Text style={styles.phoneLabel}>{t('auth.phoneLabel')}</Text>
 
                 <View style={styles.phoneRow}>
-                  {/* Country code */}
-                  <View style={styles.countryCode}>
-                    <Text style={styles.flag}>{'\uD83C\uDDEA\uD83C\uDDEC'}</Text>
-                    <Text style={styles.countryText}>+20</Text>
-                  </View>
+                  {/* Country code — tappable */}
+                  <TouchableOpacity
+                    style={styles.countryCode}
+                    onPress={() => { Haptics.selectionAsync(); setCountryPickerOpen(true); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.flag}>{country.flag}</Text>
+                    <Text style={styles.countryText}>{country.dial}</Text>
+                    <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                  </TouchableOpacity>
 
                   {/* Divider */}
                   <View style={styles.phoneDivider} />
@@ -336,13 +379,46 @@ export default function PhoneEntryScreen({ navigation }: Props) {
                     value={phone}
                     onChangeText={handlePhoneChange}
                     keyboardType="number-pad"
-                    maxLength={11}
+                    maxLength={country.maxLen}
                     placeholder={t('auth.phonePlaceholder')}
                     placeholderTextColor={colors.textTertiary}
                     style={styles.phoneInput}
                     editable={!sending}
                   />
                 </View>
+
+                {/* Country Picker Modal */}
+                <Modal visible={countryPickerOpen} transparent animationType="slide" onRequestClose={() => setCountryPickerOpen(false)}>
+                  <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setCountryPickerOpen(false)}>
+                    <View style={[styles.pickerContent, { backgroundColor: colors.bgCard }]}>
+                      <View style={styles.pickerHandle} />
+                      <Text style={styles.pickerTitle}>{t('auth.selectCountry') || 'Select Country'}</Text>
+                      <FlatList
+                        data={COUNTRIES}
+                        keyExtractor={item => item.code}
+                        style={{ maxHeight: SCREEN_H * 0.5 }}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={[styles.pickerRow, item.code === country.code && styles.pickerRowActive]}
+                            onPress={() => {
+                              Haptics.selectionAsync();
+                              setCountry(item);
+                              setPhone('');
+                              setCountryPickerOpen(false);
+                            }}
+                          >
+                            <Text style={styles.pickerFlag}>{item.flag}</Text>
+                            <Text style={styles.pickerName}>{item.name}</Text>
+                            <Text style={styles.pickerDial}>{item.dial}</Text>
+                            {item.code === country.code && (
+                              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                            )}
+                          </TouchableOpacity>
+                        )}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
               </ThemedCard>
 
               {/* Continue button */}
@@ -616,6 +692,57 @@ function createStyles(colors: ThemeColors, isDark: boolean) {
       color: colors.text,
       letterSpacing: 1.5,
       paddingVertical: 14,
+    },
+
+    // Country picker
+    pickerOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    pickerContent: {
+      borderTopLeftRadius: Radius.xxl,
+      borderTopRightRadius: Radius.xxl,
+      paddingHorizontal: Spacing.xl,
+      paddingTop: Spacing.lg,
+      paddingBottom: 40,
+    },
+    pickerHandle: {
+      width: 40, height: 4, borderRadius: 2,
+      backgroundColor: colors.border,
+      alignSelf: 'center',
+      marginBottom: Spacing.lg,
+    },
+    pickerTitle: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 18,
+      color: colors.text,
+      marginBottom: Spacing.lg,
+    },
+    pickerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      gap: Spacing.md,
+    },
+    pickerRowActive: {
+      backgroundColor: colors.primarySurface,
+      borderRadius: Radius.md,
+    },
+    pickerFlag: { fontSize: 22 },
+    pickerName: {
+      flex: 1,
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 15,
+      color: colors.text,
+    },
+    pickerDial: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 14,
+      color: colors.textSecondary,
     },
 
     // CTA

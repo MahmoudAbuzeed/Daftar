@@ -79,7 +79,7 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
   const [description, setDescription] = useState(prefillDescription || '');
   const [notes, setNotes] = useState('');
   const [amount, setAmount] = useState(prefillAmount ? prefillAmount.toString() : '');
-  const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
+  const [currency, setCurrency] = useState<string>('EGP');
   const [paidBy, setPaidBy] = useState<string>('');
   const [splitType, setSplitType] = useState<SplitType>('equal');
   const [memberSplits, setMemberSplits] = useState<MemberSplit[]>([]);

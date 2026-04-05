@@ -50,21 +50,25 @@ export async function getExchangeRates(): Promise<CachedRates> {
 
 export function convertCurrency(
   amount: number,
-  from: 'EGP' | 'USD',
-  to: 'EGP' | 'USD',
+  from: string,
+  to: string,
   rates: CachedRates,
 ): number {
   if (from === to) return amount;
-  if (from === 'EGP') return Math.round(amount * rates.egpToUsd * 100) / 100;
-  return Math.round(amount * rates.usdToEgp * 100) / 100;
+  if (from === 'EGP' && to === 'USD') return Math.round(amount * rates.egpToUsd * 100) / 100;
+  if (from === 'USD' && to === 'EGP') return Math.round(amount * rates.usdToEgp * 100) / 100;
+  // For other pairs, fallback via USD
+  const inUsd = from === 'USD' ? amount : Math.round(amount * rates.egpToUsd * 100) / 100;
+  return to === 'USD' ? inUsd : Math.round(inUsd * rates.usdToEgp * 100) / 100;
 }
 
 export function formatConverted(
   amount: number,
-  from: 'EGP' | 'USD',
-  to: 'EGP' | 'USD',
+  from: string,
+  to: string,
   rates: CachedRates,
 ): string {
+  const { formatCurrency } = require('./balance');
   const converted = convertCurrency(amount, from, to, rates);
-  return to === 'USD' ? `$${converted.toFixed(2)}` : `${converted.toFixed(2)} EGP`;
+  return formatCurrency(converted, to);
 }

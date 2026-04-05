@@ -25,7 +25,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
-import { Balance, User } from '../../types/database';
+import { Balance, User, PaymentMethod } from '../../types/database';
 import { simplifyDebts, formatCurrency } from '../../utils/balance';
 import { Spacing, Radius, FontFamily } from '../../theme';
 import AnimatedListItem from '../../components/AnimatedListItem';
@@ -38,8 +38,6 @@ import { useAlert } from '../../hooks/useAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupBalances'>;
 
-type PaymentMethod = 'cash' | 'vodafone_cash' | 'instapay' | 'bank';
-
 interface SimplifiedDebt extends Balance {
   from_user_data?: User;
   to_user_data?: User;
@@ -47,9 +45,15 @@ interface SimplifiedDebt extends Balance {
 
 const PAYMENT_METHODS: { key: PaymentMethod; labelKey: string; icon: string }[] = [
   { key: 'cash', labelKey: 'settlements.cash', icon: 'cash-outline' },
+  { key: 'bank', labelKey: 'settlements.bank', icon: 'business-outline' },
+  { key: 'paypal', labelKey: 'settlements.paypal', icon: 'logo-paypal' },
+  { key: 'apple_pay', labelKey: 'settlements.apple_pay', icon: 'logo-apple' },
+  { key: 'google_pay', labelKey: 'settlements.google_pay', icon: 'logo-google' },
   { key: 'vodafone_cash', labelKey: 'settlements.vodafone_cash', icon: 'phone-portrait-outline' },
   { key: 'instapay', labelKey: 'settlements.instapay', icon: 'flash-outline' },
-  { key: 'bank', labelKey: 'settlements.bank', icon: 'business-outline' },
+  { key: 'wise', labelKey: 'settlements.wise', icon: 'swap-horizontal-outline' },
+  { key: 'venmo', labelKey: 'settlements.venmo', icon: 'card-outline' },
+  { key: 'other', labelKey: 'settlements.other', icon: 'ellipsis-horizontal-outline' },
 ];
 
 export default function GroupBalancesScreen({ route, navigation }: Props) {
@@ -61,7 +65,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [debts, setDebts] = useState<SimplifiedDebt[]>([]);
-  const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
+  const [currency, setCurrency] = useState<string>('EGP');
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
 

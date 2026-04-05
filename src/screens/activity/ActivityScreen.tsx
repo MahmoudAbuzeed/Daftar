@@ -33,7 +33,7 @@ interface ActivityItem {
   description: string;
   groupName: string;
   amount: number;
-  currency: 'EGP' | 'USD';
+  currency: string;
   createdAt: string;
   paidByName: string;
 }

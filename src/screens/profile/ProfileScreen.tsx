@@ -34,6 +34,9 @@ import { useAlert } from '../../hooks/useAlert';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
+import { CurrencyCode } from '../../types/database';
+
+const PROFILE_CURRENCIES: CurrencyCode[] = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'INR', 'PKR', 'TRY', 'CAD', 'AUD', 'BRL'];
 
 const { width: SW } = Dimensions.get('window');
 
@@ -108,7 +111,8 @@ export default function ProfileScreen() {
 
   const handleCurrencyToggle = async () => {
     if (!profile) return;
-    const newCurrency = currentCurrency === 'EGP' ? 'USD' : 'EGP';
+    const idx = PROFILE_CURRENCIES.indexOf(currentCurrency as CurrencyCode);
+    const newCurrency = PROFILE_CURRENCIES[(idx + 1) % PROFILE_CURRENCIES.length];
     try {
       const { error } = await supabase.from('users').update({ preferred_currency: newCurrency }).eq('id', profile.id);
       if (error) throw error;

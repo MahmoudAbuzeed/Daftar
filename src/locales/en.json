@@ -234,6 +234,13 @@
     "vodafone_cash": "Vodafone Cash",
     "instapay": "InstaPay",
     "bank": "Bank Transfer",
+    "paypal": "PayPal",
+    "apple_pay": "Apple Pay",
+    "google_pay": "Google Pay",
+    "wise": "Wise",
+    "venmo": "Venmo",
+    "zelle": "Zelle",
+    "other": "Other",
     "note": "Note (optional)",
     "confirm": "Confirm Payment"
   },
@@ -281,7 +288,7 @@
     "light": "Light",
     "pro": "PRO",
     "proComingSoon": "Pro features are coming soon! Stay tuned for unlimited groups, AI receipt scanning, and more.",
-    "aboutDescription": "Split bills with friends, track personal debts, and scan receipts.\nMade with love in Egypt.",
+    "aboutDescription": "Split bills with friends, track personal debts, and scan receipts with AI.",
     "version": "Daftar v1.0.0"
   },
   "common": {
@@ -433,7 +440,7 @@
     "privacyPolicy": "Privacy Policy",
     "terms": "Terms of Service",
     "contactUs": "Contact Us",
-    "madeInEgypt": "Made with love in Egypt",
+    "madeInEgypt": "Made with love",
     "version": "Version",
     "description": "Split bills with friends, track personal debts, and scan receipts with AI. Daftar makes it easy to keep track of shared expenses."
   },
@@ -445,7 +452,7 @@
     "acceptableUse": { "title": "3. Acceptable Use", "body": "- You agree to use Daftar only for lawful purposes\n- You will not attempt to manipulate expense records fraudulently" },
     "subscriptions": { "title": "4. Subscriptions", "body": "- Daftar Pro is available as a monthly or yearly subscription\n- Subscriptions are managed through Apple App Store or Google Play Store\n- You can cancel anytime through your store account settings" },
     "liability": { "title": "5. Limitation of Liability", "body": "- Daftar is provided \"as is\" without warranties\n- We are not responsible for disputes between users about expenses\n- We are not a financial institution or payment processor" },
-    "governingLaw": { "title": "6. Governing Law", "body": "- These terms are governed by the laws of Egypt" },
+    "governingLaw": { "title": "6. Governing Law", "body": "- These terms are governed by applicable local laws" },
     "changes": { "title": "7. Changes", "body": "- We may update these terms from time to time\n- Continued use constitutes acceptance of updated terms" },
     "contact": { "title": "8. Contact", "body": "- Email: support@daftar.app" }
   },

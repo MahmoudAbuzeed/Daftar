@@ -1,3 +1,7 @@
+export type CurrencyCode = 'EGP' | 'USD' | 'EUR' | 'GBP' | 'SAR' | 'AED' | 'KWD' | 'QAR' | 'BHD' | 'OMR' | 'JOD' | 'LBP' | 'IQD' | 'MAD' | 'TND' | 'DZD' | 'LYD' | 'SDG' | 'INR' | 'PKR' | 'TRY' | 'NGN' | 'ZAR' | 'BRL' | 'CAD' | 'AUD';
+
+export type PaymentMethod = 'cash' | 'vodafone_cash' | 'instapay' | 'bank' | 'paypal' | 'venmo' | 'zelle' | 'wise' | 'revolut' | 'apple_pay' | 'google_pay' | 'stc_pay' | 'mada' | 'upi' | 'other';
+
 export interface User {
   id: string;
   display_name: string;
@@ -5,7 +9,7 @@ export interface User {
   phone: string | null;
   avatar_url: string | null;
   preferred_lang: 'en' | 'ar';
-  preferred_currency: 'EGP' | 'USD';
+  preferred_currency: CurrencyCode;
   created_at: string;
 }
 
@@ -14,7 +18,7 @@ export interface Group {
   name: string;
   description: string | null;
   cover_image_url: string | null;
-  currency: 'EGP' | 'USD';
+  currency: CurrencyCode;
   invite_code: string;
   created_by: string;
   created_at: string;
@@ -36,7 +40,7 @@ export interface Expense {
   paid_by: string;
   description: string;
   total_amount: number;
-  currency: 'EGP' | 'USD';
+  currency: CurrencyCode;
   category: string | null;
   split_type: 'equal' | 'exact' | 'percentage' | 'by_item';
   receipt_image: string | null;
@@ -86,8 +90,8 @@ export interface Settlement {
   paid_by: string;
   paid_to: string;
   amount: number;
-  currency: 'EGP' | 'USD';
-  method: 'cash' | 'vodafone_cash' | 'instapay' | 'bank';
+  currency: CurrencyCode;
+  method: PaymentMethod;
   note: string | null;
   created_at: string;
   paid_by_user?: User;
@@ -121,7 +125,7 @@ export interface ParsedReceipt {
   tax: number;
   service_charge: number;
   total: number;
-  currency: 'EGP' | 'USD';
+  currency: CurrencyCode;
   merchant_name: string | null;
 }
 
@@ -183,7 +187,7 @@ export interface SharedBill {
   receipt_image: string | null;
   tax: number;
   service_charge: number;
-  currency: 'EGP' | 'USD';
+  currency: CurrencyCode;
   merchant_name: string | null;
   created_at: string;
   updated_at: string;
@@ -221,7 +225,7 @@ export interface RecurringExpense {
   created_by: string;
   description: string;
   amount: number;
-  currency: 'EGP' | 'USD';
+  currency: CurrencyCode;
   category: string | null;
   split_type: 'equal' | 'exact' | 'percentage';
   frequency: 'weekly' | 'biweekly' | 'monthly';

@@ -56,7 +56,7 @@ export default function RecurringExpensesScreen({ route, navigation }: Props) {
   const [items, setItems] = useState<RecurringExpense[]>([]);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState<'EGP' | 'USD'>('EGP');
+  const [currency, setCurrency] = useState<string>('EGP');
 
   // Form state
   const [modalVisible, setModalVisible] = useState(false);

@@ -55,22 +55,35 @@ export function simplifyDebts(balances: Balance[]): Balance[] {
   return simplified;
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$', EUR: '€', GBP: '£', EGP: 'E£', SAR: 'SR', AED: 'AED',
+  KWD: 'KD', QAR: 'QR', BHD: 'BD', OMR: 'OMR', JOD: 'JD',
+  INR: '₹', PKR: 'Rs', TRY: '₺', NGN: '₦', ZAR: 'R', BRL: 'R$',
+  CAD: 'CA$', AUD: 'A$', MAD: 'MAD', TND: 'DT', DZD: 'DA',
+  LBP: 'L£', IQD: 'IQD', LYD: 'LD', SDG: 'SDG',
+};
+
+const CURRENCY_NAMES_AR: Record<string, string> = {
+  USD: 'دولار', EUR: 'يورو', GBP: 'جنيه إسترليني', EGP: 'ج.م',
+  SAR: 'ر.س', AED: 'د.إ', KWD: 'د.ك', QAR: 'ر.ق', BHD: 'د.ب',
+  OMR: 'ر.ع', JOD: 'د.أ', INR: 'روبية', PKR: 'روبية', TRY: 'ليرة',
+  NGN: 'نيرا', ZAR: 'راند', BRL: 'ريال', CAD: 'دولار كندي',
+  AUD: 'دولار أسترالي', MAD: 'د.م', TND: 'د.ت', DZD: 'د.ج',
+  LBP: 'ل.ل', IQD: 'د.ع', LYD: 'د.ل', SDG: 'ج.س',
+};
+
 /**
  * Format currency amount with symbol
  */
-export function formatCurrency(amount: number, currency: 'EGP' | 'USD' = 'EGP'): string {
-  if (currency === 'USD') {
-    return `$${amount.toFixed(2)}`;
-  }
-  return `${amount.toFixed(2)} EGP`;
+export function formatCurrency(amount: number, currency: string = 'EGP'): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  return `${symbol} ${amount.toFixed(2)}`;
 }
 
 /**
  * Format currency for Arabic
  */
-export function formatCurrencyAr(amount: number, currency: 'EGP' | 'USD' = 'EGP'): string {
-  if (currency === 'USD') {
-    return `${amount.toFixed(2)} دولار`;
-  }
-  return `${amount.toFixed(2)} ج.م`;
+export function formatCurrencyAr(amount: number, currency: string = 'EGP'): string {
+  const name = CURRENCY_NAMES_AR[currency] || currency;
+  return `${amount.toFixed(2)} ${name}`;
 }

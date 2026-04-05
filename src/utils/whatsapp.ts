@@ -30,7 +30,7 @@ export function generateBalanceSummary(
   if (lang === 'ar') {
     let msg = `📊 ملخص حسابات "${groupName}" من دفتر\n\n`;
     for (const b of balances) {
-      msg += `• ${b.from} مديون لـ ${b.to}: ${b.amount.toFixed(2)} ${b.currency === 'EGP' ? 'ج.م' : 'دولار'}\n`;
+      msg += `• ${b.from} مديون لـ ${b.to}: ${b.amount.toFixed(2)} ${b.currency}\n`;
     }
     msg += `\nحمّل تطبيق دفتر عشان تقسّم الحساب بسهولة! 📱`;
     return msg;
@@ -55,7 +55,7 @@ export function generateReminder(
   lang: 'en' | 'ar' = 'en'
 ): string {
   if (lang === 'ar') {
-    return `👋 تذكير من دفتر: ${toName}، أنت مديون لـ ${fromName} بمبلغ ${amount.toFixed(2)} ${currency === 'EGP' ? 'ج.م' : 'دولار'}. ممكن تسوّي الحساب؟ 🙏`;
+    return `👋 تذكير من دفتر: ${toName}، أنت مديون لـ ${fromName} بمبلغ ${amount.toFixed(2)} ${currency}. ممكن تسوّي الحساب؟ 🙏`;
   }
   return `👋 Daftar reminder: Hey ${toName}, you owe ${fromName} ${amount.toFixed(2)} ${currency}. Can you settle up? 🙏`;
 }
@@ -85,11 +85,11 @@ export function generatePaymentNotification(
   description: string,
   lang: 'en' | 'ar' = 'en'
 ): string {
-  const formattedAmount = `${amount.toFixed(2)} ${currency === 'EGP' ? (lang === 'ar' ? 'ج.م' : 'EGP') : (lang === 'ar' ? 'دولار' : 'USD')}`;
+  const formattedAmount = `${amount.toFixed(2)} ${currency}`;
   const phoneInfo = payerPhone ? `\n📱 ${payerPhone}` : '';
 
   if (lang === 'ar') {
-    return `🧾 دفتر: عليك ${formattedAmount} لـ ${payerName} عن "${description}".${phoneInfo}\n\nادفع عن طريق فودافون كاش أو إنستاباي. 💸`;
+    return `🧾 دفتر: عليك ${formattedAmount} لـ ${payerName} عن "${description}".${phoneInfo}\n\nسدد الحساب عن طريق التطبيق. 💸`;
   }
-  return `🧾 Daftar: You owe ${formattedAmount} to ${payerName} for "${description}".${phoneInfo}\n\nPay via Vodafone Cash or InstaPay. 💸`;
+  return `🧾 Daftar: You owe ${formattedAmount} to ${payerName} for "${description}".${phoneInfo}\n\nSettle up through the app. 💸`;
 }

@@ -129,7 +129,7 @@ export default function GroupsListScreen({ navigation }: Props) {
   useFocusEffect(useCallback(() => { fetchGroups(); }, [fetchGroups]));
   const onRefresh = useCallback(() => { setRefreshing(true); fetchGroups(); }, [fetchGroups]);
 
-  const renderBalancePill = (balance: number, currency: 'EGP' | 'USD') => {
+  const renderBalancePill = (balance: number, currency: string) => {
     if (Math.abs(balance) < 0.01) {
       return (
         <View style={styles.pillSettled}>
