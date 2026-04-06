@@ -11,9 +11,12 @@ interface AuthContextType {
   needsProfile: boolean; // True when user is authenticated but has no profile yet
   sendOTP: (phone: string) => Promise<void>;
   verifyOTP: (phone: string, code: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   setupProfile: (displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  skipLogin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,6 +95,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  // Sign in with email + password
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
+  // Sign up with email + password
+  const signUpWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+  };
+
   // Set up profile for new users after OTP verification
   const setupProfile = async (displayName: string) => {
     if (!user) throw new Error('No user');
@@ -110,7 +125,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setSession(null);
+    setUser(null);
     setProfile(null);
+    setNeedsProfile(false);
+  };
+
+  // DEV ONLY: skip login with a fake session
+  const skipLogin = () => {
+    const fakeUser = { id: 'dev-user-000', phone: '+0000000000' } as any;
+    setSession({ access_token: 'dev', user: fakeUser } as any);
+    setUser(fakeUser);
+    setProfile({
+      id: 'dev-user-000',
+      display_name: 'Dev User',
+      phone: '+0000000000',
+    } as any);
     setNeedsProfile(false);
   };
 
@@ -124,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         session, user, profile, loading, needsProfile,
-        sendOTP, verifyOTP, setupProfile, signOut, refreshProfile,
+        sendOTP, verifyOTP, signInWithEmail, signUpWithEmail, setupProfile, signOut, refreshProfile, skipLogin,
       }}
     >
       {children}

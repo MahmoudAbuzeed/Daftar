@@ -11,7 +11,7 @@ const REVENUECAT_IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || 'test_i
 const REVENUECAT_ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || 'test_icBvIOqImAaaNmNFCRNeVscTFlB';
 
 // Entitlement ID configured in RevenueCat dashboard
-const PRO_ENTITLEMENT = 'Daftar Pro';
+const PRO_ENTITLEMENT = 'Fifti Pro';
 
 /**
  * Initialize RevenueCat SDK. Call once on app startup.

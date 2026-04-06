@@ -28,19 +28,19 @@ export function generateBalanceSummary(
   lang: 'en' | 'ar' = 'en'
 ): string {
   if (lang === 'ar') {
-    let msg = `📊 ملخص حسابات "${groupName}" من دفتر\n\n`;
+    let msg = `📊 ملخص حسابات "${groupName}" من Fifti\n\n`;
     for (const b of balances) {
       msg += `• ${b.from} مديون لـ ${b.to}: ${b.amount.toFixed(2)} ${b.currency}\n`;
     }
-    msg += `\nحمّل تطبيق دفتر عشان تقسّم الحساب بسهولة! 📱`;
+    msg += `\nحمّل تطبيق Fifti عشان تقسّم الحساب بسهولة! 📱`;
     return msg;
   }
 
-  let msg = `📊 Balance summary for "${groupName}" from Daftar\n\n`;
+  let msg = `📊 Balance summary for "${groupName}" from Fifti\n\n`;
   for (const b of balances) {
     msg += `• ${b.from} owes ${b.to}: ${b.amount.toFixed(2)} ${b.currency}\n`;
   }
-  msg += `\nDownload Daftar to split bills easily! 📱`;
+  msg += `\nDownload Fifti to split bills easily! 📱`;
   return msg;
 }
 
@@ -55,9 +55,9 @@ export function generateReminder(
   lang: 'en' | 'ar' = 'en'
 ): string {
   if (lang === 'ar') {
-    return `👋 تذكير من دفتر: ${toName}، أنت مديون لـ ${fromName} بمبلغ ${amount.toFixed(2)} ${currency}. ممكن تسوّي الحساب؟ 🙏`;
+    return `👋 تذكير من Fifti: ${toName}، أنت مديون لـ ${fromName} بمبلغ ${amount.toFixed(2)} ${currency}. ممكن تسوّي الحساب؟ 🙏`;
   }
-  return `👋 Daftar reminder: Hey ${toName}, you owe ${fromName} ${amount.toFixed(2)} ${currency}. Can you settle up? 🙏`;
+  return `👋 Fifti reminder: Hey ${toName}, you owe ${fromName} ${amount.toFixed(2)} ${currency}. Can you settle up? 🙏`;
 }
 
 /**
@@ -69,9 +69,9 @@ export function generateInviteMessage(
   lang: 'en' | 'ar' = 'en'
 ): string {
   if (lang === 'ar') {
-    return `🎉 انضم لمجموعة "${groupName}" على دفتر!\n\nكود الدعوة: ${inviteCode}\n\nحمّل التطبيق وادخل الكود عشان تنضم. 📱`;
+    return `🎉 انضم لمجموعة "${groupName}" على Fifti!\n\nكود الدعوة: ${inviteCode}\n\nحمّل التطبيق وادخل الكود عشان تنضم. 📱`;
   }
-  return `🎉 Join "${groupName}" on Daftar!\n\nInvite code: ${inviteCode}\n\nDownload the app and enter the code to join. 📱`;
+  return `🎉 Join "${groupName}" on Fifti!\n\nInvite code: ${inviteCode}\n\nDownload the app and enter the code to join. 📱`;
 }
 
 /**
@@ -89,7 +89,7 @@ export function generatePaymentNotification(
   const phoneInfo = payerPhone ? `\n📱 ${payerPhone}` : '';
 
   if (lang === 'ar') {
-    return `🧾 دفتر: عليك ${formattedAmount} لـ ${payerName} عن "${description}".${phoneInfo}\n\nسدد الحساب عن طريق التطبيق. 💸`;
+    return `🧾 Fifti: عليك ${formattedAmount} لـ ${payerName} عن "${description}".${phoneInfo}\n\nسدد الحساب عن طريق التطبيق. 💸`;
   }
-  return `🧾 Daftar: You owe ${formattedAmount} to ${payerName} for "${description}".${phoneInfo}\n\nSettle up through the app. 💸`;
+  return `🧾 Fifti: You owe ${formattedAmount} to ${payerName} for "${description}".${phoneInfo}\n\nSettle up through the app. 💸`;
 }

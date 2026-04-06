@@ -1,20 +1,20 @@
 {
-  "app_name": "Daftar",
+  "app_name": "Fifti",
   "tabs": {
     "friends": "Friends",
     "groups": "Groups",
-    "daftar": "Daftar",
+    "daftar": "Ledger",
     "activity": "Activity",
     "profile": "Profile"
   },
   "auth": {
-    "welcome_title": "Welcome to Daftar",
-    "welcome_subtitle": "Split bills, track debts, stay fair",
-    "welcomeTagline": "Split bills, track debts, stay fair",
+    "welcome_title": "Welcome to Fifti",
+    "welcome_subtitle": "Split fair, stay square",
+    "welcomeTagline": "Split fair, stay square",
     "welcomeBack": "WELCOME BACK",
-    "joinDaftar": "JOIN DAFTAR",
+    "joinDaftar": "JOIN FIFTI",
     "est": "EST. 2025",
-    "taglineShort": "Split bills. Track debts. Stay even.",
+    "taglineShort": "Split fair. Stay square.",
     "featureSplitBills": "Split bills instantly with friends",
     "featureTrackDebts": "Track who owes what, effortlessly",
     "featureScanReceipts": "Scan receipts to auto-split items",
@@ -61,7 +61,7 @@
     "resendCode": "Resend Code",
     "invalidOTP": "Invalid code. Please try again.",
     "verifying": "Verifying...",
-    "welcomeToDaftar": "Welcome to Daftar!",
+    "welcomeToDaftar": "Welcome to Fifti!",
     "whatName": "What should we call you?",
     "namePlaceholder": "Your name",
     "getStarted": "Get Started",
@@ -182,7 +182,7 @@
     "subtotal": "Subtotal"
   },
   "daftar": {
-    "title": "Daftar",
+    "title": "Ledger",
     "add_entry": "Add Entry",
     "addEntry": "Add Entry",
     "contact_name": "Contact Name",
@@ -199,7 +199,7 @@
     "settle": "Settle",
     "settleTitle": "Settle debt",
     "settleConfirm": "Are you sure you want to settle this?",
-    "settlementNote": "Settled via Daftar",
+    "settlementNote": "Settled via Fifti",
     "settleFailed": "Failed to settle. Please try again.",
     "saveFailed": "Failed to save. Please try again.",
     "invalidAmount": "Please enter a valid amount.",
@@ -269,8 +269,8 @@
     "currency": "Default Currency",
     "defaultCurrency": "Default Currency",
     "notifications": "Notifications",
-    "subscription": "Daftar Pro",
-    "daftarPro": "Daftar Pro",
+    "subscription": "Fifti Pro",
+    "daftarPro": "Fifti Pro",
     "daftarProHint": "Unlimited groups & more",
     "appearance": "Appearance",
     "about": "About",
@@ -289,7 +289,7 @@
     "pro": "PRO",
     "proComingSoon": "Pro features are coming soon! Stay tuned for unlimited groups, AI receipt scanning, and more.",
     "aboutDescription": "Split bills with friends, track personal debts, and scan receipts with AI.",
-    "version": "Daftar v1.0.0"
+    "version": "Fifti v1.0.0"
   },
   "common": {
     "save": "Save",
@@ -311,7 +311,7 @@
     "total": "Total"
   },
   "subscription": {
-    "daftarPro": "Daftar Pro",
+    "daftarPro": "Fifti Pro",
     "upgradeTitle": "Upgrade to Pro",
     "monthlyPrice": "49.9 EGP/month",
     "yearlyPrice": "399.9 EGP/year",
@@ -328,9 +328,9 @@
     "daftarLimitBody": "You have reached the free limit of contacts",
     "exportTitle": "Export Your Data",
     "analyticsTitle": "See Your Spending Insights",
-    "generalTitle": "Get More from Daftar",
+    "generalTitle": "Get More from Fifti",
     "successTitle": "Welcome to Pro!",
-    "successBody": "You now have access to all Daftar features.",
+    "successBody": "You now have access to all Fifti features.",
     "errorTitle": "Purchase Failed",
     "errorBody": "Something went wrong. Please try again.",
     "scansRemaining": "{{count}} scans left",
@@ -339,7 +339,7 @@
     "features": {
       "unlimitedGroups": "Unlimited groups",
       "unlimitedScans": "Unlimited AI receipt scans",
-      "unlimitedContacts": "Unlimited Daftar contacts",
+      "unlimitedContacts": "Unlimited ledger contacts",
       "dataExport": "Export to PDF & Excel",
       "analytics": "Spending analytics & charts",
       "recurringExpenses": "Recurring expenses",
@@ -376,9 +376,9 @@
     "noContacts": "No contacts found",
     "grantAccess": "Grant Access",
     "permissionNeeded": "Contacts Access Needed",
-    "permissionExplain": "We need access to your contacts to help you invite friends to Daftar",
+    "permissionExplain": "We need access to your contacts to help you invite friends to Fifti",
     "noPhone": "No phone number",
-    "addToDaftar": "Add \"{{name}}\" to Daftar",
+    "addToDaftar": "Add \"{{name}}\" to Fifti",
     "fromContacts": "From your contacts",
     "review": "Review",
     "addFriend": "Add friend",
@@ -442,29 +442,29 @@
     "contactUs": "Contact Us",
     "madeInEgypt": "Made with love",
     "version": "Version",
-    "description": "Split bills with friends, track personal debts, and scan receipts with AI. Daftar makes it easy to keep track of shared expenses."
+    "description": "Split bills with friends, track personal debts, and scan receipts with AI. Fifti makes it easy to keep things fifty-fifty."
   },
   "terms": {
-    "heading": "Terms of Service for Daftar",
+    "heading": "Terms of Service for Fifti",
     "updated": "Last updated: April 2026",
-    "serviceDescription": { "title": "1. Service Description", "body": "Daftar is a bill splitting and personal debt tracking application." },
+    "serviceDescription": { "title": "1. Service Description", "body": "Fifti is a bill splitting and personal debt tracking application." },
     "account": { "title": "2. Account", "body": "- You must provide a valid phone number to create an account\n- You are responsible for all activity on your account" },
-    "acceptableUse": { "title": "3. Acceptable Use", "body": "- You agree to use Daftar only for lawful purposes\n- You will not attempt to manipulate expense records fraudulently" },
-    "subscriptions": { "title": "4. Subscriptions", "body": "- Daftar Pro is available as a monthly or yearly subscription\n- Subscriptions are managed through Apple App Store or Google Play Store\n- You can cancel anytime through your store account settings" },
-    "liability": { "title": "5. Limitation of Liability", "body": "- Daftar is provided \"as is\" without warranties\n- We are not responsible for disputes between users about expenses\n- We are not a financial institution or payment processor" },
+    "acceptableUse": { "title": "3. Acceptable Use", "body": "- You agree to use Fifti only for lawful purposes\n- You will not attempt to manipulate expense records fraudulently" },
+    "subscriptions": { "title": "4. Subscriptions", "body": "- Fifti Pro is available as a monthly or yearly subscription\n- Subscriptions are managed through Apple App Store or Google Play Store\n- You can cancel anytime through your store account settings" },
+    "liability": { "title": "5. Limitation of Liability", "body": "- Fifti is provided \"as is\" without warranties\n- We are not responsible for disputes between users about expenses\n- We are not a financial institution or payment processor" },
     "governingLaw": { "title": "6. Governing Law", "body": "- These terms are governed by applicable local laws" },
     "changes": { "title": "7. Changes", "body": "- We may update these terms from time to time\n- Continued use constitutes acceptance of updated terms" },
-    "contact": { "title": "8. Contact", "body": "- Email: support@daftar.app" }
+    "contact": { "title": "8. Contact", "body": "- Email: support@fifti.app" }
   },
   "privacy": {
-    "heading": "Privacy Policy for Daftar",
+    "heading": "Privacy Policy for Fifti",
     "updated": "Last updated: April 2026",
     "infoCollect": { "title": "1. Information We Collect", "body": "- Phone number (for authentication)\n- Display name (your chosen name)\n- Expense and payment data you enter\n- Receipt images you scan\n- Contacts (only when you choose to invite friends)" },
     "howWeUse": { "title": "2. How We Use Your Information", "body": "- To provide bill splitting and debt tracking services\n- To authenticate your account via SMS verification\n- To process receipt images using AI for item extraction\n- To send notifications about shared expenses" },
     "thirdParty": { "title": "3. Third-Party Services", "body": "- Supabase: Authentication, database, and file storage\n- OpenAI: Receipt image processing (images are processed and not stored by OpenAI)" },
     "dataStorage": { "title": "4. Data Storage and Security", "body": "- Your data is stored securely on Supabase servers\n- We use row-level security to ensure you can only access your own data\n- Receipt images are stored in private buckets" },
     "dataDeletion": { "title": "5. Data Deletion", "body": "- You can delete your account and all associated data by contacting us\n- Deleting the app does not delete your server-side data" },
-    "childrenPrivacy": { "title": "6. Children's Privacy", "body": "- Daftar is not intended for children under 13" },
-    "contact": { "title": "7. Contact", "body": "- Email: support@daftar.app" }
-  },
+    "childrenPrivacy": { "title": "6. Children's Privacy", "body": "- Fifti is not intended for children under 13" },
+    "contact": { "title": "7. Contact", "body": "- Email: support@fifti.app" }
+  }
 }

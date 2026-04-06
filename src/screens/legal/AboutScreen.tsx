@@ -38,7 +38,7 @@ export default function AboutScreen({ navigation }: Props) {
     {
       icon: 'mail-outline' as const,
       label: t('legal.contactUs'),
-      onPress: () => Linking.openURL('mailto:support@daftar.app'),
+      onPress: () => Linking.openURL('mailto:support@fifti.app'),
     },
   ];
 
@@ -56,9 +56,9 @@ export default function AboutScreen({ navigation }: Props) {
           end={{ x: 1, y: 1 }}
           style={styles.logoCircle}
         >
-          <Text style={styles.logoEmoji}>{'📒'}</Text>
+          <Text style={styles.logoEmoji}>{'\u2696\uFE0F'}</Text>
         </LinearGradient>
-        <Text style={styles.appName}>Daftar</Text>
+        <Text style={styles.appName}>Fifti</Text>
         <Text style={styles.version}>{t('legal.version')} 1.0.0</Text>
         <Text style={styles.description}>{t('legal.description')}</Text>
       </View>

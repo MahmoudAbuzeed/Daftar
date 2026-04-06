@@ -81,7 +81,7 @@ Deno.serve(async (req: Request) => {
             messages: [
               {
                 role: "system",
-                content: `You are a receipt parser for an Egyptian expense-splitting app called Daftar.
+                content: `You are a receipt parser for an expense-splitting app called Fifti.
 Given receipt text, extract structured data.
 
 Rules:
@@ -131,7 +131,7 @@ Schema: {
             messages: [
               {
                 role: "system",
-                content: `You are a receipt parser for an Egyptian expense-splitting app called Daftar.
+                content: `You are a receipt parser for an expense-splitting app called Fifti.
 Given a receipt image, extract all items with prices.
 
 Rules:

@@ -1,7 +1,7 @@
 import { Platform, StyleSheet } from 'react-native';
 import { FontFamily } from './fonts';
 
-// ── Daftar Design System ──────────────────────────────────────
+// ── Fifti Design System ──────────────────────────────────────
 // "Clean & Bright" — white backgrounds, friendly green, orange accents
 
 export const Colors = {

@@ -17,8 +17,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+import Svg, { Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { AuthStackParamList } from '../../navigation/AppNavigator';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
@@ -26,11 +28,12 @@ import { Spacing, Radius, FontFamily } from '../../theme';
 import { useAuth } from '../../lib/auth-context';
 import { useAlert } from '../../hooks/useAlert';
 import FunButton from '../../components/FunButton';
-import ThemedCard from '../../components/ThemedCard';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'PhoneEntry'>;
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const { height: SCREEN_H } = Dimensions.get('window');
+
+type AuthMode = 'phone' | 'email';
 
 interface Country { code: string; dial: string; flag: string; name: string; maxLen: number }
 
@@ -67,169 +70,46 @@ const COUNTRIES: Country[] = [
 export default function PhoneEntryScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { colors, isDark } = useAppTheme();
-  const { sendOTP } = useAuth();
+  const { sendOTP, signInWithEmail, signUpWithEmail, skipLogin } = useAuth();
   const alert = useAlert();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
+  const [mode, setMode] = useState<AuthMode>('email');
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  // Phone state
   const [phone, setPhone] = useState('');
-  const [country, setCountry] = useState<Country>(COUNTRIES[0]); // Default Egypt
+  const [country, setCountry] = useState<Country>(COUNTRIES[0]);
   const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+
+  // Email state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   const [sending, setSending] = useState(false);
 
-  // ── Logo bounce on mount ──
-  const logoScale = useRef(new Animated.Value(0)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
-
-  // ── Orb drift animations ──
-  const orbTealX = useRef(new Animated.Value(0)).current;
-  const orbTealY = useRef(new Animated.Value(0)).current;
-  const orbBrassX = useRef(new Animated.Value(0)).current;
-  const orbBrassY = useRef(new Animated.Value(0)).current;
-
-  // ── Title entrance ──
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleSlide = useRef(new Animated.Value(24)).current;
-
-  // ── Card entrance ──
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-  const cardSlide = useRef(new Animated.Value(30)).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const slideUp = useRef(new Animated.Value(40)).current;
 
   useEffect(() => {
-    // Logo: spring in with a satisfying bounce
-    Animated.spring(logoScale, {
-      toValue: 1,
-      useNativeDriver: true,
-      damping: 8,
-      stiffness: 140,
-      mass: 0.9,
-      delay: 200,
-    }).start();
-
-    // Logo: subtle continuous wobble
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(logoRotate, {
-          toValue: 1,
-          duration: 2400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoRotate, {
-          toValue: -1,
-          duration: 2400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoRotate, {
-          toValue: 0,
-          duration: 2400,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-
-    // Title entrance
     Animated.parallel([
-      Animated.timing(titleOpacity, {
+      Animated.timing(fadeIn, {
         toValue: 1,
-        duration: 600,
-        delay: 500,
+        duration: 700,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.spring(titleSlide, {
+      Animated.spring(slideUp, {
         toValue: 0,
-        delay: 500,
-        damping: 16,
-        stiffness: 160,
+        damping: 20,
+        stiffness: 120,
         useNativeDriver: true,
       }),
     ]).start();
-
-    // Card entrance
-    Animated.parallel([
-      Animated.timing(cardOpacity, {
-        toValue: 1,
-        duration: 600,
-        delay: 700,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.spring(cardSlide, {
-        toValue: 0,
-        delay: 700,
-        damping: 16,
-        stiffness: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Floating orb drift
-    const driftOrb = (
-      animX: Animated.Value,
-      animY: Animated.Value,
-      rangeX: number,
-      rangeY: number,
-      durationX: number,
-      durationY: number,
-    ) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(animX, {
-            toValue: rangeX,
-            duration: durationX,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
-          }),
-          Animated.timing(animX, {
-            toValue: -rangeX,
-            duration: durationX,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start();
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(animY, {
-            toValue: rangeY,
-            duration: durationY,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
-          }),
-          Animated.timing(animY, {
-            toValue: -rangeY,
-            duration: durationY,
-            easing: Easing.inOut(Easing.sin),
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start();
-    };
-
-    driftOrb(orbTealX, orbTealY, 18, 12, 6000, 8000);
-    driftOrb(orbBrassX, orbBrassY, 14, 20, 7000, 5500);
   }, []);
 
-  const logoAnimStyle = {
-    transform: [
-      {
-        scale: logoScale.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.3, 1],
-        }),
-      },
-      {
-        rotate: logoRotate.interpolate({
-          inputRange: [-1, 0, 1],
-          outputRange: ['-3deg', '0deg', '3deg'],
-        }),
-      },
-    ],
-  };
-
-  const handleContinue = async () => {
+  const handlePhoneContinue = async () => {
     const trimmed = phone.trim().replace(/\s/g, '');
     if (trimmed.length < 6) {
       alert.error(t('auth.error'), t('auth.invalidPhone'));
@@ -250,37 +130,46 @@ export default function PhoneEntryScreen({ navigation }: Props) {
     }
   };
 
+  const handleEmailContinue = async () => {
+    if (!email.trim() || !password) {
+      alert.error(t('auth.error'), t('auth.fillAllFields'));
+      return;
+    }
+    if (password.length < 6) {
+      alert.error(t('auth.error'), t('auth.passwordTooShort'));
+      return;
+    }
+
+    setSending(true);
+    try {
+      if (isSignUp) {
+        await signUpWithEmail(email.trim(), password);
+      } else {
+        await signInWithEmail(email.trim(), password);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      alert.error(
+        t('auth.error'),
+        error.message ?? (isSignUp ? t('auth.signUpFailed') : t('auth.signInFailed')),
+      );
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleContinue = mode === 'phone' ? handlePhoneContinue : handleEmailContinue;
+
   const handlePhoneChange = (raw: string) => {
     setPhone(raw.replace(/\D/g, '').slice(0, country.maxLen));
   };
 
+  const isDisabled = mode === 'phone'
+    ? sending || phone.replace(/\D/g, '').length < 6
+    : sending || !email.trim() || password.length < 6;
+
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={colors.headerGradient}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-      />
-
-      {/* Floating orbs with drift */}
-      <Animated.View
-        style={[
-          styles.orbTeal,
-          { transform: [{ translateX: orbTealX }, { translateY: orbTealY }] },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.orbBrass,
-          { transform: [{ translateX: orbBrassX }, { translateY: orbBrassY }] },
-        ]}
-      />
-      <View style={styles.orbDeep} />
-
-      {/* Diagonal brass line accent */}
-      <View style={styles.diagonalLine} />
-
       <SafeAreaView style={styles.safeArea}>
         <StatusBar
           barStyle={colors.statusBarStyle}
@@ -291,156 +180,237 @@ export default function PhoneEntryScreen({ navigation }: Props) {
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          {/* Top bar */}
-          <View style={styles.topBar}>
-            <View style={styles.topBarLine} />
-            <Text style={styles.topBarLabel}>{t('auth.est')}</Text>
-            <View style={styles.topBarLine} />
-          </View>
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                opacity: fadeIn,
+                transform: [{ translateY: slideUp }],
+              },
+            ]}
+          >
+            {/* Hero */}
+            <View style={styles.hero}>
+              <View style={styles.logoArea}>
+                <Svg width={100} height={100} style={styles.logoRing}>
+                  <Circle
+                    cx={50}
+                    cy={50}
+                    r={46}
+                    stroke={isDark ? 'rgba(29,185,84,0.25)' : 'rgba(29,185,84,0.15)'}
+                    strokeWidth={1.5}
+                    fill="none"
+                    strokeDasharray="8 6"
+                  />
+                  <Circle
+                    cx={50}
+                    cy={50}
+                    r={36}
+                    stroke={isDark ? 'rgba(255,149,0,0.2)' : 'rgba(255,149,0,0.12)'}
+                    strokeWidth={1}
+                    fill="none"
+                  />
+                </Svg>
+                <View style={styles.logoWrap}>
+                  <Text style={styles.logoEmoji}>{'\u2696\uFE0F'}</Text>
+                </View>
+              </View>
 
-          <View style={styles.content}>
-            {/* Hero zone */}
-            <View style={styles.heroZone}>
-              {/* Bouncy Logo */}
-              <Animated.View style={[styles.logoWrap, logoAnimStyle]}>
+              <MaskedView
+                maskElement={<Text style={styles.title}>Fifti</Text>}
+              >
                 <LinearGradient
-                  colors={colors.accentGradient}
-                  style={styles.logoBorder}
+                  colors={isDark ? ['#4AD97B', '#1DB954'] : ['#1DB954', '#17A347']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <View style={styles.logoCore}>
-                    <Text style={styles.logoEmoji}>{'\uD83D\uDCD2'}</Text>
-                  </View>
+                  <Text style={[styles.title, { opacity: 0 }]}>Fifti</Text>
                 </LinearGradient>
+              </MaskedView>
 
-                <View style={styles.logoCornerTL} />
-                <View style={styles.logoCornerBR} />
-              </Animated.View>
+              <View style={styles.dotAccent} />
 
-              {/* Title stack with entrance */}
-              <Animated.View
-                style={[
-                  styles.titleBlock,
-                  {
-                    opacity: titleOpacity,
-                    transform: [{ translateY: titleSlide }],
-                  },
-                ]}
-              >
-                <Text style={styles.titleMain}>Daftar</Text>
-                <View style={styles.titleDivider}>
-                  <View style={styles.titleDividerLine} />
-                  <View style={styles.titleDividerDiamond} />
-                  <View style={styles.titleDividerLine} />
-                </View>
-                <Text style={styles.titleArabic}>{'\u062F\u0641\u062A\u0631'}</Text>
-              </Animated.View>
-
-              <Animated.View
-                style={[styles.taglineRow, { opacity: titleOpacity }]}
-              >
-                <Text style={styles.tagline}>
-                  {t('auth.welcomeTagline')}
-                </Text>
-              </Animated.View>
+              <Text style={styles.subtitle}>
+                {t('auth.welcomeTagline')}
+              </Text>
             </View>
 
-            {/* Phone input card */}
-            <Animated.View
-              style={[
-                styles.cardWrap,
-                {
-                  opacity: cardOpacity,
-                  transform: [{ translateY: cardSlide }],
-                },
-              ]}
-            >
-              <ThemedCard accent padded style={styles.phoneCard}>
-                <Text style={styles.phoneLabel}>{t('auth.phoneLabel')}</Text>
+            {/* Mode toggle */}
+            <View style={styles.modeToggle}>
+              <TouchableOpacity
+                style={[styles.modeBtn, mode === 'email' && styles.modeBtnActive]}
+                onPress={() => setMode('email')}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={16}
+                  color={mode === 'email' ? colors.primary : colors.textTertiary}
+                />
+                <Text style={[styles.modeBtnText, mode === 'email' && styles.modeBtnTextActive]}>
+                  {t('auth.email')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeBtn, mode === 'phone' && styles.modeBtnActive]}
+                onPress={() => setMode('phone')}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="call-outline"
+                  size={16}
+                  color={mode === 'phone' ? colors.primary : colors.textTertiary}
+                />
+                <Text style={[styles.modeBtnText, mode === 'phone' && styles.modeBtnTextActive]}>
+                  {t('auth.phoneLabel')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-                <View style={styles.phoneRow}>
-                  {/* Country code — tappable */}
-                  <TouchableOpacity
-                    style={styles.countryCode}
-                    onPress={() => { Haptics.selectionAsync(); setCountryPickerOpen(true); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.flag}>{country.flag}</Text>
-                    <Text style={styles.countryText}>{country.dial}</Text>
-                    <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
-                  </TouchableOpacity>
+            {/* Form */}
+            <View style={styles.form}>
+              {mode === 'phone' ? (
+                <>
+                  <View style={styles.inputRow}>
+                    <TouchableOpacity
+                      style={styles.countryBtn}
+                      onPress={() => { Haptics.selectionAsync(); setCountryPickerOpen(true); }}
+                      activeOpacity={0.6}
+                    >
+                      <Text style={styles.flag}>{country.flag}</Text>
+                      <Text style={styles.dialCode}>{country.dial}</Text>
+                      <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                    </TouchableOpacity>
 
-                  {/* Divider */}
-                  <View style={styles.phoneDivider} />
+                    <View style={styles.inputDivider} />
 
-                  {/* Phone input */}
-                  <TextInput
-                    value={phone}
-                    onChangeText={handlePhoneChange}
-                    keyboardType="number-pad"
-                    maxLength={country.maxLen}
-                    placeholder={t('auth.phonePlaceholder')}
-                    placeholderTextColor={colors.textTertiary}
-                    style={styles.phoneInput}
-                    editable={!sending}
-                  />
-                </View>
+                    <TextInput
+                      value={phone}
+                      onChangeText={handlePhoneChange}
+                      keyboardType="number-pad"
+                      maxLength={country.maxLen}
+                      placeholder={t('auth.phonePlaceholder')}
+                      placeholderTextColor={colors.textTertiary}
+                      style={styles.phoneInput}
+                      editable={!sending}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.emailInputWrap}>
+                    <Ionicons name="mail-outline" size={18} color={colors.textTertiary} style={styles.inputIcon} />
+                    <TextInput
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      placeholder={t('auth.emailPlaceholder')}
+                      placeholderTextColor={colors.textTertiary}
+                      style={styles.emailInput}
+                      editable={!sending}
+                    />
+                  </View>
 
-                {/* Country Picker Modal */}
-                <Modal visible={countryPickerOpen} transparent animationType="slide" onRequestClose={() => setCountryPickerOpen(false)}>
-                  <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setCountryPickerOpen(false)}>
-                    <View style={[styles.pickerContent, { backgroundColor: colors.bgCard }]}>
-                      <View style={styles.pickerHandle} />
-                      <Text style={styles.pickerTitle}>{t('auth.selectCountry') || 'Select Country'}</Text>
-                      <FlatList
-                        data={COUNTRIES}
-                        keyExtractor={item => item.code}
-                        style={{ maxHeight: SCREEN_H * 0.5 }}
-                        renderItem={({ item }) => (
-                          <TouchableOpacity
-                            style={[styles.pickerRow, item.code === country.code && styles.pickerRowActive]}
-                            onPress={() => {
-                              Haptics.selectionAsync();
-                              setCountry(item);
-                              setPhone('');
-                              setCountryPickerOpen(false);
-                            }}
-                          >
-                            <Text style={styles.pickerFlag}>{item.flag}</Text>
-                            <Text style={styles.pickerName}>{item.name}</Text>
-                            <Text style={styles.pickerDial}>{item.dial}</Text>
-                            {item.code === country.code && (
-                              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                            )}
-                          </TouchableOpacity>
-                        )}
+                  <View style={styles.emailInputWrap}>
+                    <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} style={styles.inputIcon} />
+                    <TextInput
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      placeholder={t('auth.passwordPlaceholder')}
+                      placeholderTextColor={colors.textTertiary}
+                      style={styles.emailInput}
+                      editable={!sending}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={18}
+                        color={colors.textTertiary}
                       />
-                    </View>
-                  </TouchableOpacity>
-                </Modal>
-              </ThemedCard>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
 
-              {/* Continue button */}
-              <View style={styles.ctaZone}>
+              <View style={styles.btnWrap}>
                 <FunButton
-                  title={t('auth.continue')}
+                  title={mode === 'email'
+                    ? (isSignUp ? t('auth.signUp') : t('auth.signIn'))
+                    : t('auth.continue')
+                  }
                   onPress={handleContinue}
                   loading={sending}
-                  disabled={sending || phone.replace(/\D/g, '').length < 10}
+                  disabled={isDisabled}
                   variant="primary"
                   icon={
                     !sending ? (
-                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                      <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                     ) : undefined
                   }
                 />
               </View>
 
-              {/* Terms note */}
-              <Text style={styles.termsNote}>{t('auth.termsNote')}</Text>
-            </Animated.View>
-          </View>
+              {mode === 'email' && (
+                <TouchableOpacity
+                  onPress={() => setIsSignUp(!isSignUp)}
+                  style={styles.switchAuth}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.switchAuthText}>
+                    {isSignUp ? t('auth.hasAccount') : t('auth.noAccount')}{' '}
+                    <Text style={styles.switchAuthLink}>
+                      {isSignUp ? t('auth.signIn') : t('auth.signUp')}
+                    </Text>
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <Text style={styles.terms}>{t('auth.termsNote')}</Text>
+
+              {__DEV__ && (
+                <TouchableOpacity onPress={skipLogin} style={styles.skipBtn}>
+                  <Text style={styles.skipText}>Skip Login (Dev)</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </Animated.View>
+
+          {/* Country Picker Modal */}
+          <Modal visible={countryPickerOpen} transparent animationType="slide" onRequestClose={() => setCountryPickerOpen(false)}>
+            <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setCountryPickerOpen(false)}>
+              <View style={[styles.pickerSheet, { backgroundColor: colors.bgCard }]}>
+                <View style={styles.pickerHandle} />
+                <Text style={styles.pickerTitle}>{t('auth.selectCountry') || 'Select Country'}</Text>
+                <FlatList
+                  data={COUNTRIES}
+                  keyExtractor={item => item.code}
+                  style={{ maxHeight: SCREEN_H * 0.5 }}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[styles.pickerRow, item.code === country.code && styles.pickerRowActive]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setCountry(item);
+                        setPhone('');
+                        setCountryPickerOpen(false);
+                      }}
+                    >
+                      <Text style={styles.pickerFlag}>{item.flag}</Text>
+                      <Text style={styles.pickerName}>{item.name}</Text>
+                      <Text style={styles.pickerDial}>{item.dial}</Text>
+                      {item.code === country.code && (
+                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -459,239 +429,183 @@ function createStyles(colors: ThemeColors, isDark: boolean) {
     flex: {
       flex: 1,
     },
-
-    // Atmospheric orbs
-    orbTeal: {
-      position: 'absolute',
-      width: SCREEN_W * 0.8,
-      height: SCREEN_W * 0.8,
-      borderRadius: SCREEN_W * 0.4,
-      backgroundColor: isDark
-        ? 'rgba(27, 122, 108, 0.12)'
-        : 'rgba(13, 148, 136, 0.08)',
-      top: SCREEN_H * 0.08,
-      left: -SCREEN_W * 0.25,
-    },
-    orbBrass: {
-      position: 'absolute',
-      width: SCREEN_W * 0.5,
-      height: SCREEN_W * 0.5,
-      borderRadius: SCREEN_W * 0.25,
-      backgroundColor: isDark
-        ? 'rgba(201, 162, 39, 0.06)'
-        : 'rgba(166, 124, 0, 0.05)',
-      top: SCREEN_H * 0.55,
-      right: -SCREEN_W * 0.15,
-    },
-    orbDeep: {
-      position: 'absolute',
-      width: SCREEN_W * 0.6,
-      height: SCREEN_W * 0.6,
-      borderRadius: SCREEN_W * 0.3,
-      backgroundColor: isDark
-        ? 'rgba(20, 184, 166, 0.05)'
-        : 'rgba(13, 148, 136, 0.04)',
-      bottom: -SCREEN_W * 0.1,
-      left: SCREEN_W * 0.2,
-    },
-
-    diagonalLine: {
-      position: 'absolute',
-      width: 1,
-      height: SCREEN_H * 0.35,
-      backgroundColor: isDark
-        ? 'rgba(201, 162, 39, 0.15)'
-        : 'rgba(166, 124, 0, 0.1)',
-      top: SCREEN_H * 0.1,
-      right: 40,
-      transform: [{ rotate: '25deg' }],
-    },
-
-    // Top bar
-    topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingTop: Spacing.sm,
-      paddingBottom: Spacing.md,
-      gap: Spacing.md,
-    },
-    topBarLine: {
-      height: 1,
-      width: 36,
-      backgroundColor: isDark
-        ? 'rgba(201, 162, 39, 0.4)'
-        : 'rgba(166, 124, 0, 0.25)',
-    },
-    topBarLabel: {
-      fontFamily: FontFamily.bodySemibold,
-      fontSize: 9,
-      letterSpacing: 5,
-      color: isDark ? 'rgba(212, 175, 55, 0.65)' : colors.accent,
-    },
-
     content: {
       flex: 1,
-      justifyContent: 'space-between',
-      paddingBottom: 36,
+      justifyContent: 'center',
+      paddingHorizontal: Spacing.xxxl,
     },
 
     // Hero
-    heroZone: {
+    hero: {
       alignItems: 'center',
-      paddingTop: Spacing.lg,
+      marginBottom: 32,
     },
-    logoWrap: {
-      marginBottom: 20,
-    },
-    logoBorder: {
+    logoArea: {
       width: 100,
       height: 100,
-      borderRadius: 30,
-      padding: 3,
-      shadowColor: colors.accent,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.35,
-      shadowRadius: 14,
-      elevation: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
     },
-    logoCore: {
-      flex: 1,
-      borderRadius: 27,
-      backgroundColor: isDark ? '#0A1614' : colors.bgCard,
+    logoRing: {
+      position: 'absolute',
+    },
+    logoWrap: {
+      width: 60,
+      height: 60,
+      borderRadius: 18,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.primarySurface,
       justifyContent: 'center',
       alignItems: 'center',
     },
     logoEmoji: {
-      fontSize: 42,
+      fontSize: 28,
     },
-    logoCornerTL: {
-      position: 'absolute',
-      top: -6,
-      left: -6,
-      width: 20,
-      height: 20,
-      borderTopWidth: 2,
-      borderLeftWidth: 2,
-      borderColor: isDark
-        ? 'rgba(201, 162, 39, 0.5)'
-        : 'rgba(166, 124, 0, 0.3)',
-    },
-    logoCornerBR: {
-      position: 'absolute',
-      bottom: -6,
-      right: -6,
-      width: 20,
-      height: 20,
-      borderBottomWidth: 2,
-      borderRightWidth: 2,
-      borderColor: isDark
-        ? 'rgba(201, 162, 39, 0.5)'
-        : 'rgba(166, 124, 0, 0.3)',
-    },
-
-    titleBlock: {
-      alignItems: 'center',
-      marginBottom: Spacing.sm,
-    },
-    titleMain: {
+    title: {
       fontFamily: FontFamily.display,
-      fontSize: 48,
-      letterSpacing: -3,
+      fontSize: 42,
+      letterSpacing: -2,
       color: colors.text,
-      includeFontPadding: false,
     },
-    titleDivider: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginVertical: 6,
-    },
-    titleDividerLine: {
-      width: 28,
-      height: 1,
-      backgroundColor: isDark
-        ? 'rgba(201, 162, 39, 0.55)'
-        : 'rgba(166, 124, 0, 0.3)',
-    },
-    titleDividerDiamond: {
+    dotAccent: {
       width: 6,
       height: 6,
+      borderRadius: 3,
       backgroundColor: colors.accent,
-      transform: [{ rotate: '45deg' }],
+      marginVertical: 10,
     },
-    titleArabic: {
-      fontFamily: FontFamily.display,
-      fontSize: 28,
-      color: colors.accentLight,
-      letterSpacing: 1,
-    },
-    taglineRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 48,
-      marginTop: Spacing.xs,
-    },
-    tagline: {
+    subtitle: {
       fontFamily: FontFamily.body,
-      fontSize: 14,
+      fontSize: 15,
       color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 22,
+      paddingHorizontal: Spacing.xl,
     },
 
-    // Phone card
-    cardWrap: {
-      paddingHorizontal: Spacing.xxl,
+    // Mode toggle
+    modeToggle: {
+      flexDirection: 'row',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F4F4F6',
+      borderRadius: Radius.md,
+      padding: 3,
+      marginBottom: Spacing.xxl,
     },
-    phoneCard: {
-      marginBottom: Spacing.lg,
-    },
-    phoneLabel: {
-      fontFamily: FontFamily.bodySemibold,
-      fontSize: 11,
-      letterSpacing: 1.5,
-      textTransform: 'uppercase',
-      color: isDark ? colors.kicker : colors.textSecondary,
-      marginBottom: Spacing.md,
-    },
-    phoneRow: {
+    modeBtn: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: isDark ? 'rgba(255,252,247,0.05)' : '#F8F7F5',
-      borderWidth: 1.5,
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: Radius.sm,
+    },
+    modeBtnActive: {
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    modeBtnText: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 13,
+      color: colors.textTertiary,
+    },
+    modeBtnTextActive: {
+      color: colors.primary,
+    },
+
+    // Form
+    form: {
+      gap: 0,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8F8FA',
+      borderWidth: 1,
       borderColor: colors.border,
       borderRadius: Radius.lg,
       paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.lg,
     },
-    countryCode: {
+    countryBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      paddingVertical: 14,
     },
     flag: {
-      fontSize: 22,
+      fontSize: 20,
     },
-    countryText: {
+    dialCode: {
       fontFamily: FontFamily.bodySemibold,
-      fontSize: 17,
+      fontSize: 16,
       color: colors.text,
-      letterSpacing: 0.5,
     },
-    phoneDivider: {
+    inputDivider: {
       width: 1,
-      height: 24,
+      height: 22,
       backgroundColor: colors.border,
       marginHorizontal: Spacing.md,
     },
     phoneInput: {
       flex: 1,
       fontFamily: FontFamily.bodyMedium,
-      fontSize: 18,
+      fontSize: 17,
       color: colors.text,
-      letterSpacing: 1.5,
+      letterSpacing: 1,
       paddingVertical: 14,
+    },
+
+    // Email inputs
+    emailInputWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8F8FA',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+    },
+    inputIcon: {
+      marginRight: Spacing.sm,
+    },
+    emailInput: {
+      flex: 1,
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 16,
+      color: colors.text,
+      paddingVertical: 14,
+    },
+
+    btnWrap: {
+      marginTop: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    switchAuth: {
+      alignSelf: 'center',
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    switchAuthText: {
+      fontFamily: FontFamily.body,
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    switchAuthLink: {
+      fontFamily: FontFamily.bodySemibold,
+      color: colors.primary,
+    },
+    terms: {
+      fontFamily: FontFamily.body,
+      fontSize: 12,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      lineHeight: 18,
     },
 
     // Country picker
@@ -700,7 +614,7 @@ function createStyles(colors: ThemeColors, isDark: boolean) {
       backgroundColor: colors.overlay,
       justifyContent: 'flex-end',
     },
-    pickerContent: {
+    pickerSheet: {
       borderTopLeftRadius: Radius.xxl,
       borderTopRightRadius: Radius.xxl,
       paddingHorizontal: Spacing.xl,
@@ -708,14 +622,16 @@ function createStyles(colors: ThemeColors, isDark: boolean) {
       paddingBottom: 40,
     },
     pickerHandle: {
-      width: 40, height: 4, borderRadius: 2,
+      width: 36,
+      height: 4,
+      borderRadius: 2,
       backgroundColor: colors.border,
       alignSelf: 'center',
       marginBottom: Spacing.lg,
     },
     pickerTitle: {
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 18,
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 17,
       color: colors.text,
       marginBottom: Spacing.lg,
     },
@@ -745,16 +661,17 @@ function createStyles(colors: ThemeColors, isDark: boolean) {
       color: colors.textSecondary,
     },
 
-    // CTA
-    ctaZone: {
-      marginBottom: Spacing.md,
+    // Dev skip
+    skipBtn: {
+      marginTop: Spacing.lg,
+      alignSelf: 'center',
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.xl,
     },
-    termsNote: {
-      fontFamily: FontFamily.body,
-      fontSize: 12,
+    skipText: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 14,
       color: colors.textTertiary,
-      textAlign: 'center',
-      lineHeight: 18,
     },
   });
 }

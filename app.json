@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Daftar - Split Bills",
-    "slug": "daftar",
+    "name": "Fifti - Split Fair",
+    "slug": "fifti",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "daftar",
+    "scheme": "fifti",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -14,17 +14,17 @@
       "backgroundColor": "#FFFFFF"
     },
     "ios": {
-      "bundleIdentifier": "com.daftar.app",
+      "bundleIdentifier": "com.fifti.app",
       "buildNumber": "1",
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Daftar needs camera access to scan receipts and split bills automatically",
-        "NSPhotoLibraryUsageDescription": "Daftar needs photo access to attach receipt images to expenses",
-        "NSContactsUsageDescription": "Daftar needs contacts access to invite friends to your groups"
+        "NSCameraUsageDescription": "Fifti needs camera access to scan receipts and split bills automatically",
+        "NSPhotoLibraryUsageDescription": "Fifti needs photo access to attach receipt images to expenses",
+        "NSContactsUsageDescription": "Fifti needs contacts access to invite friends to your groups"
       }
     },
     "android": {
-      "package": "com.daftar.app",
+      "package": "com.fifti.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

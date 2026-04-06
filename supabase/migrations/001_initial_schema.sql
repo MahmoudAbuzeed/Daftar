@@ -1,5 +1,5 @@
--- Daftar Database Schema
--- Egyptian bill splitting & expense tracking app
+-- Fifti Database Schema
+-- Bill splitting & expense tracking app
 
 -- Users table (extends Supabase auth.users)
 CREATE TABLE IF NOT EXISTS users (

@@ -172,8 +172,8 @@ export default function AddFriendsScreen({ navigation }: Props) {
           text: t('addFriends.sendTextMessage'),
           onPress: () => {
             const message = i18n.language === 'ar'
-              ? `أهلاً ${selectedContact.name}! حمّل تطبيق دفتر عشان نقسّم الحساب مع بعض بسهولة 📱`
-              : `Hi ${selectedContact.name}! Download Daftar so we can split bills together easily 📱`;
+              ? `أهلاً ${selectedContact.name}! حمّل تطبيق Fifti عشان نقسّم الحساب مع بعض بسهولة 📱`
+              : `Hi ${selectedContact.name}! Download Fifti so we can split bills together easily 📱`;
 
             const phone = normalizePhone(selectedContact.phone);
             const smsUrl = Platform.OS === 'ios'
@@ -234,7 +234,7 @@ export default function AddFriendsScreen({ navigation }: Props) {
               <Ionicons name="person-add-outline" size={20} color={colors.textSecondary} />
             </View>
             <Text style={styles.addByNameText}>
-              {t('addFriends.addToDaftar', { name: searchQuery.trim() }) || `Add "${searchQuery.trim()}" to Daftar`}
+              {t('addFriends.addToDaftar', { name: searchQuery.trim() }) || `Add "${searchQuery.trim()}" to Fifti`}
             </Text>
           </View>
         </BouncyPressable>
