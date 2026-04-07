@@ -37,6 +37,7 @@ import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
 import { generateBalanceSummary, shareViaWhatsApp } from '../../utils/whatsapp';
 import { sendNotificationsToUsers, saveInAppNotification } from '../../lib/notifications';
+import { checkDebtFree } from '../../lib/achievements';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupBalances'>;
 
@@ -198,8 +199,21 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Send notification to the person who was paid
+      // Check for debt-free achievement
+      await checkDebtFree(selectedDebt.from_user, groupId);
+
+      // Insert system message to group chat
       const fromUserName = selectedDebt.from_user_data?.display_name || 'Someone';
+      const toUserName = selectedDebt.to_user_data?.display_name || 'Someone';
+      await supabase.from('group_messages').insert({
+        group_id: groupId,
+        user_id: user!.id,
+        content: `${fromUserName} settled ${amount.toFixed(2)} ${currency} with ${toUserName}`,
+        type: 'settlement',
+        metadata: { from_user: selectedDebt.from_user, to_user: selectedDebt.to_user, amount, currency },
+      });
+
+      // Send notification to the person who was paid
       const toUserId = selectedDebt.to_user;
       const lang = i18n.language === 'ar' ? 'ar' : 'en';
 

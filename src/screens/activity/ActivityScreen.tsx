@@ -10,9 +10,12 @@ import {
   Animated,
   Easing,
   Dimensions,
+  I18nManager,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -24,12 +27,15 @@ import AnimatedListItem from '../../components/AnimatedListItem';
 import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { RootStackParamList } from '../../navigation/AppNavigator';
 
 const { width: SW } = Dimensions.get('window');
 
+type Props = NativeStackScreenProps<RootStackParamList, 'Activity'>;
+
 interface ActivityItem {
   id: string;
-  type: 'expense' | 'settlement';
+  type: 'expense' | 'settlement' | 'member_joined';
   description: string;
   groupName: string;
   amount: number;
@@ -38,16 +44,19 @@ interface ActivityItem {
   paidByName: string;
 }
 
-export default function ActivityScreen() {
+export default function ActivityScreen({ route }: Props) {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
 
+  const preFilteredGroupId = route?.params?.groupId || null;
+
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'expense' | 'settlement' | 'member_joined'>('all');
 
   // Bouncing empty-state icon
   const emptyBounce = useRef(new Animated.Value(0)).current;
@@ -66,7 +75,13 @@ export default function ActivityScreen() {
       const { data: memberships, error: memberError } = await supabase
         .from('group_members').select('group_id').eq('user_id', profile.id);
       if (memberError) throw memberError;
-      const groupIds = (memberships || []).map((m) => m.group_id);
+      let groupIds = (memberships || []).map((m) => m.group_id);
+
+      // If pre-filtered to a specific group, use only that
+      if (preFilteredGroupId) {
+        groupIds = groupIds.filter(id => id === preFilteredGroupId);
+      }
+
       if (groupIds.length === 0) { setActivities([]); setLoading(false); setRefreshing(false); return; }
 
       const { data: expenses, error: expenseError } = await supabase
@@ -86,25 +101,72 @@ export default function ActivityScreen() {
         .in('group_id', groupIds).order('created_at', { ascending: false }).limit(20);
       if (settlementError) throw settlementError;
 
+      const { data: memberJoins, error: memberJoinError } = await supabase
+        .from('group_members')
+        .select(`id, joined_at, group_id,
+          user:users!group_members_user_id_fkey(display_name),
+          group:groups!group_members_group_id_fkey(name)`)
+        .in('group_id', groupIds)
+        .order('joined_at', { ascending: false })
+        .limit(20);
+      if (memberJoinError) throw memberJoinError;
+
       const expenseItems: ActivityItem[] = (expenses || []).map((e: any) => ({
         id: `expense-${e.id}`, type: 'expense' as const, description: e.description,
         groupName: e.group?.name || '', amount: e.total_amount, currency: e.currency,
         createdAt: e.created_at, paidByName: e.paid_by_user?.display_name || '',
       }));
+
       const settlementItems: ActivityItem[] = (settlements || []).map((s: any) => ({
         id: `settlement-${s.id}`, type: 'settlement' as const,
         description: `${s.paid_by_user?.display_name || ''} ${t('activity.paidTo')} ${s.paid_to_user?.display_name || ''}`,
         groupName: s.group?.name || '', amount: s.amount, currency: s.currency,
         createdAt: s.created_at, paidByName: s.paid_by_user?.display_name || '',
       }));
-      setActivities([...expenseItems, ...settlementItems]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 50));
+
+      const memberJoinItems: ActivityItem[] = (memberJoins || []).map((m: any) => ({
+        id: `member-${m.id}`, type: 'member_joined' as const,
+        description: t('activity.memberJoined', { name: m.user?.display_name || '' }),
+        groupName: m.group?.name || '', amount: 0, currency: '',
+        createdAt: m.joined_at, paidByName: '',
+      }));
+
+      setActivities([...expenseItems, ...settlementItems, ...memberJoinItems]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 80));
     } catch (err) { console.error('Failed to fetch activity:', err); }
     finally { setLoading(false); setRefreshing(false); }
-  }, [profile, t]);
+  }, [profile, t, preFilteredGroupId]);
 
   useEffect(() => { fetchActivity(); }, [fetchActivity]);
   const onRefresh = useCallback(() => { setRefreshing(true); fetchActivity(); }, [fetchActivity]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!profile) return;
+
+    const channel = supabase
+      .channel('activity-feed')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'expenses' },
+        () => fetchActivity()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'settlements' },
+        () => fetchActivity()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'group_members' },
+        () => fetchActivity()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile, fetchActivity]);
 
   const getTimeAgo = (dateString: string): string => {
     const now = new Date(); const date = new Date(dateString);
@@ -117,26 +179,92 @@ export default function ActivityScreen() {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
+  const filteredActivities = useMemo(() => {
+    if (filter === 'all') return activities;
+    return activities.filter(a => a.type === filter);
+  }, [activities, filter]);
+
+  const renderFilterChips = () => {
+    const chips: Array<{ label: string; value: typeof filter; icon: string }> = [
+      { label: t('activity.filterAll'), value: 'all', icon: 'list' },
+      { label: t('activity.filterExpenses'), value: 'expense', icon: 'receipt-outline' },
+      { label: t('activity.filterSettlements'), value: 'settlement', icon: 'swap-horizontal-outline' },
+      { label: t('activity.filterJoined'), value: 'member_joined', icon: 'person-add-outline' },
+    ];
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterChipsContainer}
+      >
+        {chips.map(chip => (
+          <BouncyPressable
+            key={chip.value}
+            onPress={() => setFilter(chip.value)}
+            style={[
+              styles.filterChip,
+              filter === chip.value && { backgroundColor: colors.primary }
+            ]}
+          >
+            <Ionicons
+              name={chip.icon as any}
+              size={14}
+              color={filter === chip.value ? '#FFFFFF' : colors.textTertiary}
+            />
+            <Text style={[
+              styles.filterChipText,
+              filter === chip.value && { color: '#FFFFFF', fontFamily: FontFamily.bodySemibold }
+            ]}>
+              {chip.label}
+            </Text>
+          </BouncyPressable>
+        ))}
+      </ScrollView>
+    );
+  };
+
   const renderActivity = ({ item, index }: { item: ActivityItem; index: number }) => {
     const isExpense = item.type === 'expense';
+    const isSettlement = item.type === 'settlement';
+    const isMemberJoined = item.type === 'member_joined';
+
+    const getIcon = () => {
+      if (isExpense) return 'receipt-outline';
+      if (isSettlement) return 'swap-horizontal-outline';
+      return 'person-add-outline';
+    };
+
+    const getGradient = () => {
+      if (isExpense) return colors.primaryGradient;
+      if (isSettlement) return colors.successGradient;
+      return colors.accentGradient;
+    };
+
+    const getDotIcon = () => {
+      if (isExpense) return 'receipt';
+      if (isSettlement) return 'checkmark';
+      return 'person-add';
+    };
+
     return (
       <AnimatedListItem index={index}>
-        <View style={styles.timelineRow}>
+        <View style={[styles.timelineRow, I18nManager.isRTL && styles.timelineRowRTL]}>
           {/* Timeline track */}
           <View style={styles.timelineTrack}>
             <LinearGradient
-              colors={isExpense ? colors.primaryGradient : colors.successGradient}
+              colors={getGradient()}
               style={styles.timelineDotGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <Ionicons
-                name={isExpense ? 'receipt' : 'checkmark'}
+                name={getDotIcon() as any}
                 size={10}
                 color="#FFFFFF"
               />
             </LinearGradient>
-            {index < activities.length - 1 && <View style={styles.timelineLine} />}
+            {index < filteredActivities.length - 1 && <View style={styles.timelineLine} />}
           </View>
 
           {/* Activity card */}
@@ -144,13 +272,13 @@ export default function ActivityScreen() {
             <View style={styles.cardRow}>
               <View style={styles.activityIconWrap}>
                 <LinearGradient
-                  colors={isExpense ? colors.primaryGradient : colors.successGradient}
+                  colors={getGradient()}
                   style={styles.activityIcon}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
                   <Ionicons
-                    name={isExpense ? 'receipt-outline' : 'swap-horizontal-outline'}
+                    name={getIcon() as any}
                     size={16}
                     color="#FFFFFF"
                   />
@@ -175,11 +303,13 @@ export default function ActivityScreen() {
                 )}
               </View>
 
-              <View style={[styles.amountPill, isExpense ? styles.amountPillExpense : styles.amountPillSettlement]}>
-                <Text style={[styles.amountText, { color: isExpense ? colors.primaryLight : colors.success }]}>
-                  {item.amount.toFixed(2)} {item.currency}
-                </Text>
-              </View>
+              {!isMemberJoined && (
+                <View style={[styles.amountPill, isExpense ? styles.amountPillExpense : styles.amountPillSettlement]}>
+                  <Text style={[styles.amountText, { color: isExpense ? colors.primaryLight : colors.success }]}>
+                    {item.amount.toFixed(2)} {item.currency}
+                  </Text>
+                </View>
+              )}
             </View>
           </ThemedCard>
         </View>
@@ -234,6 +364,8 @@ export default function ActivityScreen() {
           <Text style={styles.headerTitle}>{t('activity.title')}</Text>
         </Animated.View>
 
+        {activities.length > 0 && renderFilterChips()}
+
         {activities.length > 0 && (
           <View style={styles.countStrip}>
             <LinearGradient
@@ -242,15 +374,15 @@ export default function ActivityScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             />
-            <Text style={styles.countText}>{t('activity.itemCount', { count: activities.length })}</Text>
+            <Text style={styles.countText}>{t('activity.itemCount', { count: filteredActivities.length })}</Text>
           </View>
         )}
 
         <FlatList
-          data={activities}
+          data={filteredActivities}
           keyExtractor={(item) => item.id}
           renderItem={renderActivity}
-          contentContainerStyle={activities.length === 0 ? styles.emptyList : styles.list}
+          contentContainerStyle={filteredActivities.length === 0 ? styles.emptyList : styles.list}
           ListEmptyComponent={renderEmpty}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
@@ -333,9 +465,34 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       alignItems: 'center',
     },
 
+    filterChipsContainer: {
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.md,
+      gap: 8,
+    },
+    filterChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 8,
+      borderRadius: Radius.full,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : c.bgCard,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.15)' : c.border,
+      gap: 6,
+    },
+    filterChipText: {
+      fontFamily: FontFamily.body,
+      fontSize: 13,
+      color: c.textSecondary,
+    },
+
     timelineRow: {
       flexDirection: 'row',
       marginBottom: 0,
+    },
+    timelineRowRTL: {
+      flexDirection: 'row-reverse',
     },
     timelineTrack: {
       width: 32,

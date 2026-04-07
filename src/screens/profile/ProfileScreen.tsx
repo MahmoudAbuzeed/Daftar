@@ -34,7 +34,10 @@ import { useAlert } from '../../hooks/useAlert';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
-import { CurrencyCode } from '../../types/database';
+import { CurrencyCode, UserAchievement } from '../../types/database';
+import { Share } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { ACHIEVEMENT_DEFS, getAchievementDef } from '../../data/achievementDefinitions';
 
 const PROFILE_CURRENCIES: CurrencyCode[] = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'INR', 'PKR', 'TRY', 'CAD', 'AUD', 'BRL'];
 
@@ -51,8 +54,31 @@ export default function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [signingOut, setSigningOut] = useState(false);
+  const [earnedAchievements, setEarnedAchievements] = useState<string[]>([]);
   const isArabic = i18n.language === 'ar';
   const currentCurrency = profile?.preferred_currency || 'EGP';
+
+  // Fetch earned achievements when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchAchievements = async () => {
+        if (!profile?.id) return;
+        try {
+          const { data, error } = await supabase
+            .from('user_achievements')
+            .select('type')
+            .eq('user_id', profile.id);
+
+          if (error) throw error;
+          setEarnedAchievements(data?.map((d: any) => d.type) || []);
+        } catch (err) {
+          console.error('Error fetching achievements:', err);
+        }
+      };
+
+      fetchAchievements();
+    }, [profile?.id])
+  );
 
   // Bouncy hero avatar
   const heroScale = useRef(new Animated.Value(0)).current;
@@ -139,6 +165,69 @@ export default function ProfileScreen() {
     return profile.display_name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const handleShareBadge = async (badgeType: string) => {
+    const def = getAchievementDef(badgeType as any);
+    if (!def) return;
+
+    const shareText = t(def.shareTextKey);
+    try {
+      await Share.share({
+        message: shareText,
+        url: 'https://fifti.app', // App store/play store link would go here
+        title: t(def.titleKey),
+      });
+    } catch (err) {
+      console.error('Error sharing badge:', err);
+    }
+  };
+
+  const renderAchievementsGrid = () => {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>{t('achievements.sectionTitle')}</Text>
+        <View style={styles.achievementsGrid}>
+          {ACHIEVEMENT_DEFS.map((def, idx) => {
+            const isEarned = earnedAchievements.includes(def.type);
+            return (
+              <AnimatedListItem key={def.type} index={idx}>
+                <BouncyPressable
+                  onPress={isEarned ? () => handleShareBadge(def.type) : undefined}
+                  disabled={!isEarned}
+                >
+                  <View style={styles.badgeItem}>
+                    <LinearGradient
+                      colors={def.gradientColors}
+                      style={[styles.badgeIcon, !isEarned && { opacity: 0.35 }]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons
+                        name={def.icon as any}
+                        size={24}
+                        color="#FFFFFF"
+                      />
+                      {!isEarned && (
+                        <View style={styles.badgeLock}>
+                          <Ionicons name="lock-closed" size={10} color="#FFFFFF" />
+                        </View>
+                      )}
+                    </LinearGradient>
+                    <Text style={[styles.badgeTitle, !isEarned && styles.badgeTitleLocked]}>
+                      {t(def.titleKey)}
+                    </Text>
+                    <Text style={[styles.badgeDesc, !isEarned && styles.badgeDescLocked]}>
+                      {t(def.descKey)}
+                    </Text>
+                  </View>
+                </BouncyPressable>
+              </AnimatedListItem>
+            );
+          })}
+        </View>
+      </View>
+    );
+  };
+
   const settingsItems: Array<{
     icon: React.ReactNode;
     label: string;
@@ -214,6 +303,9 @@ export default function ProfileScreen() {
               <View style={styles.heroDividerLine} />
             </View>
           </Animated.View>
+
+          {/* Achievements */}
+          {renderAchievementsGrid()}
 
           {/* Settings */}
           <View style={styles.section}>
@@ -416,6 +508,59 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       textTransform: 'uppercase',
       paddingHorizontal: Spacing.xs,
       marginBottom: 4,
+    },
+
+    achievementsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.md,
+      justifyContent: 'space-between',
+    },
+    badgeItem: {
+      width: '31%',
+      alignItems: 'center',
+      paddingVertical: Spacing.md,
+    },
+    badgeIcon: {
+      width: 72,
+      height: 72,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+      position: 'relative',
+    },
+    badgeLock: {
+      position: 'absolute',
+      bottom: -4,
+      right: -4,
+      backgroundColor: isDark ? c.bgDarkCard : c.bg,
+      borderRadius: 12,
+      padding: 4,
+      borderWidth: 1.5,
+      borderColor: isDark ? c.border : c.borderLight,
+    },
+    badgeTitle: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 12,
+      color: c.text,
+      textAlign: 'center',
+      letterSpacing: -0.2,
+    },
+    badgeTitleLocked: {
+      color: c.textTertiary,
+    },
+    badgeDesc: {
+      fontFamily: FontFamily.body,
+      fontSize: 10,
+      color: c.textSecondary,
+      textAlign: 'center',
+      marginTop: 2,
+      lineHeight: 13,
+    },
+    badgeDescLocked: {
+      color: c.textTertiary,
+      opacity: 0.6,
     },
 
     settingRowCard: {

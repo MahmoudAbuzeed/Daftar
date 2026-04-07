@@ -301,3 +301,30 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+export type AchievementType =
+  | 'first_expense'
+  | 'debt_free'
+  | 'speed_settler'
+  | 'group_creator'
+  | 'social_butterfly'
+  | 'receipt_scanner';
+
+export interface UserAchievement {
+  id: string;
+  user_id: string;
+  type: AchievementType;
+  earned_at: string;
+  metadata: Record<string, any>;
+}
+
+export interface GroupMessage {
+  id: string;
+  group_id: string;
+  user_id: string;
+  content: string;
+  type: 'text' | 'expense' | 'settlement';
+  metadata: Record<string, any>;
+  created_at: string;
+  user?: User;
+}

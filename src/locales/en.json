@@ -269,7 +269,12 @@
     "emptyTitle": "No activity yet",
     "emptySubtitle": "Transactions will appear here",
     "recentTransactions": "RECENT TRANSACTIONS",
-    "itemCount": "{{count}} items"
+    "itemCount": "{{count}} items",
+    "filterAll": "All",
+    "filterExpenses": "Expenses",
+    "filterSettlements": "Settlements",
+    "filterJoined": "Joined",
+    "memberJoined": "{{name}} joined {{group}}"
   },
   "profile": {
     "title": "Profile",
@@ -604,6 +609,39 @@
     "dataDeletion": { "title": "5. Data Deletion", "body": "- You can delete your account and all associated data by contacting us\n- Deleting the app does not delete your server-side data" },
     "childrenPrivacy": { "title": "6. Children's Privacy", "body": "- Fifti is not intended for children under 13" },
     "contact": { "title": "7. Contact", "body": "- Email: support@fifti.app" }
+  },
+  "achievements": {
+    "sectionTitle": "ACHIEVEMENTS",
+    "earned": "Earned",
+    "locked": "Locked",
+    "sharePrompt": "Share",
+    "first_expense_title": "First Steps",
+    "first_expense_desc": "Added your first expense",
+    "first_expense_share": "I just added my first expense on Fifti! 📝 Join me and start splitting bills easily",
+    "debt_free_title": "Debt Free",
+    "debt_free_desc": "Settled all debts in a group at once",
+    "debt_free_share": "I just cleared all my debts on Fifti! No more awkward IOUs 💸",
+    "speed_settler_title": "Speed Settler",
+    "speed_settler_desc": "Settled a debt within 24 hours",
+    "speed_settler_share": "I earned the Speed Settler badge on Fifti — I settle up fast ⚡",
+    "group_creator_title": "Group Creator",
+    "group_creator_desc": "Created your first group",
+    "group_creator_share": "I just created my first group on Fifti! Join me to split bills without the drama 🙌",
+    "social_butterfly_title": "Social Butterfly",
+    "social_butterfly_desc": "Member of 5 or more groups",
+    "social_butterfly_share": "I'm in 5+ groups on Fifti — the bill-splitting app that actually works 🦋",
+    "receipt_scanner_title": "Receipt Wizard",
+    "receipt_scanner_desc": "Used AI receipt scanning",
+    "receipt_scanner_share": "I scanned a receipt with Fifti's AI and split it instantly 🤖"
+  },
+  "chat": {
+    "title": "Chat",
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "noMessages": "No messages yet",
+    "noMessagesSubtitle": "Start the conversation!",
+    "expenseAdded": "{{name}} added '{{description}}' — {{amount}} {{currency}}",
+    "settlementRecorded": "{{from}} settled {{amount}} {{currency}} with {{to}}"
   },
   "onboarding": {
     "skip": "Skip",

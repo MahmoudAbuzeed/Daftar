@@ -36,6 +36,7 @@ import { useAlert } from '../../hooks/useAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { generatePaymentNotification, shareViaWhatsApp } from '../../utils/whatsapp';
 import { sendNotificationsToUsers, saveInAppNotification } from '../../lib/notifications';
+import { checkFirstExpense, awardAchievement } from '../../lib/achievements';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
 type SplitType = 'equal' | 'exact' | 'percentage';
@@ -240,6 +241,23 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       if (splitsError) throw splitsError;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Award achievements
+      await checkFirstExpense(user!.id);
+      if (receiptImage) {
+        await awardAchievement(user!.id, 'receipt_scanner');
+      }
+
+      // Insert system message to group chat
+      const payerMember = members.find(m => m.user_id === paidBy);
+      const payerName = (payerMember?.user as any)?.display_name || 'Someone';
+      await supabase.from('group_messages').insert({
+        group_id: groupId,
+        user_id: user!.id,
+        content: `${payerName} added '${description.trim()}' — ${totalAmount.toFixed(2)} ${currency}`,
+        type: 'expense',
+        metadata: { expense_id: expense.id, amount: totalAmount, currency, description },
+      });
 
       // Get the payer's profile info
       const payerMember = members.find(m => m.user_id === paidBy);

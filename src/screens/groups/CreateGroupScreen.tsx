@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
+import { awardAchievement, checkSocialButterfly } from '../../lib/achievements';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -88,6 +89,11 @@ export default function CreateGroupScreen({ navigation }: Props) {
       if (memberError) throw memberError;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Award achievements
+      await awardAchievement(user.id, 'group_creator');
+      await checkSocialButterfly(user.id);
+
       navigation.goBack();
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

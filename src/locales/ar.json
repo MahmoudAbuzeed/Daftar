@@ -269,7 +269,12 @@
     "emptyTitle": "لا يوجد نشاط بعد",
     "emptySubtitle": "المعاملات ستظهر هنا عندما تبدأ",
     "recentTransactions": "آخر المعاملات",
-    "itemCount": "{{count}} معاملة"
+    "itemCount": "{{count}} معاملة",
+    "filterAll": "الكل",
+    "filterExpenses": "المصاريف",
+    "filterSettlements": "التسويات",
+    "filterJoined": "الانضمام",
+    "memberJoined": "{{name}} انضم إلى {{group}}"
   },
   "profile": {
     "title": "الملف الشخصي",
@@ -604,6 +609,39 @@
     "dataDeletion": { "title": "٥. حذف البيانات", "body": "- يمكنك حذف حسابك وكل البيانات المرتبطة بالتواصل معنا\n- حذف التطبيق لا يحذف بياناتك من الخادم" },
     "childrenPrivacy": { "title": "٦. خصوصية الأطفال", "body": "- Fifti غير مخصص للأطفال أقل من ١٣ سنة" },
     "contact": { "title": "٧. التواصل", "body": "- البريد الإلكتروني: support@fifti.app" }
+  },
+  "achievements": {
+    "sectionTitle": "الإنجازات",
+    "earned": "مكتسبة",
+    "locked": "مقفلة",
+    "sharePrompt": "شارك",
+    "first_expense_title": "الخطوة الأولى",
+    "first_expense_desc": "أضفت أول مصروف",
+    "first_expense_share": "أضفت أول مصروف على Fifti! 📝 انضم إليّ وابدأ تقسيم الحسابات بسهولة",
+    "debt_free_title": "خالي من الديون",
+    "debt_free_desc": "سوّيت جميع الديون في مجموعة دفعة واحدة",
+    "debt_free_share": "سوّيت كل ديوني على Fifti! مفيش ديون عالقة 💸",
+    "speed_settler_title": "المسوّي السريع",
+    "speed_settler_desc": "سوّيت ديناً في أقل من ٢٤ ساعة",
+    "speed_settler_share": "حصلت على وسام المسوّي السريع على Fifti ⚡",
+    "group_creator_title": "منشئ المجموعة",
+    "group_creator_desc": "أنشأت أول مجموعة",
+    "group_creator_share": "أنشأت أول مجموعة على Fifti! انضم معايا 🙌",
+    "social_butterfly_title": "الاجتماعي",
+    "social_butterfly_desc": "عضو في ٥ مجموعات أو أكثر",
+    "social_butterfly_share": "أنا في ٥+ مجموعات على Fifti — التطبيق الأفضل لتقسيم الحسابات 🦋",
+    "receipt_scanner_title": "ساحر الفواتير",
+    "receipt_scanner_desc": "استخدمت المسح الذكي للفواتير",
+    "receipt_scanner_share": "مسحت فاتورة بذكاء Fifti وقسّمتها في ثانية 🤖"
+  },
+  "chat": {
+    "title": "المحادثة",
+    "placeholder": "اكتب رسالة...",
+    "send": "إرسال",
+    "noMessages": "لا توجد رسائل بعد",
+    "noMessagesSubtitle": "ابدأ المحادثة!",
+    "expenseAdded": "{{name}} أضاف '{{description}}' — {{amount}} {{currency}}",
+    "settlementRecorded": "{{from}} سوّى {{amount}} {{currency}} مع {{to}}"
   },
   "onboarding": {
     "skip": "تخطي",

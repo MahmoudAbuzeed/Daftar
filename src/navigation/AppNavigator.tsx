@@ -20,6 +20,7 @@ import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 import GroupsListScreen from '../screens/groups/GroupsListScreen';
 import PeopleScreen from '../screens/people/PeopleScreen';
 import ActivityScreen from '../screens/activity/ActivityScreen';
+import GroupChatScreen from '../screens/groups/GroupChatScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 
@@ -97,7 +98,8 @@ export type RootStackParamList = {
   AddFriends: undefined;
   Analytics: { groupId?: string };
   RecurringExpenses: { groupId: string };
-  Activity: undefined;
+  Activity: { groupId?: string };
+  GroupChat: { groupId: string };
   About: undefined;
   PrivacyPolicy: undefined;
   Terms: undefined;
@@ -374,6 +376,11 @@ function AppStack() {
         name="Activity"
         component={ActivityScreen}
         options={{ title: t('tabs.activity') }}
+      />
+      <RootStack.Screen
+        name="GroupChat"
+        component={GroupChatScreen}
+        options={{ title: '' }}
       />
       <RootStack.Screen
         name="About"
