@@ -14,7 +14,7 @@ import {
   Easing,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,6 +45,7 @@ export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const { profile, signOut, refreshProfile } = useAuth();
   const { colors, isDark, toggleTheme } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
   const alert = useAlert();
@@ -188,7 +189,7 @@ export default function ProfileScreen() {
       )}
 
       <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom + Spacing.xl, Spacing.xxl) }]} showsVerticalScrollIndicator={false}>
           {/* Hero Section */}
           <Animated.View style={[styles.hero, entrance.style]}>
             <Animated.View style={[styles.avatarWrap, { transform: [{ scale: heroScale }, { rotate: rotateInterpolate }] }]}>
