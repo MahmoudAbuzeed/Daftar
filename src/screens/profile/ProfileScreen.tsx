@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { MoonIcon, GlobeAltIcon, CurrencyDollarIcon, BellIcon, StarIcon, InformationCircleIcon, ArrowRightOnRectangleIcon } from 'react-native-heroicons/solid';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
@@ -140,28 +141,28 @@ export default function ProfileScreen() {
   };
 
   const settingsItems: Array<{
-    icon: string;
+    icon: React.ReactNode;
     label: string;
     value: string;
     onPress: () => void;
     gradColors: [string, string, ...string[]];
   }> = [
     {
-      icon: 'moon-outline',
+      icon: <MoonIcon size={20} color="#FFFFFF" strokeWidth={2.5} />,
       label: t('profile.appearance') || 'Appearance',
       value: isDark ? t('profile.dark') : t('profile.light'),
       onPress: toggleTheme,
       gradColors: isDark ? ['#1B7A6C', '#14B8A6'] : ['#0D9488', '#14B8A6'],
     },
     {
-      icon: 'globe-outline',
+      icon: <GlobeAltIcon size={20} color="#FFFFFF" strokeWidth={2.5} />,
       label: t('profile.language'),
       value: isArabic ? t('profile.arabic') : t('profile.english'),
       onPress: handleLanguageToggle,
       gradColors: colors.primaryGradient,
     },
     {
-      icon: 'cash-outline',
+      icon: <CurrencyDollarIcon size={20} color="#FFFFFF" strokeWidth={2.5} />,
       label: t('profile.defaultCurrency'),
       value: currentCurrency,
       onPress: handleCurrencyToggle,
@@ -231,7 +232,7 @@ export default function ProfileScreen() {
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
                         >
-                          <Ionicons name={s.icon as any} size={18} color="#FFFFFF" />
+                          {s.icon}
                         </LinearGradient>
                         <Text style={styles.settingLabel}>{s.label}</Text>
                       </View>
@@ -258,16 +259,20 @@ export default function ProfileScreen() {
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                     >
-                      <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+                      <BellIcon size={20} color="#FFFFFF" strokeWidth={2.5} />
                     </LinearGradient>
                     <Text style={styles.settingLabel}>{t('profile.notifications')}</Text>
                   </View>
-                  <Switch
-                    value={notificationsEnabled}
-                    onValueChange={setNotificationsEnabled}
-                    trackColor={{ false: isDark ? 'rgba(255,255,255,0.1)' : '#D1D5DB', true: `${colors.primary}66` }}
-                    thumbColor={notificationsEnabled ? colors.primaryLight : isDark ? '#4A5F59' : '#9CA3AF'}
-                  />
+                  <View style={styles.switchWrapper}>
+                    <Switch
+                      value={notificationsEnabled}
+                      onValueChange={setNotificationsEnabled}
+                      trackColor={{ false: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', true: `${colors.primary}` }}
+                      thumbColor={notificationsEnabled ? '#FFFFFF' : isDark ? '#6B7F7B' : '#F3F4F6'}
+                      ios_backgroundColor={isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB'}
+                      style={styles.switchControl}
+                    />
+                  </View>
                 </View>
               </ThemedCard>
             </AnimatedListItem>
@@ -292,7 +297,7 @@ export default function ProfileScreen() {
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                       >
-                        <Ionicons name="star" size={18} color="#FFFFFF" />
+                        <StarIcon size={20} color="#FFFFFF" strokeWidth={2.5} />
                       </LinearGradient>
                       <View>
                         <Text style={styles.settingLabel}>{t('profile.fiftiPro')}</Text>
@@ -319,7 +324,7 @@ export default function ProfileScreen() {
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                       >
-                        <Ionicons name="information-circle-outline" size={18} color={isDark ? '#FFFFFF' : colors.textSecondary} />
+                        <InformationCircleIcon size={20} color={isDark ? '#FFFFFF' : colors.textSecondary} strokeWidth={2.5} />
                       </LinearGradient>
                       <Text style={styles.settingLabel}>{t('profile.about')}</Text>
                     </View>
@@ -338,7 +343,7 @@ export default function ProfileScreen() {
               variant="danger"
               loading={signingOut}
               disabled={signingOut}
-              icon={<Ionicons name="log-out-outline" size={18} color="#FFFFFF" />}
+              icon={<ArrowRightOnRectangleIcon size={20} color="#FFFFFF" strokeWidth={2.5} />}
             />
           </View>
 
@@ -360,7 +365,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: c.bg },
     safe: { flex: 1 },
-    scroll: { paddingBottom: 120 },
+    scroll: { paddingBottom: Spacing.xxl },
 
     bgOrb: {
       position: 'absolute',
@@ -492,6 +497,16 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontFamily: FontFamily.bodyMedium,
       fontSize: 13,
       color: c.textSecondary,
+    },
+
+    /* Switch styling */
+    switchWrapper: {
+      borderRadius: Radius.full,
+      overflow: 'hidden',
+    },
+    switchControl: {
+      transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
+      marginRight: -4,
     },
 
     proBadge: {
