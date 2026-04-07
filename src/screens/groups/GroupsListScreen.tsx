@@ -285,6 +285,27 @@ export default function GroupsListScreen({ navigation }: Props) {
           </View>
         ) : null}
 
+        {/* Quick Split hero button */}
+        <Animated.View style={entrance.style}>
+          <BouncyPressable onPress={() => navigation.navigate('QuickSplit')} scaleDown={0.97}>
+            <View style={styles.quickSplitCard}>
+              <LinearGradient
+                colors={colors.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.quickSplitIcon}
+              >
+                <Ionicons name="flash" size={20} color="#FFFFFF" />
+              </LinearGradient>
+              <View style={styles.quickSplitText}>
+                <Text style={styles.quickSplitTitle}>{t('quick_split.title')}</Text>
+                <Text style={styles.quickSplitHint}>{t('quick_split.heroHint')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </View>
+          </BouncyPressable>
+        </Animated.View>
+
         {groups.length > 0 && (
           <View style={styles.listLabel}>
             <View style={styles.listLabelLine} />
@@ -414,6 +435,45 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       letterSpacing: 3,
       color: c.textTertiary,
       textTransform: 'uppercase',
+    },
+
+    quickSplitCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.lg,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.lg,
+      borderRadius: Radius.xl,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : c.bgCard,
+      borderWidth: 1,
+      borderColor: isDark ? c.border : c.borderLight,
+      gap: Spacing.md,
+      shadowColor: c.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0 : 0.06,
+      shadowRadius: 8,
+      elevation: isDark ? 0 : 2,
+    },
+    quickSplitIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    quickSplitText: { flex: 1 },
+    quickSplitTitle: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 15,
+      color: c.text,
+      letterSpacing: -0.2,
+    },
+    quickSplitHint: {
+      fontFamily: FontFamily.body,
+      fontSize: 12,
+      color: c.textTertiary,
+      marginTop: 1,
     },
 
     list: { paddingHorizontal: Spacing.lg, paddingBottom: 160, gap: Spacing.md },

@@ -79,13 +79,8 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
 
   const bottomPad = Math.max(insets.bottom, 8);
 
-  const dockBg = isDark
-    ? 'rgba(6, 15, 13, 0.94)'
-    : 'rgba(255, 255, 255, 0.96)';
-
-  const dockBorder = isDark
-    ? 'rgba(201, 162, 39, 0.12)'
-    : 'rgba(0, 0, 0, 0.08)';
+  const dockBg = colors.tabBarDockBg;
+  const dockBorder = colors.tabBarBorder;
 
   const pillGradient: [string, string, ...string[]] = isDark
     ? [colors.primaryDark, colors.primary]
@@ -173,18 +168,14 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
                 <Ionicons
                   name={icons[isFocused ? 0 : 1] as any}
                   size={22}
-                  color={isFocused ? '#FFFFFF' : isDark ? 'rgba(244,240,232,0.3)' : colors.textTertiary}
+                  color={isFocused ? colors.textOnPrimary : colors.tabInactive}
                 />
               </Animated.View>
               <Animated.Text
                 style={[
                   styles.label,
                   {
-                    color: isFocused
-                      ? '#FFFFFF'
-                      : isDark
-                        ? 'rgba(244,240,232,0.25)'
-                        : colors.textTertiary,
+                    color: isFocused ? colors.textOnPrimary : colors.tabInactive,
                     opacity: labelOpacity,
                   },
                 ]}

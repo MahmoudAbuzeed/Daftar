@@ -62,17 +62,24 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     }).start();
   }, []);
 
-  // Add scan button to header
+  // Add scan + settings buttons to header
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('ScanReceipt', { groupId })}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={{ marginRight: 4 }}
-        >
-          <Ionicons name="scan-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ScanReceipt', { groupId })}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="scan-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('GroupSettings', { groupId })}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [navigation, groupId, colors]);

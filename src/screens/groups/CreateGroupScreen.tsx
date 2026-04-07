@@ -152,30 +152,16 @@ export default function CreateGroupScreen({ navigation }: Props) {
                       <BouncyPressable
                         key={cur}
                         onPress={() => {
+                          Haptics.selectionAsync();
                           setCurrency(cur);
                         }}
-                        scaleDown={0.94}
-                        style={styles.currencyOption}
+                        scaleDown={0.95}
                       >
-                        {isActive ? (
-                          <LinearGradient
-                            colors={colors.primaryGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.currencyOptionInner}
-                          >
-                            <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                            <Text style={styles.currencyTextActive}>
-                              {cur}
-                            </Text>
-                          </LinearGradient>
-                        ) : (
-                          <View style={styles.currencyOptionInnerInactive}>
-                            <Text style={styles.currencyText}>
-                              {cur}
-                            </Text>
-                          </View>
-                        )}
+                        <View style={[styles.currencyPill, isActive && styles.currencyPillActive]}>
+                          <Text style={[styles.currencyText, isActive && styles.currencyTextActive]}>
+                            {cur}
+                          </Text>
+                        </View>
                       </BouncyPressable>
                     );
                   })}
@@ -188,7 +174,7 @@ export default function CreateGroupScreen({ navigation }: Props) {
               onPress={handleCreate}
               loading={saving}
               disabled={!isValid}
-              icon={<Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />}
+              icon={<Ionicons name="add-circle-outline" size={20} color={colors.textOnPrimary} />}
             />
           </Animated.View>
         </ScrollView>
@@ -233,31 +219,22 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     textArea: { minHeight: 80, textAlignVertical: 'top' },
 
-    currencyRow: { flexDirection: 'row', gap: Spacing.md },
-    currencyOption: { flex: 1, borderRadius: Radius.lg, overflow: 'hidden' },
-    currencyOptionInner: {
-      flexDirection: 'row',
-      paddingVertical: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: Radius.lg,
+    currencyRow: { flexDirection: 'row', gap: Spacing.sm },
+    currencyPill: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: Radius.full,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
     },
-    currencyOptionInnerInactive: {
-      paddingVertical: 14,
-      alignItems: 'center',
-      borderRadius: Radius.lg,
-      backgroundColor: isDark ? 'rgba(255,252,247,0.05)' : '#F8F7F5',
-      borderWidth: 1.5,
-      borderColor: c.border,
+    currencyPillActive: {
+      backgroundColor: c.primary,
     },
     currencyText: {
-      fontSize: 15,
+      fontSize: 13,
       fontFamily: FontFamily.bodySemibold,
-      color: c.textSecondary,
+      color: c.textTertiary,
     },
     currencyTextActive: {
-      fontSize: 15,
-      fontFamily: FontFamily.bodyBold,
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
   });

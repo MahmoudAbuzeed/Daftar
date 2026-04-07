@@ -72,9 +72,9 @@ export default function FunButton({
   };
 
   const textColorMap: Record<string, string> = {
-    primary: '#FFFFFF',
+    primary: colors.textOnPrimary,
     secondary: isDark ? colors.primaryLight : colors.primary,
-    danger: '#FFFFFF',
+    danger: colors.textOnPrimary,
     ghost: colors.primary,
   };
 

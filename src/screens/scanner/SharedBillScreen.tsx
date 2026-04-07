@@ -25,7 +25,6 @@ import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
-import { generateMultiDebtorNotification, shareViaWhatsApp } from '../../utils/whatsapp';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SharedBill'>;
 
@@ -114,12 +113,25 @@ export default function SharedBillScreen({ navigation, route }: Props) {
   useEffect(() => {
     const channel = supabase
       .channel(`bill-${billId}`)
+      // Listen for claim changes (item assignments)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'shared_bill_claims',
+          filter: `item_id=in.(SELECT id FROM shared_bill_items WHERE bill_id=eq.${billId})`,
+        },
+        () => fetchBill()
+      )
+      // Listen for bill status changes (e.g., finalization, tax/charge updates)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'shared_bills',
+          filter: `id=eq.${billId}`,
         },
         () => fetchBill()
       )
@@ -265,37 +277,19 @@ export default function SharedBillScreen({ navigation, route }: Props) {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Get users who owe money (perUserTotals where user_id !== current user)
-      const usersWhoOwe = Array.from(perUserTotals.entries()).filter(([userId]) => userId !== user?.id);
-      const payerName = profile?.display_name || 'Someone';
-      const payerPhone = profile?.phone || null;
-      const billCurrency = bill?.currency ?? 'EGP';
-      const billDescription = bill?.merchant_name || t('shared_bill.title');
+      // Fetch the finalized bill to get the expense_id
+      const { data: finalizedBill } = await supabase
+        .from('shared_bills')
+        .select('expense_id')
+        .eq('id', billId)
+        .single();
 
-      if (usersWhoOwe.length > 0) {
-        const lang = i18n.language === 'ar' ? 'ar' : 'en';
-        alert.show('success', t('notify.expenseSaved'), t('notify.notifyFriends'), [
-          {
-            text: t('notify.skip'),
-            style: 'cancel',
-            onPress: () => navigation.popToTop(),
-          },
-          {
-            text: t('notify.notifyViaWhatsApp'),
-            style: 'default',
-            onPress: () => {
-              const debtors = usersWhoOwe.map(([userId, amount]) => ({
-                name: getMemberName(userId),
-                amount,
-              }));
-              const message = generateMultiDebtorNotification(
-                payerName, payerPhone, debtors, billCurrency, billDescription, lang
-              );
-              shareViaWhatsApp(message);
-              navigation.popToTop();
-            },
-          },
-        ]);
+      if (finalizedBill?.expense_id) {
+        // Navigate to Collection Summary
+        navigation.replace('CollectionSummary', {
+          groupId,
+          expenseId: finalizedBill.expense_id,
+        });
       } else {
         alert.success(t('shared_bill.finalized'));
         navigation.popToTop();
@@ -305,7 +299,7 @@ export default function SharedBillScreen({ navigation, route }: Props) {
     } finally {
       setFinalizing(false);
     }
-  }, [billId, alert, t, navigation, perUserTotals, user, profile, bill, i18n]);
+  }, [billId, alert, t, navigation, groupId]);
 
   const handleCancel = useCallback(() => {
     alert.confirm(
@@ -463,13 +457,13 @@ export default function SharedBillScreen({ navigation, route }: Props) {
                     style={styles.claimButton}
                   >
                     {isToggling ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color={colors.textOnPrimary} />
                     ) : (
                       <>
                         <Ionicons
                           name="hand-left-outline"
                           size={16}
-                          color="#FFFFFF"
+                          color={colors.textOnPrimary}
                         />
                         <Text style={styles.claimButtonText}>
                           {t('shared_bill.claim')}
@@ -593,7 +587,7 @@ export default function SharedBillScreen({ navigation, route }: Props) {
                   <Ionicons
                     name="checkmark-done-outline"
                     size={20}
-                    color="#FFFFFF"
+                    color={colors.textOnPrimary}
                   />
                 }
               />
@@ -818,13 +812,14 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontFamily: FontFamily.bodySemibold,
       fontSize: 10,
       letterSpacing: 2,
-      color: 'rgba(255,255,255,0.7)',
+      color: c.textOnPrimary,
+      opacity: 0.7,
       textTransform: 'uppercase',
     },
     totalAmount: {
       fontFamily: FontFamily.display,
       fontSize: 22,
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
       letterSpacing: -0.5,
     },
 
@@ -930,7 +925,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     claimAvatarCircleMe: {
       borderWidth: 2,
-      borderColor: '#FFFFFF',
+      borderColor: c.textOnPrimary,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.2,
@@ -940,7 +935,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     claimAvatarText: {
       fontFamily: FontFamily.bodyBold,
       fontSize: 13,
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
     claimChipName: {
       fontFamily: FontFamily.bodyMedium,
@@ -980,7 +975,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     claimButtonText: {
       fontFamily: FontFamily.bodySemibold,
       fontSize: 13,
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
     unclaimButton: {
       flexDirection: 'row',

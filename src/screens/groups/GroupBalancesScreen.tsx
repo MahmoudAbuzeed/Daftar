@@ -262,7 +262,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
               onPress={() => openSettleModal(item)}
               variant="primary"
               size="small"
-              icon={<Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />}
+              icon={<Ionicons name="checkmark-circle-outline" size={16} color={colors.textOnPrimary} />}
               style={styles.settleButtonWrap}
             />
           )}
@@ -345,7 +345,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
               end={{ x: 1, y: 1 }}
               style={styles.emptyIconCircle}
             >
-              <Ionicons name="checkmark-done-outline" size={36} color="#FFFFFF" />
+              <Ionicons name="checkmark-done-outline" size={36} color={colors.textOnPrimary} />
             </LinearGradient>
             <Text style={styles.emptyTitle}>{t('groups.settled_up')}</Text>
             <Text style={styles.emptySubtitle}>
@@ -433,9 +433,10 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
                     <BouncyPressable
                       key={m.key}
                       onPress={() => {
+                        Haptics.selectionAsync();
                         setPaymentMethod(m.key);
                       }}
-                      scaleDown={0.93}
+                      scaleDown={0.95}
                     >
                       <View
                         style={[
@@ -446,7 +447,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
                         <Ionicons
                           name={m.icon as any}
                           size={14}
-                          color={paymentMethod === m.key ? '#FFFFFF' : colors.textTertiary}
+                          color={paymentMethod === m.key ? colors.textOnPrimary : colors.textTertiary}
                           style={{ marginRight: 6 }}
                         />
                         <Text
@@ -468,7 +469,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
                 title={t('settlements.confirm')}
                 onPress={handleSettle}
                 loading={settling}
-                icon={<Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />}
+                icon={<Ionicons name="checkmark-circle" size={20} color={colors.textOnPrimary} />}
                 style={{ marginTop: Spacing.sm }}
               />
 
@@ -729,7 +730,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     methodChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: c.borderLight,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
       borderRadius: Radius.full,
       paddingHorizontal: Spacing.lg,
       paddingVertical: 10,
@@ -739,7 +740,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     methodChipText: {
       fontFamily: FontFamily.bodySemibold,
-      fontSize: 14,
+      fontSize: 13,
       color: c.textTertiary,
     },
     methodChipTextActive: {

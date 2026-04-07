@@ -248,6 +248,27 @@ export interface RecurringExpenseMember {
   share_percentage: number | null;
 }
 
+// Quick Split (standalone, no group needed)
+
+export interface QuickSplit {
+  id: string;
+  user_id: string;
+  description: string;
+  total_amount: number;
+  currency: CurrencyCode;
+  created_at: string;
+}
+
+export interface QuickSplitParticipant {
+  id: string;
+  quick_split_id: string;
+  name: string;
+  phone: string | null;
+  amount: number;
+  is_settled: boolean;
+  created_at: string;
+}
+
 // Currency Conversion
 
 export interface ExchangeRate {

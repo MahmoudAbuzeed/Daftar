@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   ScrollView,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
@@ -29,7 +28,6 @@ import ThemedInput from '../../components/ThemedInput';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
-import { generateMultiDebtorNotification, shareViaWhatsApp } from '../../utils/whatsapp';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ParsedItems'>;
 
@@ -249,6 +247,8 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
     }
 
     setSaving(true);
+    let createdExpenseId: string | null = null;
+
     try {
       const splits = calculateSplits();
       const totalAmount = Array.from(splits.values()).reduce(
@@ -263,7 +263,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
           paid_by: user!.id,
           description: t('scanner.scannedReceipt'),
           total_amount: totalAmount,
-          currency: 'EGP',
+          currency: receiptData.currency || 'EGP',
           split_type: 'by_item',
           ai_parsed: true,
           created_by: user!.id,
@@ -274,6 +274,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
         .single();
 
       if (expenseError) throw expenseError;
+      createdExpenseId = expense.id;
 
       const itemInserts = items.map((item, index) => ({
         expense_id: expense.id,
@@ -289,7 +290,13 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
         .insert(itemInserts)
         .select();
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        throw new Error(`Failed to insert items: ${itemsError.message}`);
+      }
+
+      if (!insertedItems || insertedItems.length === 0) {
+        throw new Error('Failed to create expense items');
+      }
 
       const assignments = [];
       for (let i = 0; i < items.length; i++) {
@@ -308,7 +315,9 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
         const { error: assignError } = await supabase
           .from('item_assignments')
           .insert(assignments);
-        if (assignError) throw assignError;
+        if (assignError) {
+          throw new Error(`Failed to assign items: ${assignError.message}`);
+        }
       }
 
       const splitInserts = Array.from(splits.entries()).map(
@@ -322,42 +331,114 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
       const { error: splitsError } = await supabase
         .from('expense_splits')
         .insert(splitInserts);
+      if (splitsError) {
+        throw new Error(`Failed to create splits: ${splitsError.message}`);
+      }
+
+      createdExpenseId = null; // Mark as successfully completed
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Navigate to Collection Summary
+      navigation.replace('CollectionSummary', {
+        groupId,
+        expenseId: expense.id,
+      });
+    } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+      // If expense was created but subsequent operations failed, offer rollback
+      if (createdExpenseId) {
+        alert.show(
+          'error',
+          t('common.error'),
+          `${error.message}\n\n${t('common.autoCleanupWarning') || 'The expense was created but some items could not be assigned. Please try again or contact support.'}`,
+          [
+            {
+              text: t('common.undo'),
+              onPress: async () => {
+                try {
+                  // Mark expense as deleted instead of hard delete (soft delete)
+                  await supabase
+                    .from('expenses')
+                    .update({ is_deleted: true })
+                    .eq('id', createdExpenseId);
+                } catch (rollbackError) {
+                  console.error('Rollback failed:', rollbackError);
+                }
+              },
+            },
+            {
+              text: t('common.ok'),
+              style: 'default',
+            },
+          ]
+        );
+      } else {
+        alert.error(t('common.error'), error.message);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSplitEqually = async () => {
+    if (!user || members.length === 0) return;
+    setSaving(true);
+    try {
+      const totalAmount = total;
+      const memberCount = members.length;
+      const perPerson = Math.round((totalAmount / memberCount) * 100) / 100;
+
+      const { data: expense, error: expenseError } = await supabase
+        .from('expenses')
+        .insert({
+          group_id: groupId,
+          paid_by: user.id,
+          description: receiptData.merchant_name || t('scanner.scannedReceipt'),
+          total_amount: totalAmount,
+          currency: receiptData.currency || 'EGP',
+          split_type: 'equal',
+          ai_parsed: true,
+          created_by: user.id,
+          category: 'food',
+          tip_amount: tip,
+        })
+        .select()
+        .single();
+
+      if (expenseError) throw expenseError;
+
+      // Save items for record
+      const itemInserts = items.map((item, index) => ({
+        expense_id: expense.id,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total,
+        sort_order: index,
+      }));
+
+      await supabase.from('expense_items').insert(itemInserts);
+
+      // Create equal splits for all members
+      const splitInserts = members.map((member) => ({
+        expense_id: expense.id,
+        user_id: member.user_id,
+        amount: perPerson,
+      }));
+
+      const { error: splitsError } = await supabase
+        .from('expense_splits')
+        .insert(splitInserts);
       if (splitsError) throw splitsError;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Get users who owe money (splits where user_id !== current user)
-      const usersWhoOwe = Array.from(splits.entries()).filter(([userId]) => userId !== user!.id);
-      const payerName = profile?.display_name || 'Someone';
-      const payerPhone = profile?.phone || null;
-
-      if (usersWhoOwe.length > 0) {
-        const lang = i18n.language === 'ar' ? 'ar' : 'en';
-        alert.show('success', t('notify.expenseSaved'), t('notify.notifyFriends'), [
-          {
-            text: t('notify.skip'),
-            style: 'cancel',
-            onPress: () => navigation.popToTop(),
-          },
-          {
-            text: t('notify.notifyViaWhatsApp'),
-            style: 'default',
-            onPress: () => {
-              const debtors = usersWhoOwe.map(([userId, amount]) => ({
-                name: getMemberName(userId),
-                amount,
-              }));
-              const message = generateMultiDebtorNotification(
-                payerName, payerPhone, debtors, 'EGP', t('scanner.scannedReceipt'), lang
-              );
-              shareViaWhatsApp(message);
-              navigation.popToTop();
-            },
-          },
-        ]);
-      } else {
-        navigation.popToTop();
-      }
+      navigation.replace('CollectionSummary', {
+        groupId,
+        expenseId: expense.id,
+      });
     } catch (error: any) {
       alert.error(t('common.error'), error.message);
     } finally {
@@ -612,7 +693,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
-                  <Ionicons name="add" size={18} color="#FFFFFF" />
+                  <Ionicons name="add" size={18} color={colors.textOnPrimary} />
                 </LinearGradient>
                 <Text style={styles.addItemText}>{t('scanner.addItem')}</Text>
               </View>
@@ -827,20 +908,58 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
             )}
 
             {/* Spacer for bottom buttons */}
-            <View style={{ height: 140 }} />
+            <View style={{ height: 200 }} />
           </View>
         }
       />
 
-      {/* Bottom Buttons */}
+      {/* Bottom Buttons - 3 Split Options */}
       <View style={styles.bottomButtons}>
-        <TouchableOpacity onPress={createSharedBill} disabled={sharing}>
-          <Text style={styles.shareLink}>
-            {sharing ? t('common.loading') : t('shared_bill.share_with_group')}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.splitOptionsRow}>
+          {/* Split Equally */}
+          <BouncyPressable
+            onPress={handleSplitEqually}
+            disabled={saving || sharing}
+            scaleDown={0.95}
+          >
+            <View style={styles.splitOption}>
+              <LinearGradient
+                colors={colors.primaryGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.splitOptionIcon}
+              >
+                <Ionicons name="people-outline" size={20} color={colors.textOnPrimary} />
+              </LinearGradient>
+              <Text style={styles.splitOptionTitle}>{t('collection.splitEqually')}</Text>
+              <Text style={styles.splitOptionHint}>{t('collection.splitEquallyHint')}</Text>
+            </View>
+          </BouncyPressable>
+
+          {/* Let Them Pick */}
+          <BouncyPressable
+            onPress={createSharedBill}
+            disabled={saving || sharing}
+            scaleDown={0.95}
+          >
+            <View style={styles.splitOption}>
+              <LinearGradient
+                colors={[colors.accent, colors.accentLight || colors.accent]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.splitOptionIcon}
+              >
+                <Ionicons name="hand-left-outline" size={20} color={colors.textOnPrimary} />
+              </LinearGradient>
+              <Text style={styles.splitOptionTitle}>{t('collection.letThemPick')}</Text>
+              <Text style={styles.splitOptionHint}>{t('collection.letThemPickHint')}</Text>
+            </View>
+          </BouncyPressable>
+        </View>
+
+        {/* I Assigned Items - only show if items have been assigned */}
         <FunButton
-          title={saving ? t('common.loading') : t('scanner.confirm_split')}
+          title={saving ? t('common.loading') : t('collection.confirmMyAssignment')}
           onPress={handleSave}
           loading={saving}
           disabled={saving}
@@ -848,7 +967,7 @@ export default function ParsedItemsScreen({ navigation, route }: Props) {
             <Ionicons
               name="checkmark-done-outline"
               size={20}
-              color="#FFFFFF"
+              color={colors.textOnPrimary}
             />
           }
         />
@@ -900,7 +1019,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     itemCountText: {
       fontFamily: FontFamily.bodyBold,
       fontSize: 13,
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
     itemCountLabel: {
       fontFamily: FontFamily.body,
@@ -1092,10 +1211,10 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       marginTop: Spacing.sm,
     },
     tipPill: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
       borderRadius: Radius.full,
-      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F0F0F2',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
     },
     tipPillActive: {
       backgroundColor: c.primary,
@@ -1103,10 +1222,10 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     tipPillText: {
       fontFamily: FontFamily.bodySemibold,
       fontSize: 13,
-      color: c.textSecondary,
+      color: c.textTertiary,
     },
     tipPillTextActive: {
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
     tipAmount: {
       fontFamily: FontFamily.bodySemibold,
@@ -1203,7 +1322,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.textSecondary,
     },
     quickAvatarInitialActive: {
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
     quickAvatarName: {
       fontFamily: FontFamily.bodyMedium,
@@ -1249,7 +1368,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     chipInitialActive: {
       fontFamily: FontFamily.bodyBold,
       fontSize: 12,
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
     assignChipText: {
       fontFamily: FontFamily.body,
@@ -1259,7 +1378,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     assignChipTextActive: {
       fontFamily: FontFamily.bodySemibold,
       fontSize: 12,
-      color: '#FFFFFF',
+      color: c.textOnPrimary,
     },
 
     /* Split summary card */
@@ -1309,12 +1428,39 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       right: Spacing.xl,
       gap: Spacing.sm,
     },
-    shareLink: {
+    splitOptionsRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      marginBottom: Spacing.xs,
+    },
+    splitOption: {
+      flex: 1,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.bgCard,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: c.borderLight,
+      gap: 4,
+    },
+    splitOptionIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: Radius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 2,
+    },
+    splitOptionTitle: {
       fontFamily: FontFamily.bodySemibold,
-      fontSize: 14,
-      color: c.primary,
+      fontSize: 12,
+      color: c.text,
       textAlign: 'center',
-      paddingVertical: Spacing.sm,
-      textDecorationLine: 'underline',
+    },
+    splitOptionHint: {
+      fontFamily: FontFamily.body,
+      fontSize: 10,
+      color: c.textTertiary,
+      textAlign: 'center',
     },
   });

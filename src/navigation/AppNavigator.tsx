@@ -28,6 +28,7 @@ import GroupDetailScreen from '../screens/groups/GroupDetailScreen';
 import GroupBalancesScreen from '../screens/groups/GroupBalancesScreen';
 import AddExpenseScreen from '../screens/groups/AddExpenseScreen';
 import JoinGroupScreen from '../screens/groups/JoinGroupScreen';
+import GroupSettingsScreen from '../screens/groups/GroupSettingsScreen';
 
 // Scanner Screens
 import ScanReceiptScreen from '../screens/scanner/ScanReceiptScreen';
@@ -43,6 +44,13 @@ import PaywallScreen from '../screens/subscription/PaywallScreen';
 
 // Shared Bill
 import SharedBillScreen from '../screens/scanner/SharedBillScreen';
+
+// Collection Summary
+import CollectionSummaryScreen from '../screens/scanner/CollectionSummaryScreen';
+
+// Quick Split
+import QuickSplitScreen from '../screens/quicksplit/QuickSplitScreen';
+import QuickSplitTrackScreen from '../screens/quicksplit/QuickSplitTrackScreen';
 
 // Search & Friends
 import SearchScreen from '../screens/search/SearchScreen';
@@ -71,6 +79,7 @@ export type RootStackParamList = {
   JoinGroup: undefined;
   GroupDetail: { groupId: string };
   GroupBalances: { groupId: string };
+  GroupSettings: { groupId: string };
   AddExpense: { groupId: string; prefillAmount?: number; prefillDescription?: string; prefillSplitType?: string; prefillCategory?: string };
   ScanReceipt: { groupId: string };
   ParsedItems: { groupId: string; receiptData: any };
@@ -79,6 +88,9 @@ export type RootStackParamList = {
   LedgerContact: { contactName: string };
   Paywall: { trigger: string };
   SharedBill: { billId: string; groupId: string };
+  CollectionSummary: { groupId: string; expenseId: string };
+  QuickSplit: undefined;
+  QuickSplitTrack: { quickSplitId: string };
   Search: undefined;
   AddFriends: undefined;
   Analytics: { groupId?: string };
@@ -207,6 +219,13 @@ function AppStack() {
         }}
       />
       <RootStack.Screen
+        name="GroupSettings"
+        component={GroupSettingsScreen}
+        options={{
+          title: t('groups.settings'),
+        }}
+      />
+      <RootStack.Screen
         name="AddExpense"
         component={AddExpenseScreen}
         options={{
@@ -261,6 +280,31 @@ function AppStack() {
         component={SharedBillScreen}
         options={{
           title: t('shared_bill.title'),
+        }}
+      />
+      <RootStack.Screen
+        name="CollectionSummary"
+        component={CollectionSummaryScreen}
+        options={{
+          title: t('collection.title'),
+          headerBackVisible: false,
+        }}
+      />
+      <RootStack.Screen
+        name="QuickSplit"
+        component={QuickSplitScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          title: t('quick_split.title'),
+          presentation: 'modal',
+        }}
+      />
+      <RootStack.Screen
+        name="QuickSplitTrack"
+        component={QuickSplitTrackScreen}
+        options={{
+          title: t('quick_split.trackTitle'),
+          headerBackVisible: false,
         }}
       />
       <RootStack.Screen

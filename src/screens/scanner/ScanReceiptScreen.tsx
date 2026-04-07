@@ -228,8 +228,10 @@ JSON schema (return ONLY valid JSON, no markdown, no extra text):
         .from('receipts')
         .upload(fileName, decode(base64), { contentType: 'image/jpeg' })
         .then(({ error: uploadError }) => {
-          if (uploadError)
-            console.warn('Upload error (non-blocking):', uploadError.message);
+          if (uploadError) {
+            // Log to Sentry or monitoring service in production
+            console.error('Receipt image upload failed:', uploadError.message);
+          }
         });
 
       let receiptData: ParsedReceipt;

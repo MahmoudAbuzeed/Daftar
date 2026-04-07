@@ -1,22 +1,69 @@
 import { Linking } from 'react-native';
 
 /**
+ * Validate phone number format
+ * Accepts E.164 format, local format, and various separators
+ */
+export function isValidPhoneNumber(phone: string | null | undefined): boolean {
+  if (!phone || typeof phone !== 'string') return false;
+
+  // Remove all non-digit characters except +
+  const cleaned = phone.replace(/[^\d+]/g, '');
+
+  // Must start with + or digit
+  if (!cleaned.match(/^\+?\d/)) return false;
+
+  // Must have at least 7 digits (minimum for valid phone)
+  const digitsOnly = cleaned.replace(/\D/g, '');
+  return digitsOnly.length >= 7 && digitsOnly.length <= 15;
+}
+
+/**
+ * Format phone number for WhatsApp API
+ * Converts to E.164 format (without +) or country-prefixed format
+ */
+export function formatPhoneForWhatsApp(phone: string): string {
+  // Remove all non-digit characters except +
+  const cleaned = phone.replace(/[^\d+]/g, '');
+
+  // If it already starts with +, remove it (WhatsApp API doesn't need it)
+  if (cleaned.startsWith('+')) {
+    return cleaned.substring(1);
+  }
+
+  // If no country code (doesn't start with 2), assume Egyptian (+20)
+  if (cleaned.length <= 10 && !cleaned.startsWith('2')) {
+    // Remove leading 0 if present
+    const withoutLeadingZero = cleaned.replace(/^0/, '');
+    return `20${withoutLeadingZero}`;
+  }
+
+  return cleaned;
+}
+
+/**
  * Share a message via WhatsApp
  */
 export async function shareViaWhatsApp(message: string, phone?: string): Promise<void> {
   const encoded = encodeURIComponent(message);
-  const url = phone
-    ? `whatsapp://send?phone=${phone}&text=${encoded}`
-    : `whatsapp://send?text=${encoded}`;
 
-  const supported = await Linking.canOpenURL(url);
-  if (supported) {
-    await Linking.openURL(url);
-  } else {
-    // Fallback to web WhatsApp
-    const webUrl = `https://wa.me/?text=${encoded}`;
-    await Linking.openURL(webUrl);
+  // If phone is provided, validate it
+  if (phone) {
+    if (!isValidPhoneNumber(phone)) {
+      throw new Error('Invalid phone number format');
+    }
+    const formattedPhone = formatPhoneForWhatsApp(phone);
+    const url = `whatsapp://send?phone=${formattedPhone}&text=${encoded}`;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+      return;
+    }
   }
+
+  // Fallback to web WhatsApp (or web version if app not available)
+  const webUrl = `https://wa.me/${phone ? formatPhoneForWhatsApp(phone) : ''}?text=${encoded}`;
+  await Linking.openURL(webUrl);
 }
 
 /**

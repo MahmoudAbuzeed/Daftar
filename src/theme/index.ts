@@ -200,8 +200,8 @@ export const Shadows = StyleSheet.create({
 export const CommonStyles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: Colors.bg,
   },
+  /** @deprecated Use ThemedCard component which is theme-aware */
   card: {
     backgroundColor: Colors.bgCard,
     borderRadius: Radius.xl,

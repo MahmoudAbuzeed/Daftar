@@ -75,12 +75,8 @@ export default function ScreenHeader({ title, onBack, rightAction, transparent }
             style={[
               styles.backBtn,
               {
-                backgroundColor: isDark
-                  ? 'rgba(255,252,247,0.06)'
-                  : 'rgba(0,0,0,0.04)',
-                borderColor: isDark
-                  ? 'rgba(201,162,39,0.15)'
-                  : 'rgba(0,0,0,0.06)',
+                backgroundColor: colors.iconButtonBg,
+                borderColor: colors.iconButtonBorder,
               },
             ]}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

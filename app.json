@@ -20,7 +20,9 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Fifti needs camera access to scan receipts and split bills automatically",
         "NSPhotoLibraryUsageDescription": "Fifti needs photo access to attach receipt images to expenses",
-        "NSContactsUsageDescription": "Fifti needs contacts access to invite friends to your groups"
+        "NSContactsUsageDescription": "Fifti needs contacts access to invite friends to your groups",
+        "NSBluetoothAlwaysUsageDescription": "Fifti uses Bluetooth to detect nearby friends at the same restaurant so you can split the bill without typing names manually.",
+        "NSBluetoothPeripheralUsageDescription": "Fifti uses Bluetooth to let nearby friends discover you when splitting a bill."
       }
     },
     "android": {
@@ -32,10 +34,17 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "CAMERA",
-        "READ_CONTACTS",
-        "READ_EXTERNAL_STORAGE",
-        "VIBRATE"
+        "android.permission.CAMERA",
+        "android.permission.READ_CONTACTS",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.VIBRATE",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_ADVERTISE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.WRITE_CONTACTS"
       ]
     },
     "web": {
@@ -52,12 +61,19 @@
           "icon": "./assets/notification-icon.png",
           "color": "#1DB954"
         }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false
+        }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "91d6d3ff-f9c2-4362-9a91-25856ef7a6b9"
       }
-    }
+    },
+    "owner": "mahmoudabuzeed"
   }
 }

@@ -32,6 +32,10 @@ export interface ThemeColors {
   border: string;
   borderLight: string;
 
+  iconButtonBg: string;
+  iconButtonBorder: string;
+  tabBarDockBg: string;
+
   shadowColor: string;
   overlay: string;
 
@@ -82,6 +86,10 @@ export const lightPalette: ThemeColors = {
   border: '#E8E8EE',
   borderLight: '#F2F2F7',
 
+  iconButtonBg: 'rgba(0,0,0,0.04)',
+  iconButtonBorder: 'rgba(0,0,0,0.06)',
+  tabBarDockBg: 'rgba(255,255,255,0.96)',
+
   shadowColor: '#1A1A2E',
   overlay: 'rgba(26,26,46,0.4)',
 
@@ -131,6 +139,10 @@ export const darkPalette: ThemeColors = {
 
   border: 'rgba(255,255,255,0.1)',
   borderLight: 'rgba(255,255,255,0.06)',
+
+  iconButtonBg: 'rgba(255,252,247,0.06)',
+  iconButtonBorder: 'rgba(255,255,255,0.10)',
+  tabBarDockBg: 'rgba(6,15,13,0.94)',
 
   shadowColor: '#000000',
   overlay: 'rgba(13,13,20,0.7)',
