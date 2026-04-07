@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import en from '../locales/en.json';
 import ar from '../locales/ar.json';
 
-const LANGUAGE_KEY = 'daftar_language';
+const LANGUAGE_KEY = 'fifti_language';
 
 const languageDetector = {
   type: 'languageDetector' as const,

@@ -5,13 +5,13 @@ import { useAuth } from './auth-context';
 import { identifyUser, checkProStatus } from './purchases';
 import { Subscription, TierLimits, FeatureKey } from '../types/database';
 
-const SUB_CACHE_KEY = '@daftar/subscription';
+const SUB_CACHE_KEY = '@fifti/subscription';
 
 export const FREE_LIMITS: TierLimits = {
-  maxGroups: 3,
-  maxReceiptScans: 3,
-  maxDaftarContacts: 20,
-  maxWhatsAppReminders: 3,
+  maxGroups: 5,
+  maxReceiptScans: Infinity,
+  maxLedgerContacts: 20,
+  maxWhatsAppReminders: Infinity,
   hasDataExport: false,
   hasAnalytics: false,
   hasRecurringExpenses: false,
@@ -21,7 +21,7 @@ export const FREE_LIMITS: TierLimits = {
 export const PRO_LIMITS: TierLimits = {
   maxGroups: Infinity,
   maxReceiptScans: Infinity,
-  maxDaftarContacts: Infinity,
+  maxLedgerContacts: Infinity,
   maxWhatsAppReminders: Infinity,
   hasDataExport: true,
   hasAnalytics: true,

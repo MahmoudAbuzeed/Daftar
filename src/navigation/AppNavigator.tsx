@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../lib/auth-context';
 import { useAppTheme } from '../lib/theme-context';
 import { ActivityIndicator, View } from 'react-native';
 import AnimatedTabBar from '../components/AnimatedTabBar';
 import { FontFamily } from '../theme';
+import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 
 // Auth Screens
 import PhoneEntryScreen from '../screens/auth/PhoneEntryScreen';
@@ -16,7 +18,7 @@ import ProfileSetupScreen from '../screens/auth/ProfileSetupScreen';
 
 // Main Tab Screens
 import GroupsListScreen from '../screens/groups/GroupsListScreen';
-import DaftarScreen from '../screens/daftar/DaftarScreen';
+import PeopleScreen from '../screens/people/PeopleScreen';
 import ActivityScreen from '../screens/activity/ActivityScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
@@ -30,11 +32,11 @@ import JoinGroupScreen from '../screens/groups/JoinGroupScreen';
 // Scanner Screens
 import ScanReceiptScreen from '../screens/scanner/ScanReceiptScreen';
 import ParsedItemsScreen from '../screens/scanner/ParsedItemsScreen';
-import AssignItemsScreen from '../screens/scanner/AssignItemsScreen';
+// AssignItemsScreen merged into ParsedItemsScreen
 
-// Daftar Screens
-import AddDaftarEntryScreen from '../screens/daftar/AddDaftarEntryScreen';
-import DaftarContactScreen from '../screens/daftar/DaftarContactScreen';
+// Ledger Screens
+import AddLedgerEntryScreen from '../screens/ledger/AddLedgerEntryScreen';
+import LedgerContactScreen from '../screens/ledger/LedgerContactScreen';
 
 // Subscription
 import PaywallScreen from '../screens/subscription/PaywallScreen';
@@ -42,8 +44,7 @@ import PaywallScreen from '../screens/subscription/PaywallScreen';
 // Shared Bill
 import SharedBillScreen from '../screens/scanner/SharedBillScreen';
 
-// Friends & Search
-import FriendsScreen from '../screens/friends/FriendsScreen';
+// Search & Friends
 import SearchScreen from '../screens/search/SearchScreen';
 import AddFriendsScreen from '../screens/friends/AddFriendsScreen';
 import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
@@ -59,10 +60,8 @@ export type AuthStackParamList = {
 };
 
 export type MainTabParamList = {
-  FriendsTab: undefined;
   GroupsTab: undefined;
-  DaftarTab: undefined;
-  ActivityTab: undefined;
+  PeopleTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -72,18 +71,19 @@ export type RootStackParamList = {
   JoinGroup: undefined;
   GroupDetail: { groupId: string };
   GroupBalances: { groupId: string };
-  AddExpense: { groupId: string; prefillAmount?: number; prefillDescription?: string };
+  AddExpense: { groupId: string; prefillAmount?: number; prefillDescription?: string; prefillSplitType?: string; prefillCategory?: string };
   ScanReceipt: { groupId: string };
   ParsedItems: { groupId: string; receiptData: any };
-  AssignItems: { groupId: string; items: any[]; tax: number; serviceCharge: number };
-  AddDaftarEntry: undefined;
-  DaftarContact: { contactName: string };
+  // AssignItems merged into ParsedItems
+  AddLedgerEntry: undefined;
+  LedgerContact: { contactName: string };
   Paywall: { trigger: string };
   SharedBill: { billId: string; groupId: string };
   Search: undefined;
   AddFriends: undefined;
   Analytics: { groupId?: string };
   RecurringExpenses: { groupId: string };
+  Activity: undefined;
   About: undefined;
   PrivacyPolicy: undefined;
   Terms: undefined;
@@ -102,24 +102,14 @@ function MainTabs() {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen
-        name="FriendsTab"
-        component={FriendsScreen}
-        options={{ tabBarLabel: t('tabs.friends') }}
-      />
-      <Tab.Screen
         name="GroupsTab"
         component={GroupsListScreen}
         options={{ tabBarLabel: t('tabs.groups') }}
       />
       <Tab.Screen
-        name="DaftarTab"
-        component={DaftarScreen}
-        options={{ tabBarLabel: t('tabs.daftar') }}
-      />
-      <Tab.Screen
-        name="ActivityTab"
-        component={ActivityScreen}
-        options={{ tabBarLabel: t('tabs.activity') }}
+        name="PeopleTab"
+        component={PeopleScreen}
+        options={{ tabBarLabel: t('tabs.people') }}
       />
       <Tab.Screen
         name="ProfileTab"
@@ -242,24 +232,17 @@ function AppStack() {
         }}
       />
       <RootStack.Screen
-        name="AssignItems"
-        component={AssignItemsScreen}
-        options={{
-          title: t('scanner.assign_items'),
-        }}
-      />
-      <RootStack.Screen
-        name="AddDaftarEntry"
-        component={AddDaftarEntryScreen}
+        name="AddLedgerEntry"
+        component={AddLedgerEntryScreen}
         options={{
           animation: 'slide_from_bottom',
-          title: t('daftar.addEntry'),
+          title: t('ledger.addEntry'),
           presentation: 'modal',
         }}
       />
       <RootStack.Screen
-        name="DaftarContact"
-        component={DaftarContactScreen}
+        name="LedgerContact"
+        component={LedgerContactScreen}
         options={{
           title: '',
         }}
@@ -312,6 +295,11 @@ function AppStack() {
         }}
       />
       <RootStack.Screen
+        name="Activity"
+        component={ActivityScreen}
+        options={{ title: t('tabs.activity') }}
+      />
+      <RootStack.Screen
         name="About"
         component={AboutScreen}
         options={{ title: t('legal.about') }}
@@ -333,13 +321,24 @@ function AppStack() {
 export default function AppNavigator() {
   const { session, loading, needsProfile } = useAuth();
   const { colors } = useAppTheme();
+  const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
 
-  if (loading) {
+  useEffect(() => {
+    AsyncStorage.getItem('@fifti/onboarded').then((val) => {
+      setIsOnboarded(val === 'true');
+    });
+  }, []);
+
+  if (loading || isOnboarded === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
+  }
+
+  if (!isOnboarded) {
+    return <OnboardingScreen onComplete={() => setIsOnboarded(true)} />;
   }
 
   return (

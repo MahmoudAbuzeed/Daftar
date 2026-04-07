@@ -43,7 +43,7 @@ import { MainTabParamList, RootStackParamList } from '../../navigation/AppNaviga
 // ---------------------------------------------------------------------------
 
 type Props = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'FriendsTab'>,
+  BottomTabScreenProps<MainTabParamList, 'GroupsTab'>,
   NativeStackScreenProps<RootStackParamList, 'MainTabs'>
 >;
 
@@ -52,7 +52,7 @@ type Props = CompositeScreenProps<
 // ---------------------------------------------------------------------------
 
 interface FriendBalance {
-  userId: string | null; // null for daftar-only contacts
+  userId: string | null; // null for ledger-only contacts
   displayName: string;
   netBalance: number; // positive = they owe you, negative = you owe them
   groupCount: number; // how many groups you share
@@ -272,31 +272,31 @@ export default function FriendsScreen({ navigation }: Props) {
         }
       }
 
-      // 7. Fetch daftar entries
-      const { data: daftarEntries, error: daftarErr } = await supabase
-        .from('daftar_entries')
+      // 7. Fetch ledger entries
+      const { data: ledgerEntries, error: ledgerErr } = await supabase
+        .from('ledger_entries')
         .select('*')
         .eq('user_id', userId)
         .eq('is_settled', false);
-      if (daftarErr) throw daftarErr;
+      if (ledgerErr) throw ledgerErr;
 
-      for (const entry of daftarEntries || []) {
+      for (const entry of ledgerEntries || []) {
         const amount = entry.direction === 'they_owe' ? entry.amount : -entry.amount;
 
-        // If the daftar contact is linked to a real user, merge into their balance
+        // If the ledger contact is linked to a real user, merge into their balance
         if (entry.contact_user_id) {
           const existing = balanceMap.get(entry.contact_user_id);
           if (existing) {
             existing.netBalance += amount;
           } else {
-            const dEntry = getOrCreate(entry.contact_user_id, entry.contact_name, true);
-            dEntry.netBalance += amount;
+            const lEntry = getOrCreate(entry.contact_user_id, entry.contact_name, true);
+            lEntry.netBalance += amount;
           }
         } else {
-          // Non-linked daftar contact: use contact_name as key, prefixed to avoid collision
-          const key = `daftar:${entry.contact_name}`;
-          const dEntry = getOrCreate(key, entry.contact_name, false);
-          dEntry.netBalance += amount;
+          // Non-linked ledger contact: use contact_name as key, prefixed to avoid collision
+          const key = `ledger:${entry.contact_name}`;
+          const lEntry = getOrCreate(key, entry.contact_name, false);
+          lEntry.netBalance += amount;
         }
       }
 
@@ -711,7 +711,7 @@ export default function FriendsScreen({ navigation }: Props) {
         {/* Friend list */}
         <FlatList
           data={friends}
-          keyExtractor={(item) => item.userId || `daftar:${item.displayName}`}
+          keyExtractor={(item) => item.userId || `ledger:${item.displayName}`}
           renderItem={renderFriendRow}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmpty}

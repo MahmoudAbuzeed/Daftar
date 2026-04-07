@@ -77,6 +77,36 @@ export function generateInviteMessage(
 /**
  * Generate a payment notification after bill assignment
  */
+/**
+ * Generate a notification listing all debtors and their amounts
+ */
+export function generateMultiDebtorNotification(
+  payerName: string,
+  payerPhone: string | null,
+  debtors: { name: string; amount: number }[],
+  currency: string,
+  description: string,
+  lang: 'en' | 'ar' = 'en'
+): string {
+  const phoneInfo = payerPhone ? `\n📱 ${payerPhone}` : '';
+
+  if (lang === 'ar') {
+    let msg = `🧾 Fifti: تقسيم حساب "${description}"${phoneInfo}\n\n`;
+    for (const d of debtors) {
+      msg += `• ${d.name}: ${d.amount.toFixed(2)} ${currency}\n`;
+    }
+    msg += `\nسددوا الحساب عن طريق التطبيق. 💸`;
+    return msg;
+  }
+
+  let msg = `🧾 Fifti: Bill split for "${description}"${phoneInfo}\n\n`;
+  for (const d of debtors) {
+    msg += `• ${d.name} owes ${d.amount.toFixed(2)} ${currency}\n`;
+  }
+  msg += `\nSettle up through the app! 💸`;
+  return msg;
+}
+
 export function generatePaymentNotification(
   payerName: string,
   payerPhone: string | null,

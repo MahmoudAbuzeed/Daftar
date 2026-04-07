@@ -68,7 +68,7 @@ function categorizeExpense(description: string): string | null {
 }
 
 export default function AddExpenseScreen({ route, navigation }: Props) {
-  const { groupId, prefillAmount, prefillDescription } = route.params;
+  const { groupId, prefillAmount, prefillDescription, prefillSplitType, prefillCategory } = route.params;
   const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
   const { colors, isDark } = useAppTheme();
@@ -81,16 +81,30 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
   const [amount, setAmount] = useState(prefillAmount ? prefillAmount.toString() : '');
   const [currency, setCurrency] = useState<string>('EGP');
   const [paidBy, setPaidBy] = useState<string>('');
-  const [splitType, setSplitType] = useState<SplitType>('equal');
+  const [splitType, setSplitType] = useState<SplitType>((prefillSplitType as SplitType) || 'equal');
   const [memberSplits, setMemberSplits] = useState<MemberSplit[]>([]);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [paidByPickerOpen, setPaidByPickerOpen] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const advancedHeight = useRef(new Animated.Value(0)).current;
 
   const entrance = useScreenEntrance();
   const splitIndicator = useRef(new Animated.Value(0)).current;
+
+  const toggleAdvanced = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const next = !showAdvanced;
+    setShowAdvanced(next);
+    Animated.spring(advancedHeight, {
+      toValue: next ? 1 : 0,
+      useNativeDriver: false,
+      damping: 18,
+      stiffness: 150,
+    }).start();
+  };
 
   // Animate split type indicator
   useEffect(() => {
@@ -385,7 +399,7 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
               </ThemedCard>
             </AnimatedListItem>
 
-            {/* Description + Paid By */}
+            {/* Description */}
             <AnimatedListItem index={1}>
               <ThemedCard style={styles.formCardSpacing}>
                 <ThemedInput
@@ -395,9 +409,42 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
                   onChangeText={setDescription}
                   placeholder={t('expenses.description')}
                   maxLength={100}
-                  containerStyle={styles.field}
+                  containerStyle={styles.fieldLast}
                 />
+              </ThemedCard>
+            </AnimatedListItem>
 
+            {/* Save Button (primary position) */}
+            <AnimatedListItem index={2}>
+              <FunButton
+                title={t('expenses.save')}
+                onPress={handleSave}
+                loading={saving}
+                disabled={!description.trim() || !amount}
+                icon={<Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
+                style={{ marginTop: Spacing.sm, marginBottom: Spacing.md }}
+              />
+            </AnimatedListItem>
+
+            {/* More Options Toggle */}
+            <AnimatedListItem index={3}>
+              <BouncyPressable onPress={toggleAdvanced} scaleDown={0.98}>
+                <View style={styles.moreOptionsToggle}>
+                  <Ionicons name={showAdvanced ? 'chevron-up' : 'options-outline'} size={18} color={colors.primary} />
+                  <Text style={styles.moreOptionsText}>
+                    {showAdvanced ? t('expenses.lessOptions') : t('expenses.moreOptions')}
+                  </Text>
+                </View>
+              </BouncyPressable>
+            </AnimatedListItem>
+
+            {/* Advanced Options (collapsible) */}
+            <Animated.View style={{
+              opacity: advancedHeight,
+              maxHeight: advancedHeight.interpolate({ inputRange: [0, 1], outputRange: [0, 2000] }),
+              overflow: 'hidden',
+            }}>
+              <ThemedCard style={styles.formCardSpacing}>
                 <ThemedInput
                   label={t('expenses.notes')}
                   icon="chatbubble-outline"
@@ -484,10 +531,8 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
                   )}
                 </View>
               </ThemedCard>
-            </AnimatedListItem>
 
-            {/* Split Type + Members */}
-            <AnimatedListItem index={2}>
+              {/* Split Type + Members */}
               <ThemedCard style={styles.formCardSpacing}>
                 <View style={styles.field}>
                   <Text style={styles.label}>{t('expenses.split_type')}</Text>
@@ -584,19 +629,7 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
                   </View>
                 </View>
               </ThemedCard>
-            </AnimatedListItem>
-
-            {/* Save Button */}
-            <AnimatedListItem index={3}>
-              <FunButton
-                title={t('expenses.save')}
-                onPress={handleSave}
-                loading={saving}
-                disabled={!description.trim() || !amount}
-                icon={<Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" />}
-                style={{ marginTop: Spacing.sm }}
-              />
-            </AnimatedListItem>
+            </Animated.View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -639,6 +672,19 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     currencyBadgeText: { fontSize: 16, fontFamily: FontFamily.bodyBold, color: '#1A1408' },
 
+    moreOptionsToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    moreOptionsText: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 14,
+      color: c.primary,
+    },
     formCardSpacing: {
       marginBottom: Spacing.lg,
     },

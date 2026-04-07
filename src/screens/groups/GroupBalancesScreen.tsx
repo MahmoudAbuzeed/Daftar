@@ -35,6 +35,7 @@ import ThemedInput from '../../components/ThemedInput';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
+import { generateBalanceSummary, shareViaWhatsApp } from '../../utils/whatsapp';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupBalances'>;
 
@@ -58,7 +59,7 @@ const PAYMENT_METHODS: { key: PaymentMethod; labelKey: string; icon: string }[] 
 
 export default function GroupBalancesScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { colors, isDark } = useAppTheme();
   const alert = useAlert();
@@ -257,7 +258,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
           </View>
           {canSettle && (
             <FunButton
-              title={t('daftar.settle')}
+              title={t('ledger.settle')}
               onPress={() => openSettleModal(item)}
               variant="primary"
               size="small"
@@ -300,6 +301,34 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
           </Text>
         </Animated.View>
       </LinearGradient>
+
+      {/* Remind All button - only if others owe the current user */}
+      {debts.some((d) => d.to_user === user?.id) && (
+        <View style={styles.remindAllRow}>
+          <BouncyPressable
+            onPress={() => {
+              const lang = i18n.language === 'ar' ? 'ar' : 'en';
+              const myDebts = debts
+                .filter((d) => d.to_user === user?.id)
+                .map((d) => ({
+                  from: d.from_user_data?.display_name || '?',
+                  to: d.to_user_data?.display_name || '?',
+                  amount: d.net_amount,
+                  currency,
+                }));
+              const groupName = '';
+              const message = generateBalanceSummary(groupName, myDebts, lang as 'en' | 'ar');
+              shareViaWhatsApp(message);
+            }}
+            scaleDown={0.95}
+          >
+            <View style={styles.remindAllBtn}>
+              <Ionicons name="logo-whatsapp" size={18} color={colors.success} />
+              <Text style={styles.remindAllText}>{t('groups.remindAll')}</Text>
+            </View>
+          </BouncyPressable>
+        </View>
+      )}
 
       <FlatList
         data={debts}
@@ -488,6 +517,26 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       color: c.textSecondary,
       opacity: 0.7,
       marginTop: Spacing.xs,
+    },
+    // Remind All
+    remindAllRow: {
+      paddingHorizontal: Spacing.xl,
+      paddingTop: Spacing.md,
+    },
+    remindAllBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: Radius.full,
+      backgroundColor: isDark ? 'rgba(37,211,102,0.1)' : '#E8F8EE',
+    },
+    remindAllText: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 14,
+      color: c.success,
     },
     // List
     list: {

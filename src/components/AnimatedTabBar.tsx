@@ -19,10 +19,8 @@ const DOCK_H_PAD = 14;
 const DOCK_WIDTH = SCREEN_W - DOCK_H_PAD * 2;
 
 const ICON_MAP: Record<string, [string, string]> = {
-  FriendsTab: ['person-add', 'person-add-outline'],
   GroupsTab: ['people', 'people-outline'],
-  DaftarTab: ['wallet', 'wallet-outline'],
-  ActivityTab: ['flash', 'flash-outline'],
+  PeopleTab: ['person-add', 'person-add-outline'],
   ProfileTab: ['person-circle', 'person-circle-outline'],
 };
 

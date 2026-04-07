@@ -19,7 +19,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
-import { DaftarEntry } from '../../types/database';
+import { LedgerEntry } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import FunButton from '../../components/FunButton';
@@ -27,9 +27,9 @@ import ThemedCard from '../../components/ThemedCard';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'DaftarContact'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'LedgerContact'>;
 
-export default function DaftarContactScreen({ route, navigation }: Props) {
+export default function LedgerContactScreen({ route, navigation }: Props) {
   const { contactName } = route.params;
   const { t } = useTranslation();
   const { profile } = useAuth();
@@ -38,7 +38,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
   const entrance = useScreenEntrance();
   const alert = useAlert();
 
-  const [entries, setEntries] = useState<DaftarEntry[]>([]);
+  const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [settling, setSettling] = useState(false);
@@ -54,7 +54,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
 
     try {
       const { data, error } = await supabase
-        .from('daftar_entries')
+        .from('ledger_entries')
         .select('*')
         .eq('user_id', profile.id)
         .eq('contact_name', contactName)
@@ -62,7 +62,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
 
       if (error) throw error;
 
-      setEntries((data || []) as DaftarEntry[]);
+      setEntries((data || []) as LedgerEntry[]);
     } catch (err) {
       console.error('Failed to fetch contact entries:', err);
     } finally {
@@ -88,13 +88,13 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
     if (netBalance === 0) return;
 
     alert.confirm(
-      t('daftar.settleTitle'),
-      t('daftar.settleConfirm', {
+      t('ledger.settleTitle'),
+      t('ledger.settleConfirm', {
         name: contactName,
         amount: Math.abs(netBalance).toFixed(2),
       }),
       performSettle,
-      t('daftar.settle'),
+      t('ledger.settle'),
       t('common.cancel'),
     );
   };
@@ -108,12 +108,12 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
       const direction: 'i_owe' | 'they_owe' =
         netBalance > 0 ? 'i_owe' : 'they_owe';
 
-      const { error } = await supabase.from('daftar_entries').insert({
+      const { error } = await supabase.from('ledger_entries').insert({
         user_id: profile.id,
         contact_name: contactName,
         amount: Math.abs(netBalance),
         direction,
-        note: t('daftar.settlementNote'),
+        note: t('ledger.settlementNote'),
         is_settled: false,
       });
 
@@ -122,7 +122,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
       await fetchEntries();
     } catch (err) {
       console.error('Failed to settle:', err);
-      alert.error(t('common.error'), t('daftar.settleFailed'));
+      alert.error(t('common.error'), t('ledger.settleFailed'));
     } finally {
       setSettling(false);
     }
@@ -141,7 +141,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
     });
   };
 
-  const renderEntry = ({ item, index }: { item: DaftarEntry; index: number }) => {
+  const renderEntry = ({ item, index }: { item: LedgerEntry; index: number }) => {
     const isTheyOwe = item.direction === 'they_owe';
 
     return (
@@ -168,7 +168,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
 
             <View style={styles.entryInfo}>
               <Text style={styles.entryDirection}>
-                {isTheyOwe ? t('daftar.theyOweYou') : t('daftar.youOweThem')}
+                {isTheyOwe ? t('ledger.theyOweYou') : t('ledger.youOweThem')}
               </Text>
               {item.note ? (
                 <Text style={styles.entryNote} numberOfLines={1}>
@@ -211,7 +211,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
             />
           </LinearGradient>
         </View>
-        <Text style={styles.emptyTitle}>{t('daftar.noEntries')}</Text>
+        <Text style={styles.emptyTitle}>{t('ledger.noEntries')}</Text>
       </View>
     );
   };
@@ -241,7 +241,7 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
           end={{ x: 1, y: 1 }}
           style={styles.balanceCard}
         >
-          <Text style={styles.balanceLabel}>{t('daftar.netBalance')}</Text>
+          <Text style={styles.balanceLabel}>{t('ledger.netBalance')}</Text>
           <Text
             style={[
               styles.balanceAmount,
@@ -256,17 +256,17 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
           </Text>
           <Text style={styles.balanceDirection}>
             {netBalance === 0
-              ? t('daftar.settledUp')
+              ? t('ledger.settledUp')
               : isPositive
-              ? t('daftar.owesYou')
-              : t('daftar.youOwe')}
+              ? t('ledger.owesYou')
+              : t('ledger.youOwe')}
           </Text>
         </LinearGradient>
 
         {/* Action Buttons */}
         <View style={styles.actionRow}>
           <FunButton
-            title={t('daftar.settle')}
+            title={t('ledger.settle')}
             onPress={handleSettle}
             loading={settling}
             disabled={netBalance === 0}
@@ -280,8 +280,8 @@ export default function DaftarContactScreen({ route, navigation }: Props) {
             }
           />
           <FunButton
-            title={t('daftar.addEntry')}
-            onPress={() => navigation.navigate('AddDaftarEntry')}
+            title={t('ledger.addEntry')}
+            onPress={() => navigation.navigate('AddLedgerEntry')}
             variant="secondary"
             style={styles.actionBtn}
             icon={

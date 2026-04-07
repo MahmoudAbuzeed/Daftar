@@ -23,7 +23,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
-import { DaftarEntry } from '../../types/database';
+import { LedgerEntry } from '../../types/database';
 import { Spacing, Radius, FontFamily } from '../../theme';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import ThemedCard from '../../components/ThemedCard';
@@ -40,7 +40,7 @@ interface ContactSummary {
   entryCount: number;
 }
 
-export default function DaftarScreen() {
+export default function LedgerScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { profile } = useAuth();
@@ -70,13 +70,13 @@ export default function DaftarScreen() {
     if (!profile) return;
     try {
       const { data, error } = await supabase
-        .from('daftar_entries')
+        .from('ledger_entries')
         .select('*')
         .eq('user_id', profile.id)
         .eq('is_settled', false);
       if (error) throw error;
 
-      const entries = (data || []) as DaftarEntry[];
+      const entries = (data || []) as LedgerEntry[];
       const grouped = new Map<string, { net: number; count: number }>();
       for (const entry of entries) {
         const existing = grouped.get(entry.contact_name) || { net: 0, count: 0 };
@@ -101,7 +101,7 @@ export default function DaftarScreen() {
       setTotalOwedToYou(owedToYou);
       setTotalYouOwe(youOwe);
     } catch (err) {
-      console.error('Failed to fetch daftar entries:', err);
+      console.error('Failed to fetch ledger entries:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -117,7 +117,7 @@ export default function DaftarScreen() {
     const isPositive = item.netBalance >= 0;
     return (
       <AnimatedListItem index={index}>
-        <BouncyPressable onPress={() => navigation.navigate('DaftarContact', { contactName: item.contactName })}>
+        <BouncyPressable onPress={() => navigation.navigate('LedgerContact', { contactName: item.contactName })}>
           <ThemedCard>
             <View style={[styles.cardAccent, { backgroundColor: isPositive ? colors.success : colors.danger }]} />
 
@@ -136,7 +136,7 @@ export default function DaftarScreen() {
                   <View style={styles.contactEntriesRow}>
                     <Ionicons name="document-text-outline" size={11} color={colors.textTertiary} />
                     <Text style={styles.contactEntries}>
-                      {' '}{item.entryCount} {item.entryCount === 1 ? t('daftar.entry') : t('daftar.entries')}
+                      {' '}{item.entryCount} {item.entryCount === 1 ? t('ledger.entry') : t('ledger.entries')}
                     </Text>
                   </View>
                 </View>
@@ -148,7 +148,7 @@ export default function DaftarScreen() {
                 </Text>
                 <View style={[styles.balanceBadge, { backgroundColor: isPositive ? `${colors.success}18` : `${colors.danger}18` }]}>
                   <Text style={[styles.balanceLabel, { color: isPositive ? colors.positive : colors.negative }]}>
-                    {isPositive ? t('daftar.owesYou') : t('daftar.youOwe')}
+                    {isPositive ? t('ledger.owesYou') : t('ledger.youOwe')}
                   </Text>
                 </View>
               </View>
@@ -171,8 +171,8 @@ export default function DaftarScreen() {
             <Ionicons name="book-outline" size={42} color={colors.primary} />
           </LinearGradient>
         </Animated.View>
-        <Text style={styles.emptyTitle}>{t('daftar.emptyTitle')}</Text>
-        <Text style={styles.emptySubtitle}>{t('daftar.emptySubtitle')}</Text>
+        <Text style={styles.emptyTitle}>{t('ledger.emptyTitle')}</Text>
+        <Text style={styles.emptySubtitle}>{t('ledger.emptySubtitle')}</Text>
       </View>
     );
   };
@@ -208,8 +208,8 @@ export default function DaftarScreen() {
       <SafeAreaView style={styles.safe}>
         <Animated.View style={[styles.header, entrance.style]}>
           <View>
-            <Text style={styles.headerKicker}>{t('daftar.yourLedger')}</Text>
-            <Text style={styles.headerTitle}>{t('daftar.title')}</Text>
+            <Text style={styles.headerKicker}>{t('ledger.yourLedger')}</Text>
+            <Text style={styles.headerTitle}>{t('ledger.title')}</Text>
           </View>
           <View style={styles.headerDecor}>
             <View style={styles.decorDiamond} />
@@ -222,7 +222,7 @@ export default function DaftarScreen() {
             <View style={styles.summaryAccent} />
 
             <View style={styles.summaryNet}>
-              <Text style={styles.summaryNetLabel}>{t('daftar.net')}</Text>
+              <Text style={styles.summaryNetLabel}>{t('ledger.net')}</Text>
               <Text style={[styles.summaryNetAmount, { color: isNetPositive ? colors.positive : colors.negative }]}>
                 {isNetPositive ? '+' : '-'}{formatAmount(Math.abs(netTotal))}
               </Text>
@@ -238,7 +238,7 @@ export default function DaftarScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
-                <Text style={styles.summarySmLabel}>{t('daftar.owedToYou')}</Text>
+                <Text style={styles.summarySmLabel}>{t('ledger.owedToYou')}</Text>
                 <Text style={[styles.summarySmAmount, { color: colors.positive }]}>{formatAmount(totalOwedToYou)}</Text>
               </View>
               <View style={styles.summaryColSep} />
@@ -249,7 +249,7 @@ export default function DaftarScreen() {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
-                <Text style={styles.summarySmLabel}>{t('daftar.youOweTotal')}</Text>
+                <Text style={styles.summarySmLabel}>{t('ledger.youOweTotal')}</Text>
                 <Text style={[styles.summarySmAmount, { color: colors.negative }]}>{formatAmount(totalYouOwe)}</Text>
               </View>
             </View>
@@ -259,7 +259,7 @@ export default function DaftarScreen() {
         {contacts.length > 0 && (
           <View style={styles.listLabel}>
             <View style={styles.listLabelLine} />
-            <Text style={styles.listLabelText}>{t('daftar.contactCount', { count: contacts.length })}</Text>
+            <Text style={styles.listLabelText}>{t('ledger.contactCount', { count: contacts.length })}</Text>
             <View style={styles.listLabelLine} />
           </View>
         )}
@@ -277,7 +277,7 @@ export default function DaftarScreen() {
         />
 
         <Animated.View style={[styles.fab, { transform: [{ translateY: fabFloat }] }]}>
-          <BouncyPressable onPress={() => navigation.navigate('AddDaftarEntry')}>
+          <BouncyPressable onPress={() => navigation.navigate('AddLedgerEntry')}>
             <LinearGradient
               colors={colors.primaryGradient}
               style={styles.fabGradient}

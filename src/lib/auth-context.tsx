@@ -16,7 +16,6 @@ interface AuthContextType {
   setupProfile: (displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  skipLogin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -131,19 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setNeedsProfile(false);
   };
 
-  // DEV ONLY: skip login with a fake session
-  const skipLogin = () => {
-    const fakeUser = { id: 'dev-user-000', phone: '+0000000000' } as any;
-    setSession({ access_token: 'dev', user: fakeUser } as any);
-    setUser(fakeUser);
-    setProfile({
-      id: 'dev-user-000',
-      display_name: 'Dev User',
-      phone: '+0000000000',
-    } as any);
-    setNeedsProfile(false);
-  };
-
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id);
@@ -154,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         session, user, profile, loading, needsProfile,
-        sendOTP, verifyOTP, signInWithEmail, signUpWithEmail, setupProfile, signOut, refreshProfile, skipLogin,
+        sendOTP, verifyOTP, signInWithEmail, signUpWithEmail, setupProfile, signOut, refreshProfile,
       }}
     >
       {children}

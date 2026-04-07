@@ -296,7 +296,7 @@ export default function ProfileSetupScreen(_props: Props) {
                 ]}
               >
                 <Text style={styles.welcomeTitle}>
-                  {t('auth.welcomeToDaftar')}
+                  {t('auth.welcomeToFifti')}
                 </Text>
                 <Text style={styles.welcomeSub}>
                   {t('auth.whatName')}

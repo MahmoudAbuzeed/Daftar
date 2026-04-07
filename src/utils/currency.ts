@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const RATE_CACHE_KEY = '@daftar/exchange_rates';
+const RATE_CACHE_KEY = '@fifti/exchange_rates';
 const RATE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface CachedRates {

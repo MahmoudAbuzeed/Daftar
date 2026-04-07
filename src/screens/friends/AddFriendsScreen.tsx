@@ -149,15 +149,15 @@ export default function AddFriendsScreen({ navigation }: Props) {
     Animated.spring(reviewAnim, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 180 }).start();
   };
 
-  // Add friend → save to daftar + send notification
+  // Add friend → save to ledger + send notification
   const handleAddFriend = async () => {
     if (!selectedContact || !user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setAdding(true);
 
     try {
-      // Create a daftar entry link (so the friend appears in the user's contacts)
-      await supabase.from('daftar_entries').insert({
+      // Create a ledger entry link (so the friend appears in the user's contacts)
+      await supabase.from('ledger_entries').insert({
         user_id: user.id,
         contact_name: selectedContact.name,
         amount: 0,
@@ -234,7 +234,7 @@ export default function AddFriendsScreen({ navigation }: Props) {
               <Ionicons name="person-add-outline" size={20} color={colors.textSecondary} />
             </View>
             <Text style={styles.addByNameText}>
-              {t('addFriends.addToDaftar', { name: searchQuery.trim() }) || `Add "${searchQuery.trim()}" to Fifti`}
+              {t('addFriends.addToFifti', { name: searchQuery.trim() }) || `Add "${searchQuery.trim()}" to Fifti`}
             </Text>
           </View>
         </BouncyPressable>

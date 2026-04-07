@@ -30,6 +30,7 @@ export interface GroupMember {
   group_id: string;
   user_id: string;
   role: 'admin' | 'member';
+  is_favorite: boolean;
   joined_at: string;
   user?: User;
 }
@@ -46,6 +47,7 @@ export interface Expense {
   receipt_image: string | null;
   notes: string | null;
   ai_parsed: boolean;
+  tip_amount: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -98,7 +100,7 @@ export interface Settlement {
   paid_to_user?: User;
 }
 
-export interface DaftarEntry {
+export interface LedgerEntry {
   id: string;
   user_id: string;
   contact_name: string;
@@ -168,7 +170,7 @@ export type FeatureKey = 'receipt_scan' | 'group_create' | 'whatsapp_reminder' |
 export interface TierLimits {
   maxGroups: number;
   maxReceiptScans: number;
-  maxDaftarContacts: number;
+  maxLedgerContacts: number;
   maxWhatsAppReminders: number;
   hasDataExport: boolean;
   hasAnalytics: boolean;
@@ -187,6 +189,7 @@ export interface SharedBill {
   receipt_image: string | null;
   tax: number;
   service_charge: number;
+  tip: number;
   currency: CurrencyCode;
   merchant_name: string | null;
   created_at: string;

@@ -28,7 +28,9 @@ import { MainTabParamList, RootStackParamList } from '../../navigation/AppNaviga
 import { Group } from '../../types/database';
 import { formatCurrency } from '../../utils/balance';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import { SkeletonList } from '../../components/SkeletonLoader';
 import AnimatedListItem from '../../components/AnimatedListItem';
+import FunButton from '../../components/FunButton';
 import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
@@ -44,6 +46,7 @@ const { width: SW } = Dimensions.get('window');
 interface GroupWithMeta extends Group {
   member_count: number;
   net_balance: number;
+  is_favorite: boolean;
 }
 
 export default function GroupsListScreen({ navigation }: Props) {
@@ -75,7 +78,7 @@ export default function GroupsListScreen({ navigation }: Props) {
     try {
       setError(null);
       const { data: memberships, error: memberError } = await supabase
-        .from('group_members').select('group_id').eq('user_id', user.id);
+        .from('group_members').select('group_id, is_favorite').eq('user_id', user.id);
       if (memberError) throw memberError;
       if (!memberships || memberships.length === 0) { setGroups([]); return; }
       const groupIds = memberships.map((m) => m.group_id);
@@ -100,6 +103,7 @@ export default function GroupsListScreen({ navigation }: Props) {
         .from('settlements').select('group_id, paid_by, paid_to, amount').in('group_id', groupIds);
       if (settlementsError) throw settlementsError;
 
+      const favMap = new Map((memberships || []).map((m) => [m.group_id, m.is_favorite ?? false]));
       const enrichedGroups: GroupWithMeta[] = (groupsData || []).map((group) => {
         const memberCount = (allMembers || []).filter((m) => m.group_id === group.id).length;
         let netBalance = 0;
@@ -115,8 +119,10 @@ export default function GroupsListScreen({ navigation }: Props) {
           if (s.paid_by === user.id) netBalance += s.amount;
           if (s.paid_to === user.id) netBalance -= s.amount;
         }
-        return { ...group, member_count: memberCount, net_balance: Math.round(netBalance * 100) / 100 };
+        return { ...group, member_count: memberCount, net_balance: Math.round(netBalance * 100) / 100, is_favorite: favMap.get(group.id) || false };
       });
+      // Sort: favorites first, then by created_at (already desc from query)
+      enrichedGroups.sort((a, b) => (a.is_favorite === b.is_favorite ? 0 : a.is_favorite ? -1 : 1));
       setGroups(enrichedGroups);
     } catch (err: any) {
       setError(err.message || t('common.error'));
@@ -148,6 +154,22 @@ export default function GroupsListScreen({ navigation }: Props) {
     );
   };
 
+  const toggleFavorite = async (groupId: string, current: boolean) => {
+    if (!user) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Optimistic update
+    setGroups((prev) => {
+      const updated = prev.map((g) => g.id === groupId ? { ...g, is_favorite: !current } : g);
+      updated.sort((a, b) => (a.is_favorite === b.is_favorite ? 0 : a.is_favorite ? -1 : 1));
+      return updated;
+    });
+    await supabase
+      .from('group_members')
+      .update({ is_favorite: !current })
+      .eq('group_id', groupId)
+      .eq('user_id', user.id);
+  };
+
   const renderGroupCard = ({ item, index }: { item: GroupWithMeta; index: number }) => (
     <AnimatedListItem index={index}>
       <BouncyPressable onPress={() => navigation.navigate('GroupDetail', { groupId: item.id })}>
@@ -172,6 +194,18 @@ export default function GroupsListScreen({ navigation }: Props) {
               </View>
             </View>
 
+            <TouchableOpacity
+              onPress={() => toggleFavorite(item.id, item.is_favorite)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.starBtn}
+            >
+              <Ionicons
+                name={item.is_favorite ? 'star' : 'star-outline'}
+                size={20}
+                color={item.is_favorite ? colors.accent : colors.textTertiary}
+              />
+            </TouchableOpacity>
+
             {renderBalancePill(item.net_balance, item.currency)}
           </View>
 
@@ -195,6 +229,12 @@ export default function GroupsListScreen({ navigation }: Props) {
       </Animated.View>
       <Text style={styles.emptyTitle}>{t('groups.no_groups')}</Text>
       <Text style={styles.emptySub}>{t('groups.no_groups_subtitle')}</Text>
+      <FunButton
+        title={t('groups.createFirst')}
+        onPress={() => navigation.navigate('CreateGroup')}
+        icon={<Ionicons name="add-circle-outline" size={18} color="#FFFFFF" />}
+        style={{ marginTop: Spacing.xxl, paddingHorizontal: Spacing.xxxl, alignSelf: 'center' }}
+      />
     </View>
   );
 
@@ -202,7 +242,7 @@ export default function GroupsListScreen({ navigation }: Props) {
     return (
       <View style={styles.root}>
         <StatusBar barStyle={colors.statusBarStyle} />
-        <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
+        <SkeletonList count={4} />
       </View>
     );
   }
@@ -392,6 +432,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 22,
       color: '#FFFFFF',
     },
+    starBtn: { marginRight: Spacing.sm },
     cardTitleBlock: { flex: 1, marginLeft: Spacing.lg },
     cardTitle: {
       fontFamily: FontFamily.bodySemibold,

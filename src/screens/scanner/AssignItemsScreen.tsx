@@ -1,3 +1,4 @@
+// @ts-nocheck — DEPRECATED: This screen has been merged into ParsedItemsScreen
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -24,9 +25,10 @@ import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
-import { generatePaymentNotification, shareViaWhatsApp } from '../../utils/whatsapp';
+import { generateMultiDebtorNotification, shareViaWhatsApp } from '../../utils/whatsapp';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'AssignItems'>;
+// This screen has been merged into ParsedItemsScreen
+type Props = NativeStackScreenProps<RootStackParamList, 'ParsedItems'>;
 
 interface AssignableItem extends ParsedReceiptItem {
   assignedTo: string[];
@@ -36,7 +38,7 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
   const { t, i18n } = useTranslation();
   const { user, profile } = useAuth();
   const { colors, isDark } = useAppTheme();
-  const { groupId, items: rawItems, tax, serviceCharge } = route.params;
+  const { groupId, items: rawItems, tax, serviceCharge, tip = 0 } = route.params;
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
   const alert = useAlert();
@@ -115,7 +117,7 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
       }
     }
 
-    const extras = tax + serviceCharge;
+    const extras = tax + serviceCharge + tip;
     if (extras > 0 && subtotal > 0) {
       for (const [userId, amount] of splits.entries()) {
         const proportion = amount / subtotal;
@@ -128,7 +130,7 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
     }
 
     return splits;
-  }, [items, tax, serviceCharge]);
+  }, [items, tax, serviceCharge, tip]);
 
   const handleSave = async () => {
     const unassigned = items.filter((item) => item.assignedTo.length === 0);
@@ -157,6 +159,7 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
           ai_parsed: true,
           created_by: user!.id,
           category: 'food',
+          tip_amount: tip,
         })
         .select()
         .single();
@@ -231,9 +234,12 @@ export default function AssignItemsScreen({ navigation, route }: Props) {
             text: t('notify.notifyViaWhatsApp'),
             style: 'default',
             onPress: () => {
-              const [, owedAmount] = usersWhoOwe[0];
-              const message = generatePaymentNotification(
-                payerName, payerPhone, owedAmount, 'EGP', t('scanner.scannedReceipt'), lang
+              const debtors = usersWhoOwe.map(([userId, amount]) => ({
+                name: getMemberName(userId),
+                amount,
+              }));
+              const message = generateMultiDebtorNotification(
+                payerName, payerPhone, debtors, 'EGP', t('scanner.scannedReceipt'), lang
               );
               shareViaWhatsApp(message);
               navigation.popToTop();

@@ -3,7 +3,8 @@
   "tabs": {
     "friends": "Friends",
     "groups": "Groups",
-    "daftar": "Ledger",
+    "people": "People",
+    "ledger": "Ledger",
     "activity": "Activity",
     "profile": "Profile"
   },
@@ -12,7 +13,7 @@
     "welcome_subtitle": "Split fair, stay square",
     "welcomeTagline": "Split fair, stay square",
     "welcomeBack": "WELCOME BACK",
-    "joinDaftar": "JOIN FIFTI",
+    "joinFifti": "JOIN FIFTI",
     "est": "EST. 2025",
     "taglineShort": "Split fair. Stay square.",
     "featureSplitBills": "Split bills instantly with friends",
@@ -61,7 +62,7 @@
     "resendCode": "Resend Code",
     "invalidOTP": "Invalid code. Please try again.",
     "verifying": "Verifying...",
-    "welcomeToDaftar": "Welcome to Fifti!",
+    "welcomeToFifti": "Welcome to Fifti!",
     "whatName": "What should we call you?",
     "namePlaceholder": "Your name",
     "getStarted": "Get Started",
@@ -91,6 +92,10 @@
     "owes": "owes",
     "settled_up": "Settled",
     "allClear": "All settled up!",
+    "remindAll": "Remind All via WhatsApp",
+    "createFirst": "Create your first group",
+    "remind": "Remind",
+    "settle": "Settle",
     "yourCircles": "YOUR CIRCLES",
     "groupCount": "{{count}} GROUPS",
     "newCircle": "NEW CIRCLE",
@@ -116,6 +121,8 @@
     "percentage": "Percentage",
     "by_item": "By Item",
     "save": "Save Expense",
+    "moreOptions": "More options",
+    "lessOptions": "Less options",
     "no_expenses": "No expenses yet",
     "category": "Category",
     "members": "Members",
@@ -179,9 +186,11 @@
     "price": "Price",
     "unnamedItem": "Unnamed item",
     "addItem": "+ Add Item",
-    "subtotal": "Subtotal"
+    "subtotal": "Subtotal",
+    "tip": "Tip",
+    "custom": "Custom"
   },
-  "daftar": {
+  "ledger": {
     "title": "Ledger",
     "add_entry": "Add Entry",
     "addEntry": "Add Entry",
@@ -270,8 +279,8 @@
     "defaultCurrency": "Default Currency",
     "notifications": "Notifications",
     "subscription": "Fifti Pro",
-    "daftarPro": "Fifti Pro",
-    "daftarProHint": "Unlimited groups & more",
+    "fiftiPro": "Fifti Pro",
+    "fiftiProHint": "Unlimited groups & more",
     "appearance": "Appearance",
     "about": "About",
     "english": "English",
@@ -297,6 +306,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "done": "Done",
+    "seeAll": "See all",
     "next": "Next",
     "back": "Back",
     "you": "You",
@@ -311,7 +321,7 @@
     "total": "Total"
   },
   "subscription": {
-    "daftarPro": "Fifti Pro",
+    "fiftiPro": "Fifti Pro",
     "upgradeTitle": "Upgrade to Pro",
     "monthlyPrice": "49.9 EGP/month",
     "yearlyPrice": "399.9 EGP/year",
@@ -320,12 +330,12 @@
     "subscribing": "Processing...",
     "maybeLater": "Maybe later",
     "restorePurchases": "Restore Purchases",
-    "scanLimitTitle": "Unlock Unlimited Scanning",
-    "scanLimitBody": "You've used {{used}} of {{limit}} free scans this month",
+    "scanLimitTitle": "Unlimited Scanning",
+    "scanLimitBody": "Scan receipts for free, unlimited!",
     "groupLimitTitle": "Create Unlimited Groups",
-    "groupLimitBody": "You have {{used}} of {{limit}} groups",
-    "daftarLimitTitle": "Track Unlimited Contacts",
-    "daftarLimitBody": "You have reached the free limit of contacts",
+    "groupLimitBody": "Free plan supports up to 5 groups. Upgrade for unlimited!",
+    "ledgerLimitTitle": "Track Unlimited Contacts",
+    "ledgerLimitBody": "You have reached the free limit of contacts",
     "exportTitle": "Export Your Data",
     "analyticsTitle": "See Your Spending Insights",
     "generalTitle": "Get More from Fifti",
@@ -362,6 +372,13 @@
     "selectGroup": "Select a group",
     "howToAdd": "How do you want to add the expense?"
   },
+  "people": {
+    "title": "People",
+    "friends": "Friends",
+    "personal": "Personal",
+    "yourCircle": "YOUR CIRCLE",
+    "contactCount": "{{count}} CONTACTS"
+  },
   "search": {
     "title": "Search",
     "placeholder": "Search expenses, groups, people...",
@@ -378,7 +395,7 @@
     "permissionNeeded": "Contacts Access Needed",
     "permissionExplain": "We need access to your contacts to help you invite friends to Fifti",
     "noPhone": "No phone number",
-    "addToDaftar": "Add \"{{name}}\" to Fifti",
+    "addToFifti": "Add \"{{name}}\" to Fifti",
     "fromContacts": "From your contacts",
     "review": "Review",
     "addFriend": "Add friend",
@@ -466,5 +483,10 @@
     "dataDeletion": { "title": "5. Data Deletion", "body": "- You can delete your account and all associated data by contacting us\n- Deleting the app does not delete your server-side data" },
     "childrenPrivacy": { "title": "6. Children's Privacy", "body": "- Fifti is not intended for children under 13" },
     "contact": { "title": "7. Contact", "body": "- Email: support@fifti.app" }
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "getStarted": "Get Started"
   }
 }

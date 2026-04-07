@@ -137,8 +137,8 @@ export default function PaywallScreen({ navigation, route }: Props) {
           used: FREE_LIMITS.maxGroups,
           limit: FREE_LIMITS.maxGroups,
         });
-      case 'daftar_limit':
-        return t('subscription.daftarLimitBody');
+      case 'ledger_limit':
+        return t('subscription.ledgerLimitBody');
       case 'export':
         return t('subscription.exportTitle');
       default:
@@ -299,7 +299,7 @@ export default function PaywallScreen({ navigation, route }: Props) {
               </LinearGradient>
             </Animated.View>
 
-            <Text style={styles.heroTitle}>{t('subscription.daftarPro')}</Text>
+            <Text style={styles.heroTitle}>{t('subscription.fiftiPro')}</Text>
             <Text style={styles.heroSubtitle}>
               {t('subscription.upgradeTitle')}
             </Text>

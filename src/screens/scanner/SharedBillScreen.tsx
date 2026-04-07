@@ -25,7 +25,7 @@ import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
-import { generatePaymentNotification, shareViaWhatsApp } from '../../utils/whatsapp';
+import { generateMultiDebtorNotification, shareViaWhatsApp } from '../../utils/whatsapp';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SharedBill'>;
 
@@ -173,7 +173,7 @@ export default function SharedBillScreen({ navigation, route }: Props) {
   const progressPct = totalItems > 0 ? (claimedCount / totalItems) * 100 : 0;
 
   const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
-  const extras = (bill?.tax ?? 0) + (bill?.service_charge ?? 0);
+  const extras = (bill?.tax ?? 0) + (bill?.service_charge ?? 0) + (bill?.tip ?? 0);
   const grandTotal = subtotal + extras;
 
   /** Per-user breakdown with proportional tax & service charge (same as AssignItemsScreen) */
@@ -284,9 +284,12 @@ export default function SharedBillScreen({ navigation, route }: Props) {
             text: t('notify.notifyViaWhatsApp'),
             style: 'default',
             onPress: () => {
-              const [, owedAmount] = usersWhoOwe[0];
-              const message = generatePaymentNotification(
-                payerName, payerPhone, owedAmount, billCurrency, billDescription, lang
+              const debtors = usersWhoOwe.map(([userId, amount]) => ({
+                name: getMemberName(userId),
+                amount,
+              }));
+              const message = generateMultiDebtorNotification(
+                payerName, payerPhone, debtors, billCurrency, billDescription, lang
               );
               shareViaWhatsApp(message);
               navigation.popToTop();
@@ -564,7 +567,9 @@ export default function SharedBillScreen({ navigation, route }: Props) {
                 />
                 <Text style={styles.extrasText}>
                   {t('shared_bill.paid_by')}: {bill?.tax?.toFixed(2)} tax +{' '}
-                  {bill?.service_charge?.toFixed(2)} svc (split proportionally)
+                  {bill?.service_charge?.toFixed(2)} svc
+                  {(bill?.tip ?? 0) > 0 ? ` + ${bill?.tip?.toFixed(2)} tip` : ''}{' '}
+                  (split proportionally)
                 </Text>
               </View>
             )}

@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 
-const QUEUE_KEY = 'daftar_offline_queue';
+const QUEUE_KEY = 'fifti_offline_queue';
 
 interface QueuedAction {
   id: string;
-  type: 'insert_expense' | 'insert_settlement' | 'insert_daftar';
+  type: 'insert_expense' | 'insert_settlement' | 'insert_ledger';
   table: string;
   data: any;
   created_at: string;

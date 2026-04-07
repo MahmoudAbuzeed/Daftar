@@ -295,8 +295,8 @@ export default function ProfileScreen() {
                         <Ionicons name="star" size={18} color="#FFFFFF" />
                       </LinearGradient>
                       <View>
-                        <Text style={styles.settingLabel}>{t('profile.daftarPro')}</Text>
-                        <Text style={styles.settingHint}>{t('profile.daftarProHint')}</Text>
+                        <Text style={styles.settingLabel}>{t('profile.fiftiPro')}</Text>
+                        <Text style={styles.settingHint}>{t('profile.fiftiProHint')}</Text>
                       </View>
                     </View>
                     <View style={styles.proBadge}>

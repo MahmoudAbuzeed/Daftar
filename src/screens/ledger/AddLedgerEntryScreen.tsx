@@ -27,10 +27,10 @@ import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'AddDaftarEntry'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'AddLedgerEntry'>;
 type Direction = 'i_owe' | 'they_owe';
 
-export default function AddDaftarEntryScreen({ navigation }: Props) {
+export default function AddLedgerEntryScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const { colors, isDark } = useAppTheme();
@@ -51,7 +51,7 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
     if (!isValid || !profile) return;
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert.error(t('common.error'), t('daftar.invalidAmount'));
+      alert.error(t('common.error'), t('ledger.invalidAmount'));
       return;
     }
 
@@ -59,7 +59,7 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
     setSaving(true);
 
     try {
-      const { error } = await supabase.from('daftar_entries').insert({
+      const { error } = await supabase.from('ledger_entries').insert({
         user_id: profile.id,
         contact_name: contactName.trim(),
         amount: parsedAmount,
@@ -72,8 +72,8 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
       navigation.goBack();
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      console.error('Failed to save daftar entry:', err);
-      alert.error(t('common.error'), t('daftar.saveFailed'));
+      console.error('Failed to save ledger entry:', err);
+      alert.error(t('common.error'), t('ledger.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -105,19 +105,19 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
           <Animated.View style={entrance.style}>
             {/* Header */}
             <View style={styles.headerBlock}>
-              <Text style={styles.headerKicker}>{t('daftar.newEntry')}</Text>
-              <Text style={styles.headerTitle}>{t('daftar.addEntry')}</Text>
+              <Text style={styles.headerKicker}>{t('ledger.newEntry')}</Text>
+              <Text style={styles.headerTitle}>{t('ledger.addEntry')}</Text>
             </View>
 
             {/* Form Card */}
             <ThemedCard accent style={styles.formCard}>
               <View style={styles.fieldGroup}>
                 <ThemedInput
-                  label={t('daftar.contactName')}
+                  label={t('ledger.contactName')}
                   icon="person-outline"
                   value={contactName}
                   onChangeText={setContactName}
-                  placeholder={t('daftar.contactNamePlaceholder')}
+                  placeholder={t('ledger.contactNamePlaceholder')}
                   autoCapitalize="words"
                   autoFocus
                 />
@@ -125,7 +125,7 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
 
               <View style={styles.fieldGroup}>
                 <ThemedInput
-                  label={t('daftar.amount')}
+                  label={t('ledger.amount')}
                   icon="cash-outline"
                   value={amount}
                   onChangeText={setAmount}
@@ -136,7 +136,7 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
 
               {/* Direction Toggle */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>{t('daftar.direction')}</Text>
+                <Text style={styles.label}>{t('ledger.direction')}</Text>
                 <View style={styles.toggleRow}>
                   <BouncyPressable
                     onPress={() => {
@@ -178,7 +178,7 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
                             direction === 'they_owe' && styles.toggleTextActive,
                           ]}
                         >
-                          {t('daftar.theyOweMe')}
+                          {t('ledger.theyOweMe')}
                         </Text>
                       </View>
                     </View>
@@ -224,7 +224,7 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
                             direction === 'i_owe' && styles.toggleTextActive,
                           ]}
                         >
-                          {t('daftar.iOweThem')}
+                          {t('ledger.iOweThem')}
                         </Text>
                       </View>
                     </View>
@@ -235,10 +235,10 @@ export default function AddDaftarEntryScreen({ navigation }: Props) {
               {/* Note */}
               <View style={styles.fieldGroup}>
                 <ThemedInput
-                  label={t('daftar.note')}
+                  label={t('ledger.note')}
                   value={note}
                   onChangeText={setNote}
-                  placeholder={t('daftar.notePlaceholder')}
+                  placeholder={t('ledger.notePlaceholder')}
                   multiline
                   numberOfLines={3}
                   style={styles.noteInput}

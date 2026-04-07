@@ -70,7 +70,7 @@ const COUNTRIES: Country[] = [
 export default function PhoneEntryScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { colors, isDark } = useAppTheme();
-  const { sendOTP, signInWithEmail, signUpWithEmail, skipLogin } = useAuth();
+  const { sendOTP, signInWithEmail, signUpWithEmail } = useAuth();
   const alert = useAlert();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
@@ -370,12 +370,6 @@ export default function PhoneEntryScreen({ navigation }: Props) {
               )}
 
               <Text style={styles.terms}>{t('auth.termsNote')}</Text>
-
-              {__DEV__ && (
-                <TouchableOpacity onPress={skipLogin} style={styles.skipBtn}>
-                  <Text style={styles.skipText}>Skip Login (Dev)</Text>
-                </TouchableOpacity>
-              )}
             </View>
           </Animated.View>
 
@@ -661,17 +655,5 @@ function createStyles(colors: ThemeColors, isDark: boolean) {
       color: colors.textSecondary,
     },
 
-    // Dev skip
-    skipBtn: {
-      marginTop: Spacing.lg,
-      alignSelf: 'center',
-      paddingVertical: Spacing.sm,
-      paddingHorizontal: Spacing.xl,
-    },
-    skipText: {
-      fontFamily: FontFamily.bodyMedium,
-      fontSize: 14,
-      color: colors.textTertiary,
-    },
   });
 }
