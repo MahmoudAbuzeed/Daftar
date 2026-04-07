@@ -29,8 +29,15 @@
           "bmobile",
           "nbemobile",
           "vfcash",
+          "venmo",
+          "qnbaahmobile",
+          "cibmobile",
+          "bmobile",
+          "nbemobile",
+          "vfcash",
           "venmo"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
