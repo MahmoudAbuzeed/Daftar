@@ -35,6 +35,7 @@ import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { generatePaymentNotification, shareViaWhatsApp } from '../../utils/whatsapp';
+import { sendNotificationsToUsers, saveInAppNotification } from '../../lib/notifications';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddExpense'>;
 type SplitType = 'equal' | 'exact' | 'percentage';
@@ -248,8 +249,35 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       // Get users who owe money (splits where user_id !== paidBy)
       const usersWhoOwe = splitsToInsert.filter(s => s.user_id !== paidBy);
 
+      // Send notifications to debtors
       if (usersWhoOwe.length > 0) {
+        const debtorIds = usersWhoOwe.map(s => s.user_id);
         const lang = i18n.language === 'ar' ? 'ar' : 'en';
+
+        // Send push notifications
+        const title = lang === 'ar' ? 'مستحق جديد' : 'New expense added';
+        const body = lang === 'ar'
+          ? `عليك ${usersWhoOwe[0].amount} ${currency} لـ ${payerName} عن "${description.trim()}"`
+          : `You owe ${usersWhoOwe[0].amount} ${currency} to ${payerName} for "${description.trim()}"`;
+
+        await sendNotificationsToUsers({
+          userIds: debtorIds,
+          title,
+          body,
+          data: { groupId, expenseId: expense.id, type: 'expense' },
+        });
+
+        // Save in-app notifications for each debtor
+        for (const split of usersWhoOwe) {
+          await saveInAppNotification(
+            split.user_id,
+            'expense',
+            title,
+            body,
+            { groupId, expenseId: expense.id }
+          );
+        }
+
         alert.show('success', t('notify.expenseSaved'), t('notify.notifyFriends'), [
           {
             text: t('notify.skip'),

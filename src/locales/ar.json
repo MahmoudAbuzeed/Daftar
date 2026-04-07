@@ -6,6 +6,7 @@
     "people": "الناس",
     "ledger": "الحساب",
     "activity": "النشاط",
+    "notifications": "التنبيهات",
     "profile": "الملف الشخصي"
   },
   "auth": {
@@ -300,6 +301,23 @@
     "aboutDescription": "قسّم الفواتير مع أصدقائك، تابع الديون، وامسح الفواتير.\nصُنع بحب.",
     "version": "Fifti v1.0.0"
   },
+  "notifications": {
+    "title": "التنبيهات",
+    "empty": "لا توجد تنبيهات بعد",
+    "emptySubtitle": "ستظهر هنا التنبيهات عند إضافة مصروف أو تسوية حساب."
+  },
+  "engagement": {
+    "debtReminder": "دين قائم",
+    "debtReminderBody": "عليك {{name}} {{amount}}",
+    "activityNudge": "تابع مصروفاتك",
+    "activityNudgeBody": "لم تضف مصروف منذ {{days}} أيام. تابع فواتيرك قبل أن تتراكم!",
+    "quicksplitReminder": "مشاركات لم تُسدد",
+    "quicksplitReminderBody": "شخص واحد لم يسدد نصيبه",
+    "weeklySummary": "الملخص الأسبوعي",
+    "weeklySummaryBody": "عليك {{count}} أشخاص ما مجموعه {{amount}}",
+    "settleNudge": "تذكير بتسوية الحساب",
+    "settleNudgeBody": "لديك {{count}} ديون قائمة. انقر للتسوية."
+  },
   "common": {
     "save": "حفظ",
     "cancel": "إلغاء",
@@ -320,7 +338,11 @@
     "unknown": "غير معروف",
     "total": "الإجمالي",
     "or": "أو",
-    "clear": "مسح"
+    "clear": "مسح",
+    "now": "الآن",
+    "minutesAgo": "منذ {{count}} د",
+    "hoursAgo": "منذ {{count}} س",
+    "daysAgo": "منذ {{count}} أيام"
   },
   "subscription": {
     "fiftiPro": "Fifti Pro",

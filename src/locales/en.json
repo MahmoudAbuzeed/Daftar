@@ -6,6 +6,7 @@
     "people": "People",
     "ledger": "Ledger",
     "activity": "Activity",
+    "notifications": "Alerts",
     "profile": "Profile"
   },
   "auth": {
@@ -300,6 +301,23 @@
     "aboutDescription": "Split bills with friends, track personal debts, and scan receipts with AI.",
     "version": "Fifti v1.0.0"
   },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "emptySubtitle": "You'll see alerts here when friends add expenses or settle up."
+  },
+  "engagement": {
+    "debtReminder": "Unsettled Debt",
+    "debtReminderBody": "You still owe {{name}} {{amount}}",
+    "activityNudge": "Keep Track of Expenses",
+    "activityNudgeBody": "You haven't logged an expense in {{days}} days. Track your bills before they pile up!",
+    "quicksplitReminder": "Unpaid QuickSplits",
+    "quicksplitReminderBody": "{{count}} person has not paid their share yet",
+    "weeklySummary": "Weekly Summary",
+    "weeklySummaryBody": "You owe {{count}} people a total of {{amount}}",
+    "settleNudge": "Settle Up Reminder",
+    "settleNudgeBody": "You have {{count}} unsettled debts. Tap to settle up."
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -320,7 +338,11 @@
     "unknown": "Unknown",
     "total": "Total",
     "or": "Or",
-    "clear": "Clear"
+    "clear": "Clear",
+    "now": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
   },
   "subscription": {
     "fiftiPro": "Fifti Pro",

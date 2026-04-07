@@ -277,3 +277,27 @@ export interface ExchangeRate {
   rate: number;
   updated_at: string;
 }
+
+// Push Notifications
+
+export interface PushToken {
+  id: string;
+  user_id: string;
+  token: string;
+  platform: 'ios' | 'android' | 'web';
+  created_at: string;
+  updated_at: string;
+}
+
+export type NotificationType = 'expense' | 'settlement' | 'group_settled';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  data: Record<string, string>;
+  is_read: boolean;
+  created_at: string;
+}

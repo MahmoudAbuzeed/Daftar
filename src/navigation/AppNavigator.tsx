@@ -21,6 +21,7 @@ import GroupsListScreen from '../screens/groups/GroupsListScreen';
 import PeopleScreen from '../screens/people/PeopleScreen';
 import ActivityScreen from '../screens/activity/ActivityScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 
 // Group Screens
 import CreateGroupScreen from '../screens/groups/CreateGroupScreen';
@@ -70,6 +71,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   GroupsTab: undefined;
   PeopleTab: undefined;
+  NotificationsTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -107,6 +109,28 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   const { t } = useTranslation();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { profile } = useAuth();
+
+  // Monitor unread notification count
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const checkUnreadCount = async () => {
+      try {
+        const { getUnreadNotificationCount } = await import('../lib/notifications');
+        const count = await getUnreadNotificationCount(profile.id);
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+
+    checkUnreadCount();
+    // Check every 30 seconds
+    const interval = setInterval(checkUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [profile?.id]);
 
   return (
     <Tab.Navigator
@@ -122,6 +146,14 @@ function MainTabs() {
         name="PeopleTab"
         component={PeopleScreen}
         options={{ tabBarLabel: t('tabs.people') }}
+      />
+      <Tab.Screen
+        name="NotificationsTab"
+        component={NotificationsScreen}
+        options={{
+          tabBarLabel: t('tabs.notifications'),
+          tabBarBadge: unreadCount > 0 ? unreadCount : null,
+        }}
       />
       <Tab.Screen
         name="ProfileTab"

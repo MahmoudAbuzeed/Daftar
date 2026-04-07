@@ -36,6 +36,7 @@ import BouncyPressable from '../../components/BouncyPressable';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
 import { generateBalanceSummary, shareViaWhatsApp } from '../../utils/whatsapp';
+import { sendNotificationsToUsers, saveInAppNotification } from '../../lib/notifications';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupBalances'>;
 
@@ -196,6 +197,32 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
       if (error) throw error;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Send notification to the person who was paid
+      const fromUserName = selectedDebt.from_user_data?.display_name || 'Someone';
+      const toUserId = selectedDebt.to_user;
+      const lang = i18n.language === 'ar' ? 'ar' : 'en';
+
+      const title = lang === 'ar' ? 'تم السداد' : 'Payment received';
+      const body = lang === 'ar'
+        ? `${fromUserName} دفع لك ${amount} ${currency}`
+        : `${fromUserName} paid you ${amount} ${currency}`;
+
+      await sendNotificationsToUsers({
+        userIds: [toUserId],
+        title,
+        body,
+        data: { groupId, type: 'settlement' },
+      });
+
+      await saveInAppNotification(
+        toUserId,
+        'settlement',
+        title,
+        body,
+        { groupId }
+      );
+
       setModalVisible(false);
       setSelectedDebt(null);
       fetchBalances();
