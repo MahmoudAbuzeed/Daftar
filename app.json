@@ -22,7 +22,15 @@
         "NSPhotoLibraryUsageDescription": "Fifti needs photo access to attach receipt images to expenses",
         "NSContactsUsageDescription": "Fifti needs contacts access to invite friends to your groups",
         "NSBluetoothAlwaysUsageDescription": "Fifti uses Bluetooth to detect nearby friends at the same restaurant so you can split the bill without typing names manually.",
-        "NSBluetoothPeripheralUsageDescription": "Fifti uses Bluetooth to let nearby friends discover you when splitting a bill."
+        "NSBluetoothPeripheralUsageDescription": "Fifti uses Bluetooth to let nearby friends discover you when splitting a bill.",
+        "LSApplicationQueriesSchemes": [
+          "qnbaahmobile",
+          "cibmobile",
+          "bmobile",
+          "nbemobile",
+          "vfcash",
+          "venmo"
+        ]
       }
     },
     "android": {

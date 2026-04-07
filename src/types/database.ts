@@ -2,6 +2,8 @@ export type CurrencyCode = 'EGP' | 'USD' | 'EUR' | 'GBP' | 'SAR' | 'AED' | 'KWD'
 
 export type PaymentMethod = 'cash' | 'vodafone_cash' | 'instapay' | 'bank' | 'paypal' | 'venmo' | 'zelle' | 'wise' | 'revolut' | 'apple_pay' | 'google_pay' | 'stc_pay' | 'mada' | 'upi' | 'other';
 
+export type SettlementStatus = 'pending' | 'completed';
+
 export interface User {
   id: string;
   display_name: string;
@@ -95,6 +97,9 @@ export interface Settlement {
   currency: CurrencyCode;
   method: PaymentMethod;
   note: string | null;
+  status: SettlementStatus;
+  payment_reference: string | null;
+  initiated_at: string | null;
   created_at: string;
   paid_by_user?: User;
   paid_to_user?: User;

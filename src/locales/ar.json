@@ -252,7 +252,21 @@
     "zelle": "Zelle",
     "other": "أخرى",
     "note": "ملاحظة (اختياري)",
-    "confirm": "تأكيد الدفع"
+    "confirm": "تأكيد الدفع",
+    "openApp": "افتح تطبيق الدفع",
+    "shareRequest": "شارك طلب الدفع",
+    "launching": "جارٍ فتح تطبيق الدفع...",
+    "returnConfirmTitle": "هل أتممت الدفع؟",
+    "returnConfirmBody": "أكّد بعد إرسال {{amount}} {{currency}} عبر {{method}}.",
+    "yesIPaid": "نعم، دفعت",
+    "noCancel": "لا، رجوع",
+    "pendingLabel": "قيد الانتظار",
+    "recipientPhone": "رقم هاتف / معرّف إنستاباي",
+    "transferRef": "مرجع التحويل (اختياري)",
+    "requestId": "معرّف الطلب (اختياري)",
+    "cashQuickSettle": "سجّل كمدفوع",
+    "statusCompleted": "مدفوع",
+    "statusPending": "في انتظار التأكيد"
   },
   "activity": {
     "title": "النشاط",

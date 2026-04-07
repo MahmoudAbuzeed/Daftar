@@ -252,7 +252,21 @@
     "zelle": "Zelle",
     "other": "Other",
     "note": "Note (optional)",
-    "confirm": "Confirm Payment"
+    "confirm": "Confirm Payment",
+    "openApp": "Open Payment App",
+    "shareRequest": "Share Payment Request",
+    "launching": "Opening payment app...",
+    "returnConfirmTitle": "Did you complete the payment?",
+    "returnConfirmBody": "Confirm once you've sent {{amount}} {{currency}} via {{method}}.",
+    "yesIPaid": "Yes, I Paid",
+    "noCancel": "No, Go Back",
+    "pendingLabel": "Pending",
+    "recipientPhone": "Recipient's InstaPay Phone / ID",
+    "transferRef": "Transfer Reference (optional)",
+    "requestId": "Request ID (optional)",
+    "cashQuickSettle": "Mark as Paid",
+    "statusCompleted": "Paid",
+    "statusPending": "Awaiting confirmation"
   },
   "activity": {
     "title": "Activity",

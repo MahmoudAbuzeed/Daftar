@@ -13,6 +13,9 @@ import {
   ScrollView,
   Animated,
   I18nManager,
+  AppState,
+  AppStateStatus,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -38,6 +41,14 @@ import { useAlert } from '../../hooks/useAlert';
 import { generateBalanceSummary, shareViaWhatsApp } from '../../utils/whatsapp';
 import { sendNotificationsToUsers, saveInAppNotification } from '../../lib/notifications';
 import { checkDebtFree } from '../../lib/achievements';
+import {
+  getPaymentDeepLink,
+  canAttemptDeepLink,
+  generatePaymentShareText,
+  launchPaymentDeepLink,
+  isInstantMethod,
+  getInstapaySchemes,
+} from '../../lib/paymentLinks';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupBalances'>;
 
@@ -77,6 +88,13 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   const [selectedDebt, setSelectedDebt] = useState<SimplifiedDebt | null>(null);
   const [settlementAmount, setSettlementAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+
+  // Payment flow state machine
+  const [modalStep, setModalStep] = useState<'configure' | 'launching' | 'return_confirm'>('configure');
+  const [pendingExternalPayment, setPendingExternalPayment] = useState(false);
+  const [paymentReference, setPaymentReference] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [launchTime, setLaunchTime] = useState<number | null>(null);
 
   const entrance = useScreenEntrance();
 
@@ -164,15 +182,38 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
     }, [fetchBalances])
   );
 
+  // AppState listener for return from payment app
+  useEffect(() => {
+    if (!pendingExternalPayment) return;
+
+    const subscription = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') {
+        // Debounce to avoid false triggers from launch
+        setTimeout(() => {
+          setModalStep('return_confirm');
+        }, 500);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [pendingExternalPayment]);
+
   const openSettleModal = (debt: SimplifiedDebt) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedDebt(debt);
     setSettlementAmount(debt.net_amount.toFixed(2));
     setPaymentMethod('cash');
+    setModalStep('configure');
+    setPaymentReference('');
+    setRecipientPhone('');
+    setPendingExternalPayment(false);
+    setLaunchTime(null);
     setModalVisible(true);
   };
 
-  const handleSettle = async () => {
+  const handleSettle = async (forceImmediate: boolean = false) => {
     if (!user || !selectedDebt) return;
 
     const amount = parseFloat(settlementAmount);
@@ -185,7 +226,8 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
     setSettling(true);
 
     try {
-      const { error } = await supabase.from('settlements').insert({
+      const isInstant = isInstantMethod(paymentMethod) || forceImmediate;
+      const baseInsert = {
         group_id: groupId,
         paid_by: selectedDebt.from_user,
         paid_to: selectedDebt.to_user,
@@ -193,59 +235,91 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
         currency,
         method: paymentMethod,
         note: null,
-      });
+        status: isInstant ? ('completed' as const) : ('pending' as const),
+        payment_reference: paymentReference || null,
+        initiated_at: isInstant ? null : new Date().toISOString(),
+      };
+
+      const { error } = await supabase.from('settlements').insert(baseInsert);
 
       if (error) throw error;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Check for debt-free achievement
-      await checkDebtFree(selectedDebt.from_user, groupId);
+      // For external payment methods, launch deep link and wait for return
+      if (!isInstant) {
+        const deepLink = getPaymentDeepLink(
+          paymentMethod,
+          amount,
+          currency,
+          recipientPhone || undefined
+        );
 
-      // Insert system message to group chat
-      const fromUserName = selectedDebt.from_user_data?.display_name || 'Someone';
-      const toUserName = selectedDebt.to_user_data?.display_name || 'Someone';
-      await supabase.from('group_messages').insert({
-        group_id: groupId,
-        user_id: user!.id,
-        content: `${fromUserName} settled ${amount.toFixed(2)} ${currency} with ${toUserName}`,
-        type: 'settlement',
-        metadata: { from_user: selectedDebt.from_user, to_user: selectedDebt.to_user, amount, currency },
-      });
+        if (deepLink.type === 'url') {
+          setLaunchTime(Date.now());
+          setPendingExternalPayment(true);
+          setModalStep('launching');
+          await launchPaymentDeepLink(deepLink.url);
+          return; // Don't proceed to settlement notification yet
+        }
+      }
 
-      // Send notification to the person who was paid
-      const toUserId = selectedDebt.to_user;
-      const lang = i18n.language === 'ar' ? 'ar' : 'en';
-
-      const title = lang === 'ar' ? 'تم السداد' : 'Payment received';
-      const body = lang === 'ar'
-        ? `${fromUserName} دفع لك ${amount} ${currency}`
-        : `${fromUserName} paid you ${amount} ${currency}`;
-
-      await sendNotificationsToUsers({
-        userIds: [toUserId],
-        title,
-        body,
-        data: { groupId, type: 'settlement' },
-      });
-
-      await saveInAppNotification(
-        toUserId,
-        'settlement',
-        title,
-        body,
-        { groupId }
-      );
-
-      setModalVisible(false);
-      setSelectedDebt(null);
-      fetchBalances();
+      // For instant methods or if no deep link, complete settlement immediately
+      await completeSettlement(amount);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       alert.error(t('common.error'), err.message || t('common.error'));
     } finally {
       setSettling(false);
     }
+  };
+
+  const completeSettlement = async (amount: number) => {
+    if (!user || !selectedDebt) return;
+
+    // Check for debt-free achievement
+    await checkDebtFree(selectedDebt.from_user, groupId);
+
+    // Insert system message to group chat
+    const fromUserName = selectedDebt.from_user_data?.display_name || 'Someone';
+    const toUserName = selectedDebt.to_user_data?.display_name || 'Someone';
+    await supabase.from('group_messages').insert({
+      group_id: groupId,
+      user_id: user!.id,
+      content: `${fromUserName} settled ${amount.toFixed(2)} ${currency} with ${toUserName}`,
+      type: 'settlement',
+      metadata: { from_user: selectedDebt.from_user, to_user: selectedDebt.to_user, amount, currency },
+    });
+
+    // Send notification to the person who was paid
+    const toUserId = selectedDebt.to_user;
+    const lang = i18n.language === 'ar' ? 'ar' : 'en';
+
+    const title = lang === 'ar' ? 'تم السداد' : 'Payment received';
+    const body = lang === 'ar'
+      ? `${fromUserName} دفع لك ${amount} ${currency}`
+      : `${fromUserName} paid you ${amount} ${currency}`;
+
+    await sendNotificationsToUsers({
+      userIds: [toUserId],
+      title,
+      body,
+      data: { groupId, type: 'settlement' },
+    });
+
+    await saveInAppNotification(
+      toUserId,
+      'settlement',
+      title,
+      body,
+      { groupId }
+    );
+
+    setModalVisible(false);
+    setSelectedDebt(null);
+    setPendingExternalPayment(false);
+    setModalStep('configure');
+    fetchBalances();
   };
 
   const getUserName = (userId: string, userData?: User): string => {
@@ -416,112 +490,230 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
               <Text style={styles.modalTitle}>{t('settlements.record')}</Text>
 
-              {selectedDebt && (
-                <View style={styles.modalDirectionRow}>
-                  <LinearGradient
-                    colors={colors.dangerGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.modalAvatar}
-                  >
-                    <Text style={styles.modalAvatarText}>
-                      {(selectedDebt.from_user_data?.display_name || '?').charAt(0).toUpperCase()}
-                    </Text>
-                  </LinearGradient>
-                  <View style={styles.modalArrow}>
-                    <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
+              {/* CONFIGURE STEP - Main settlement form */}
+              {modalStep === 'configure' && (
+                <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
+                  {selectedDebt && (
+                    <View style={styles.modalDirectionRow}>
+                      <LinearGradient
+                        colors={colors.dangerGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.modalAvatar}
+                      >
+                        <Text style={styles.modalAvatarText}>
+                          {(selectedDebt.from_user_data?.display_name || '?').charAt(0).toUpperCase()}
+                        </Text>
+                      </LinearGradient>
+                      <View style={styles.modalArrow}>
+                        <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
+                      </View>
+                      <LinearGradient
+                        colors={colors.successGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.modalAvatar}
+                      >
+                        <Text style={styles.modalAvatarText}>
+                          {(selectedDebt.to_user_data?.display_name || '?').charAt(0).toUpperCase()}
+                        </Text>
+                      </LinearGradient>
+                      <View style={styles.modalDirectionNames}>
+                        <Text style={styles.modalSubtitle}>
+                          {getUserName(selectedDebt.from_user, selectedDebt.from_user_data)}
+                          {I18nManager.isRTL ? ' \u2190 ' : ' \u2192 '}
+                          {getUserName(selectedDebt.to_user, selectedDebt.to_user_data)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Amount */}
+                  <ThemedInput
+                    label={t('settlements.amount')}
+                    value={settlementAmount}
+                    onChangeText={setSettlementAmount}
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                    containerStyle={styles.modalField}
+                    style={styles.amountInputStyle}
+                  />
+
+                  {/* Payment Method pills */}
+                  <View style={styles.modalField}>
+                    <Text style={styles.modalLabel}>{t('settlements.method')}</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.methodRow}
+                    >
+                      {PAYMENT_METHODS.map((m) => (
+                        <BouncyPressable
+                          key={m.key}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            setPaymentMethod(m.key);
+                            if (m.key !== 'instapay') {
+                              setRecipientPhone('');
+                            }
+                          }}
+                          scaleDown={0.95}
+                        >
+                          <View
+                            style={[
+                              styles.methodChip,
+                              paymentMethod === m.key && styles.methodChipActive,
+                            ]}
+                          >
+                            <Ionicons
+                              name={m.icon as any}
+                              size={14}
+                              color={paymentMethod === m.key ? colors.textOnPrimary : colors.textTertiary}
+                              style={{ marginRight: 6 }}
+                            />
+                            <Text
+                              style={[
+                                styles.methodChipText,
+                                paymentMethod === m.key && styles.methodChipTextActive,
+                              ]}
+                            >
+                              {t(m.labelKey)}
+                            </Text>
+                          </View>
+                        </BouncyPressable>
+                      ))}
+                    </ScrollView>
                   </View>
+
+                  {/* InstaPay recipient phone field */}
+                  {paymentMethod === 'instapay' && (
+                    <ThemedInput
+                      label={t('settlements.recipientPhone')}
+                      value={recipientPhone}
+                      onChangeText={setRecipientPhone}
+                      keyboardType="phone-pad"
+                      placeholder="01012345678"
+                      containerStyle={styles.modalField}
+                    />
+                  )}
+
+                  {/* Payment reference field (optional) */}
+                  {paymentMethod !== 'cash' && paymentMethod !== 'apple_pay' && (
+                    <ThemedInput
+                      label={paymentMethod === 'instapay' ? t('settlements.transferRef') : t('settlements.transferRef')}
+                      value={paymentReference}
+                      onChangeText={setPaymentReference}
+                      placeholder={t('common.optional')}
+                      containerStyle={styles.modalField}
+                    />
+                  )}
+
+                  {/* Action Buttons */}
+                  <View style={styles.modalButtonRow}>
+                    <FunButton
+                      title={t('settlements.confirm')}
+                      onPress={() => handleSettle()}
+                      loading={settling}
+                      icon={<Ionicons name="checkmark-circle" size={20} color={colors.textOnPrimary} />}
+                      style={{ flex: 1, marginRight: Spacing.sm }}
+                    />
+                    {paymentMethod !== 'cash' && paymentMethod !== 'apple_pay' && (
+                      <FunButton
+                        title={t('settlements.shareRequest')}
+                        onPress={async () => {
+                          const amount = parseFloat(settlementAmount);
+                          if (isNaN(amount) || amount <= 0) {
+                            alert.error(t('common.error'), t('groups.invalidAmount'));
+                            return;
+                          }
+                          const shareText = generatePaymentShareText({
+                            fromName: selectedDebt?.from_user_data?.display_name || '?',
+                            toName: selectedDebt?.to_user_data?.display_name || '?',
+                            recipientPhone: recipientPhone || null,
+                            amount,
+                            currency,
+                            method: paymentMethod,
+                            lang: i18n.language === 'ar' ? 'ar' : 'en',
+                          });
+                          try {
+                            await Share.share({
+                              message: shareText,
+                              url: undefined,
+                              title: t('settlements.shareRequest'),
+                            });
+                          } catch (err) {
+                            // User dismissed share sheet
+                          }
+                        }}
+                        variant="secondary"
+                        icon={<Ionicons name="share-social-outline" size={20} color={colors.primary} />}
+                        style={{ flex: 1 }}
+                      />
+                    )}
+                  </View>
+
+                  <BouncyPressable
+                    onPress={() => setModalVisible(false)}
+                    scaleDown={0.97}
+                  >
+                    <View style={styles.cancelButton}>
+                      <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+                    </View>
+                  </BouncyPressable>
+                </ScrollView>
+              )}
+
+              {/* LAUNCHING STEP - Payment app opening */}
+              {modalStep === 'launching' && (
+                <View style={styles.launchingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: Spacing.lg }} />
+                  <Text style={styles.launchingText}>{t('settlements.launching')}</Text>
+                </View>
+              )}
+
+              {/* RETURN_CONFIRM STEP - Payment confirmation */}
+              {modalStep === 'return_confirm' && (
+                <View style={styles.confirmContainer}>
                   <LinearGradient
                     colors={colors.successGradient}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.modalAvatar}
+                    style={styles.confirmIconCircle}
                   >
-                    <Text style={styles.modalAvatarText}>
-                      {(selectedDebt.to_user_data?.display_name || '?').charAt(0).toUpperCase()}
-                    </Text>
+                    <Ionicons name="checkmark-outline" size={48} color={colors.textOnPrimary} />
                   </LinearGradient>
-                  <View style={styles.modalDirectionNames}>
-                    <Text style={styles.modalSubtitle}>
-                      {getUserName(selectedDebt.from_user, selectedDebt.from_user_data)}
-                      {I18nManager.isRTL ? ' \u2190 ' : ' \u2192 '}
-                      {getUserName(selectedDebt.to_user, selectedDebt.to_user_data)}
-                    </Text>
+                  <Text style={styles.confirmTitle}>{t('settlements.returnConfirmTitle')}</Text>
+                  <Text style={styles.confirmBody}>
+                    {t('settlements.returnConfirmBody', {
+                      amount: parseFloat(settlementAmount).toFixed(2),
+                      currency,
+                      method: t(`settlements.${paymentMethod}`),
+                    })}
+                  </Text>
+
+                  <View style={styles.confirmButtonRow}>
+                    <FunButton
+                      title={t('settlements.yesIPaid')}
+                      onPress={async () => {
+                        const amount = parseFloat(settlementAmount);
+                        await completeSettlement(amount);
+                      }}
+                      icon={<Ionicons name="checkmark-circle" size={20} color={colors.textOnPrimary} />}
+                      style={{ flex: 1, marginRight: Spacing.sm }}
+                    />
+                    <FunButton
+                      title={t('settlements.noCancel')}
+                      onPress={() => {
+                        setModalStep('configure');
+                        setPendingExternalPayment(false);
+                      }}
+                      variant="secondary"
+                      icon={<Ionicons name="close-outline" size={20} color={colors.primary} />}
+                      style={{ flex: 1 }}
+                    />
                   </View>
                 </View>
               )}
-
-              {/* Amount */}
-              <ThemedInput
-                label={t('settlements.amount')}
-                value={settlementAmount}
-                onChangeText={setSettlementAmount}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                containerStyle={styles.modalField}
-                style={styles.amountInputStyle}
-              />
-
-              {/* Payment Method pills */}
-              <View style={styles.modalField}>
-                <Text style={styles.modalLabel}>{t('settlements.method')}</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.methodRow}
-                >
-                  {PAYMENT_METHODS.map((m) => (
-                    <BouncyPressable
-                      key={m.key}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setPaymentMethod(m.key);
-                      }}
-                      scaleDown={0.95}
-                    >
-                      <View
-                        style={[
-                          styles.methodChip,
-                          paymentMethod === m.key && styles.methodChipActive,
-                        ]}
-                      >
-                        <Ionicons
-                          name={m.icon as any}
-                          size={14}
-                          color={paymentMethod === m.key ? colors.textOnPrimary : colors.textTertiary}
-                          style={{ marginRight: 6 }}
-                        />
-                        <Text
-                          style={[
-                            styles.methodChipText,
-                            paymentMethod === m.key && styles.methodChipTextActive,
-                          ]}
-                        >
-                          {t(m.labelKey)}
-                        </Text>
-                      </View>
-                    </BouncyPressable>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* Confirm Button */}
-              <FunButton
-                title={t('settlements.confirm')}
-                onPress={handleSettle}
-                loading={settling}
-                icon={<Ionicons name="checkmark-circle" size={20} color={colors.textOnPrimary} />}
-                style={{ marginTop: Spacing.sm }}
-              />
-
-              <BouncyPressable
-                onPress={() => setModalVisible(false)}
-                scaleDown={0.97}
-              >
-                <View style={styles.cancelButton}>
-                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
-                </View>
-              </BouncyPressable>
             </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
@@ -796,5 +988,63 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontFamily: FontFamily.bodySemibold,
       color: c.textSecondary,
       fontSize: 15,
+    },
+    // Payment flow states
+    launchingContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: Spacing.xxxl,
+      paddingHorizontal: Spacing.xl,
+    },
+    launchingText: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 16,
+      color: c.text,
+      textAlign: 'center',
+    },
+    confirmContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: Spacing.xl,
+      paddingHorizontal: Spacing.xl,
+    },
+    confirmIconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.lg,
+      shadowColor: c.success,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.3,
+      shadowRadius: 14,
+      elevation: 8,
+    },
+    confirmTitle: {
+      fontFamily: FontFamily.bodyBold,
+      fontSize: 18,
+      letterSpacing: -0.3,
+      color: c.text,
+      marginBottom: Spacing.sm,
+      textAlign: 'center',
+    },
+    confirmBody: {
+      fontFamily: FontFamily.body,
+      fontSize: 15,
+      color: c.textSecondary,
+      lineHeight: 22,
+      textAlign: 'center',
+      marginBottom: Spacing.lg,
+    },
+    modalButtonRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      marginTop: Spacing.sm,
+    },
+    confirmButtonRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      marginTop: Spacing.lg,
     },
   });
