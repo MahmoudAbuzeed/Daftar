@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
-  Switch,
   I18nManager,
   DevSettings,
   ActivityIndicator,
@@ -18,7 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { MoonIcon, GlobeAltIcon, CurrencyDollarIcon, BellIcon, StarIcon, InformationCircleIcon, ArrowRightOnRectangleIcon } from 'react-native-heroicons/solid';
+import { MoonIcon, GlobeAltIcon, CurrencyDollarIcon, StarIcon, InformationCircleIcon, ArrowRightOnRectangleIcon } from 'react-native-heroicons/solid';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
@@ -51,7 +50,6 @@ export default function ProfileScreen() {
   const alert = useAlert();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
   const isArabic = i18n.language === 'ar';
   const currentCurrency = profile?.preferred_currency || 'EGP';
@@ -248,35 +246,6 @@ export default function ProfileScreen() {
                 </BouncyPressable>
               </AnimatedListItem>
             ))}
-
-            {/* Notifications */}
-            <AnimatedListItem index={settingsItems.length}>
-              <ThemedCard style={styles.settingRowCard}>
-                <View style={styles.settingRow}>
-                  <View style={styles.settingLeft}>
-                    <LinearGradient
-                      colors={[colors.accentGradient[0], colors.accentGradient[1]]}
-                      style={styles.settingIcon}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <BellIcon size={20} color="#FFFFFF" strokeWidth={2.5} />
-                    </LinearGradient>
-                    <Text style={styles.settingLabel}>{t('profile.notifications')}</Text>
-                  </View>
-                  <View style={styles.switchWrapper}>
-                    <Switch
-                      value={notificationsEnabled}
-                      onValueChange={setNotificationsEnabled}
-                      trackColor={{ false: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', true: `${colors.primary}` }}
-                      thumbColor={notificationsEnabled ? '#FFFFFF' : isDark ? '#6B7F7B' : '#F3F4F6'}
-                      ios_backgroundColor={isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB'}
-                      style={styles.switchControl}
-                    />
-                  </View>
-                </View>
-              </ThemedCard>
-            </AnimatedListItem>
 
             {/* Pro */}
             <AnimatedListItem index={settingsItems.length + 1}>
@@ -498,16 +467,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontFamily: FontFamily.bodyMedium,
       fontSize: 13,
       color: c.textSecondary,
-    },
-
-    /* Switch styling */
-    switchWrapper: {
-      borderRadius: Radius.full,
-      overflow: 'hidden',
-    },
-    switchControl: {
-      transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
-      marginRight: -4,
     },
 
     proBadge: {
