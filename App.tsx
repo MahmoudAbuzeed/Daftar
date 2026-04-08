@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { I18nManager, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ import { Colors } from './src/theme';
 import { useAuth } from './src/lib/auth-context';
 import { registerForPushNotifications } from './src/lib/notifications';
 import { checkOnAppOpen, scheduleWeeklySummary, scheduleDailySettleNudge } from './src/lib/engagement';
+import AnimatedSplashScreen from './src/components/AnimatedSplashScreen';
 
 const paperTheme = {
   ...MD3LightTheme,
@@ -40,6 +41,7 @@ const paperTheme = {
 function AppInner() {
   const { colors, ready } = useAppTheme();
   const { user } = useAuth();
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     // Register for push notifications after user is authenticated
@@ -79,6 +81,10 @@ function AppInner() {
         <ActivityIndicator size="large" color="#1DB954" />
       </View>
     );
+  }
+
+  if (showSplash) {
+    return <AnimatedSplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
   return (

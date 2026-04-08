@@ -36,6 +36,7 @@
     "expo-system-ui": "^55.0.14",
     "expo-web-browser": "^55.0.12",
     "i18next": "^26.0.3",
+    "lottie-react-native": "^7.3.6",
     "react": "19.1.0",
     "react-i18next": "^17.0.2",
     "react-native": "^0.81.5",
