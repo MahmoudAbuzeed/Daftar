@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fifti Logo Concepts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: #f0f0f5;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  h1 { text-align: center; font-size: 24px; color: #0d0d14; margin-bottom: 6px; }
+  .subtitle { text-align: center; font-size: 13px; color: #888; margin-bottom: 40px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .card {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  }
+  .card h3 { font-size: 16px; font-weight: 700; color: #0d0d14; margin-bottom: 4px; }
+  .card .tag { font-size: 11px; color: #1DB954; font-weight: 600; margin-bottom: 20px; letter-spacing: 1px; text-transform: uppercase; }
+  .card p { font-size: 12px; color: #777; text-align: center; line-height: 1.6; margin-top: 20px; }
+
+  .icon-frame {
+    width: 160px;
+    height: 160px;
+    border-radius: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Concept A: Split Receipt */
+  .concept-a .icon-frame {
+    background: linear-gradient(135deg, #1DB954, #17a34a);
+  }
+  .concept-a svg { filter: drop-shadow(0 2px 8px rgba(0,0,0,0.15)); }
+
+  /* Concept B: Bold F Split */
+  .concept-b .icon-frame {
+    background: linear-gradient(135deg, #1DB954, #15803d);
+  }
+
+  /* Concept C: Two Arrows */
+  .concept-c .icon-frame {
+    background: linear-gradient(135deg, #FF9500, #e08600);
+  }
+
+  /* Concept D: Chat + Dollar */
+  .concept-d .icon-frame {
+    background: linear-gradient(135deg, #1DB954, #0ea44a);
+  }
+
+  .sizes { display: flex; gap: 16px; align-items: flex-end; margin-top: 20px; }
+  .size-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .size-preview span { font-size: 9px; color: #aaa; }
+  .size-sm { width: 44px; height: 44px; border-radius: 10px; }
+  .size-md { width: 64px; height: 64px; border-radius: 14px; }
+  .size-lg { width: 88px; height: 88px; border-radius: 20px; }
+
+  .anim-hint {
+    margin-top: 30px;
+    text-align: center;
+    font-size: 11px;
+    color: #bbb;
+  }
+
+  /* Animations */
+  @keyframes splitReceipt {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-3px); }
+  }
+  @keyframes splitReceiptR {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(3px); }
+  }
+  .receipt-left { animation: splitReceipt 3s ease-in-out infinite; }
+  .receipt-right { animation: splitReceiptR 3s ease-in-out infinite; }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+
+  @keyframes arrowBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  @keyframes arrowBounceDown {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
+</style>
+</head>
+<body>
+
+<h1>Fifti — Logo Concepts</h1>
+<p class="subtitle">4 app icon concepts — pick your favorite</p>
+
+<div class="grid">
+
+  <!-- CONCEPT A: Split Receipt -->
+  <div class="card concept-a">
+    <h3>Concept A</h3>
+    <div class="tag">Split Receipt</div>
+    <div class="icon-frame">
+      <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+        <!-- Left half of receipt -->
+        <g class="receipt-left">
+          <path d="M 18 18 L 48 18 L 48 82 L 44 78 L 40 82 L 36 78 L 32 82 L 28 78 L 24 82 L 20 78 L 18 80 L 18 18 Z"
+                fill="white" opacity="0.95"/>
+          <rect x="24" y="30" width="18" height="3" rx="1.5" fill="#1DB954" opacity="0.4"/>
+          <rect x="24" y="38" width="14" height="3" rx="1.5" fill="#1DB954" opacity="0.3"/>
+          <rect x="24" y="46" width="18" height="3" rx="1.5" fill="#1DB954" opacity="0.4"/>
+          <rect x="24" y="54" width="10" height="3" rx="1.5" fill="#1DB954" opacity="0.3"/>
+          <rect x="24" y="64" width="18" height="4" rx="2" fill="#FF9500" opacity="0.7"/>
+        </g>
+        <!-- Right half of receipt -->
+        <g class="receipt-right">
+          <path d="M 82 18 L 52 18 L 52 82 L 56 78 L 60 82 L 64 78 L 68 82 L 72 78 L 76 82 L 80 78 L 82 80 L 82 18 Z"
+                fill="white" opacity="0.95"/>
+          <rect x="58" y="30" width="18" height="3" rx="1.5" fill="#1DB954" opacity="0.4"/>
+          <rect x="58" y="38" width="14" height="3" rx="1.5" fill="#1DB954" opacity="0.3"/>
+          <rect x="58" y="46" width="18" height="3" rx="1.5" fill="#1DB954" opacity="0.4"/>
+          <rect x="62" y="54" width="10" height="3" rx="1.5" fill="#1DB954" opacity="0.3"/>
+          <rect x="58" y="64" width="18" height="4" rx="2" fill="#FF9500" opacity="0.7"/>
+        </g>
+        <!-- Zigzag split line in center -->
+        <path d="M 50 16 L 52 22 L 48 28 L 52 34 L 48 40 L 52 46 L 48 52 L 52 58 L 48 64 L 52 70 L 48 76 L 50 84"
+              stroke="#1DB954" stroke-width="1.5" fill="none" stroke-dasharray="2,2" opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="size-preview">
+        <svg class="size-sm" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#17a34a); border-radius:10px;">
+          <g class="receipt-left"><path d="M 18 18 L 48 18 L 48 82 L 44 78 L 40 82 L 36 78 L 32 82 L 28 78 L 24 82 L 20 78 L 18 80 Z" fill="white" opacity="0.95"/></g>
+          <g class="receipt-right"><path d="M 82 18 L 52 18 L 52 82 L 56 78 L 60 82 L 64 78 L 68 82 L 72 78 L 76 82 L 80 78 L 82 80 Z" fill="white" opacity="0.95"/></g>
+        </svg>
+        <span>44px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-md" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#17a34a); border-radius:14px;">
+          <g class="receipt-left"><path d="M 18 18 L 48 18 L 48 82 L 44 78 L 40 82 L 36 78 L 32 82 L 28 78 L 24 82 L 20 78 L 18 80 Z" fill="white" opacity="0.95"/></g>
+          <g class="receipt-right"><path d="M 82 18 L 52 18 L 52 82 L 56 78 L 60 82 L 64 78 L 68 82 L 72 78 L 76 82 L 80 78 L 82 80 Z" fill="white" opacity="0.95"/></g>
+        </svg>
+        <span>64px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-lg" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#17a34a); border-radius:20px;">
+          <g class="receipt-left"><path d="M 18 18 L 48 18 L 48 82 L 44 78 L 40 82 L 36 78 L 32 82 L 28 78 L 24 82 L 20 78 L 18 80 Z" fill="white" opacity="0.95"/></g>
+          <g class="receipt-right"><path d="M 82 18 L 52 18 L 52 82 L 56 78 L 60 82 L 64 78 L 68 82 L 72 78 L 76 82 L 80 78 L 82 80 Z" fill="white" opacity="0.95"/></g>
+        </svg>
+        <span>88px</span>
+      </div>
+    </div>
+    <p>A receipt splitting in two — instantly communicates bill splitting. The zigzag tear adds personality.</p>
+  </div>
+
+  <!-- CONCEPT B: Bold F with divider -->
+  <div class="card concept-b">
+    <h3>Concept B</h3>
+    <div class="tag">Bold F / Divide</div>
+    <div class="icon-frame">
+      <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+        <!-- Stylized F with vertical split -->
+        <text x="28" y="76" font-family="Poppins, sans-serif" font-weight="900" font-size="68" fill="white" opacity="0.95">F</text>
+        <!-- Vertical divider line through the F -->
+        <line x1="50" y1="20" x2="50" y2="80" stroke="#FF9500" stroke-width="3.5" stroke-linecap="round" class="pulse"/>
+        <!-- Small "50|50" hint -->
+        <text x="56" y="42" font-family="Poppins, sans-serif" font-weight="700" font-size="16" fill="white" opacity="0.7">5</text>
+        <text x="56" y="62" font-family="Poppins, sans-serif" font-weight="700" font-size="16" fill="white" opacity="0.7">0</text>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="size-preview">
+        <svg class="size-sm" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#15803d); border-radius:10px;">
+          <text x="28" y="76" font-family="Poppins,sans-serif" font-weight="900" font-size="68" fill="white">F</text>
+          <line x1="50" y1="20" x2="50" y2="80" stroke="#FF9500" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <span>44px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-md" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#15803d); border-radius:14px;">
+          <text x="28" y="76" font-family="Poppins,sans-serif" font-weight="900" font-size="68" fill="white">F</text>
+          <line x1="50" y1="20" x2="50" y2="80" stroke="#FF9500" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <span>64px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-lg" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#15803d); border-radius:20px;">
+          <text x="28" y="76" font-family="Poppins,sans-serif" font-weight="900" font-size="68" fill="white">F</text>
+          <line x1="50" y1="20" x2="50" y2="80" stroke="#FF9500" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <span>88px</span>
+      </div>
+    </div>
+    <p>Bold "F" for Fifti with an orange divider line — the "50" on the right side reinforces the 50/50 concept. Minimal and punchy.</p>
+  </div>
+
+  <!-- CONCEPT C: Two Arrows / Exchange -->
+  <div class="card concept-c">
+    <h3>Concept C</h3>
+    <div class="tag">Split Arrows</div>
+    <div class="icon-frame">
+      <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+        <!-- Two people silhouettes abstractly represented by circles -->
+        <circle cx="34" cy="34" r="12" fill="white" opacity="0.9"/>
+        <circle cx="66" cy="66" r="12" fill="white" opacity="0.9"/>
+        <!-- Arrow from top-right person to bottom-left -->
+        <g style="animation: arrowBounce 2s ease-in-out infinite">
+          <path d="M 44 40 L 58 54" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          <path d="M 52 54 L 58 54 L 58 48" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <!-- Arrow from bottom-left person to top-right -->
+        <g style="animation: arrowBounceDown 2s ease-in-out infinite">
+          <path d="M 56 60 L 42 46" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          <path d="M 48 46 L 42 46 L 42 52" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <!-- Dollar signs -->
+        <text x="30" y="78" font-family="Poppins, sans-serif" font-weight="700" font-size="14" fill="white" opacity="0.5">$</text>
+        <text x="62" y="30" font-family="Poppins, sans-serif" font-weight="700" font-size="14" fill="white" opacity="0.5">$</text>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="size-preview">
+        <svg class="size-sm" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#FF9500,#e08600); border-radius:10px;">
+          <circle cx="34" cy="34" r="12" fill="white" opacity="0.9"/>
+          <circle cx="66" cy="66" r="12" fill="white" opacity="0.9"/>
+          <path d="M 44 40 L 58 54" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M 56 60 L 42 46" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+        </svg>
+        <span>44px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-md" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#FF9500,#e08600); border-radius:14px;">
+          <circle cx="34" cy="34" r="12" fill="white" opacity="0.9"/>
+          <circle cx="66" cy="66" r="12" fill="white" opacity="0.9"/>
+          <path d="M 44 40 L 58 54" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          <path d="M 56 60 L 42 46" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span>64px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-lg" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#FF9500,#e08600); border-radius:20px;">
+          <circle cx="34" cy="34" r="12" fill="white" opacity="0.9"/>
+          <circle cx="66" cy="66" r="12" fill="white" opacity="0.9"/>
+          <path d="M 44 40 L 58 54" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          <path d="M 56 60 L 42 46" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span>88px</span>
+      </div>
+    </div>
+    <p>Two people exchanging — arrows show money flowing both ways. Represents the social, fair-splitting nature of the app. Orange as primary.</p>
+  </div>
+
+  <!-- CONCEPT D: Receipt + Checkmark -->
+  <div class="card concept-d">
+    <h3>Concept D</h3>
+    <div class="tag">Smart Receipt</div>
+    <div class="icon-frame">
+      <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+        <!-- Receipt body -->
+        <path d="M 25 15 L 65 15 L 65 72 L 62 69 L 59 72 L 56 69 L 53 72 L 50 69 L 47 72 L 44 69 L 41 72 L 38 69 L 35 72 L 32 69 L 29 72 L 25 72 Z"
+              fill="white" opacity="0.95"/>
+        <!-- Receipt lines -->
+        <rect x="31" y="25" width="28" height="3" rx="1.5" fill="#1DB954" opacity="0.35"/>
+        <rect x="31" y="33" width="20" height="3" rx="1.5" fill="#1DB954" opacity="0.25"/>
+        <rect x="31" y="41" width="24" height="3" rx="1.5" fill="#1DB954" opacity="0.35"/>
+        <rect x="31" y="49" width="16" height="3" rx="1.5" fill="#1DB954" opacity="0.25"/>
+        <!-- Total line -->
+        <rect x="31" y="58" width="28" height="4" rx="2" fill="#FF9500" opacity="0.6"/>
+
+        <!-- Green checkmark badge -->
+        <circle cx="70" cy="68" r="18" fill="#FF9500"/>
+        <circle cx="70" cy="68" r="15" fill="white"/>
+        <path d="M 62 68 L 67 73 L 78 62" stroke="#1DB954" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
+    <div class="sizes">
+      <div class="size-preview">
+        <svg class="size-sm" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#0ea44a); border-radius:10px;">
+          <path d="M 25 15 L 65 15 L 65 72 L 62 69 L 59 72 L 56 69 L 53 72 L 50 69 L 47 72 L 44 69 L 41 72 L 38 69 L 35 72 L 32 69 L 29 72 L 25 72 Z" fill="white" opacity="0.95"/>
+          <circle cx="70" cy="68" r="18" fill="#FF9500"/><circle cx="70" cy="68" r="15" fill="white"/>
+          <path d="M 62 68 L 67 73 L 78 62" stroke="#1DB954" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span>44px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-md" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#0ea44a); border-radius:14px;">
+          <path d="M 25 15 L 65 15 L 65 72 L 62 69 L 59 72 L 56 69 L 53 72 L 50 69 L 47 72 L 44 69 L 41 72 L 38 69 L 35 72 L 32 69 L 29 72 L 25 72 Z" fill="white" opacity="0.95"/>
+          <circle cx="70" cy="68" r="18" fill="#FF9500"/><circle cx="70" cy="68" r="15" fill="white"/>
+          <path d="M 62 68 L 67 73 L 78 62" stroke="#1DB954" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span>64px</span>
+      </div>
+      <div class="size-preview">
+        <svg class="size-lg" viewBox="0 0 100 100" style="background:linear-gradient(135deg,#1DB954,#0ea44a); border-radius:20px;">
+          <path d="M 25 15 L 65 15 L 65 72 L 62 69 L 59 72 L 56 69 L 53 72 L 50 69 L 47 72 L 44 69 L 41 72 L 38 69 L 35 72 L 32 69 L 29 72 L 25 72 Z" fill="white" opacity="0.95"/>
+          <rect x="31" y="25" width="28" height="3" rx="1.5" fill="#1DB954" opacity="0.35"/>
+          <rect x="31" y="33" width="20" height="3" rx="1.5" fill="#1DB954" opacity="0.25"/>
+          <rect x="31" y="41" width="24" height="3" rx="1.5" fill="#1DB954" opacity="0.35"/>
+          <rect x="31" y="58" width="28" height="4" rx="2" fill="#FF9500" opacity="0.6"/>
+          <circle cx="70" cy="68" r="18" fill="#FF9500"/><circle cx="70" cy="68" r="15" fill="white"/>
+          <path d="M 62 68 L 67 73 L 78 62" stroke="#1DB954" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span>88px</span>
+      </div>
+    </div>
+    <p>Receipt with a checkmark badge — says "bill handled, fairly split." Combines receipt scanning with the satisfaction of settling up.</p>
+  </div>
+
+</div>
+
+<p class="anim-hint">Hover cards to preview. Open this file in a browser to see subtle animations.</p>
+
+</body>
+</html>

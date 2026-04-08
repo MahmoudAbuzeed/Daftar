@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fifti - Split Receipt Animations</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: #f0f0f5;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 20px;
+  }
+  h1 { font-size: 26px; font-weight: 800; color: #0d0d14; }
+  .badge { display: inline-block; background: #1DB954; color: white; font-size: 11px;
+    font-weight: 600; padding: 3px 10px; border-radius: 20px; margin: 8px 0 30px;
+    letter-spacing: 1px; }
+  .row { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .card {
+    background: white; border-radius: 24px; overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .card-header { padding: 20px 24px 0; text-align: center; }
+  .card-header h2 { font-size: 17px; font-weight: 700; color: #0d0d14; }
+  .card-header p { font-size: 11px; color: #999; margin-top: 2px; }
+  #logo-box { width: 320px; height: 320px; background: #fafafa; }
+  #splash-box { width: 260px; height: 520px; background: #fff; border-top: 1px solid #f0f0f0; position: relative; }
+  .splash-text {
+    position: absolute; bottom: 200px; left: 50%; transform: translateX(-50%);
+    text-align: center; pointer-events: none;
+  }
+  .splash-text .name { font-size: 28px; font-weight: 800; color: #0d0d14; letter-spacing: 2px; }
+  .splash-text .tag { font-size: 12px; font-weight: 600; color: #1DB954;
+    letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+  .btns { display: flex; gap: 8px; padding: 16px; }
+  .btns button { padding: 8px 18px; border: none; border-radius: 10px;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.15s; font-family: inherit; }
+  .btn-g { background: #1DB954; color: white; }
+  .btn-g:hover { background: #18a34a; }
+  .btn-w { background: #f0f0f0; color: #444; }
+  .btn-w:hover { background: #e4e4e4; }
+
+  .icon-row { display: flex; gap: 20px; align-items: flex-end; margin-top: 30px; }
+  .icon-prev { text-align: center; }
+  .icon-prev img { border-radius: 22%; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  .icon-prev span { display: block; font-size: 10px; color: #aaa; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Fifti Animations</h1>
+<span class="badge">CONCEPT A &mdash; SPLIT RECEIPT</span>
+
+<div class="row">
+  <div class="card">
+    <div class="card-header">
+      <h2>Animated Logo</h2>
+      <p>512 &times; 512 &bull; 3s &bull; 30fps</p>
+    </div>
+    <div id="logo-box"></div>
+    <div class="btns">
+      <button class="btn-g" onclick="logoAnim.goToAndPlay(0,true)">Replay</button>
+      <button class="btn-w" onclick="logoAnim.stop()">Stop</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Splash Screen</h2>
+      <p>400 &times; 800 &bull; 4s &bull; 30fps</p>
+    </div>
+    <div id="splash-box">
+      <div class="splash-text">
+        <div class="name">Fifti</div>
+        <div class="tag">Split Fair</div>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn-g" onclick="splashAnim.goToAndPlay(0,true)">Replay</button>
+      <button class="btn-w" onclick="splashAnim.stop()">Stop</button>
+    </div>
+  </div>
+</div>
+
+<div class="icon-row">
+  <div class="icon-prev"><img src="../icon.png" width="88" height="88"><span>App Icon</span></div>
+  <div class="icon-prev"><img src="../adaptive-icon.png" width="88" height="88"><span>Adaptive</span></div>
+  <div class="icon-prev"><img src="../splash-icon.png" width="64" height="64"><span>Splash</span></div>
+  <div class="icon-prev"><img src="../favicon.png" width="48" height="48"><span>Favicon</span></div>
+</div>
+
+<script>
+var logoAnim = lottie.loadAnimation({
+  container: document.getElementById('logo-box'),
+  renderer: 'svg', loop: true, autoplay: true,
+  path: 'logo-animation.json'
+});
+var splashAnim = lottie.loadAnimation({
+  container: document.getElementById('splash-box'),
+  renderer: 'svg', loop: true, autoplay: true,
+  path: 'splash-animation.json'
+});
+</script>
+</body>
+</html>

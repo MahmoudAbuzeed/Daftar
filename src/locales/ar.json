@@ -626,8 +626,11 @@
   },
   "achievements": {
     "sectionTitle": "الإنجازات",
+    "progress": "تقدمك",
+    "of": "من",
     "earned": "مكتسبة",
     "locked": "مقفلة",
+    "share": "شارك",
     "sharePrompt": "شارك",
     "first_expense_title": "الخطوة الأولى",
     "first_expense_desc": "أضفت أول مصروف",

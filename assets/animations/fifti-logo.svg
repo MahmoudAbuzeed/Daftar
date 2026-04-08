@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1DB954"/>
+      <stop offset="100%" stop-color="#17A34A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="46" y="46" width="420" height="420" rx="80" fill="url(#bg)"/>
+
+  <!-- Left receipt half -->
+  <g transform="translate(128, 166)">
+    <path d="M 0 0 L 90 0 L 90 168 L 81 160 L 72 168 L 63 160 L 54 168 L 45 160 L 36 168 L 27 160 L 18 168 L 9 160 L 0 168 Z"
+          fill="white" fill-opacity="0.95"/>
+    <rect x="8" y="24" width="68" height="7" rx="3" fill="#1DB954" fill-opacity="0.35"/>
+    <rect x="8" y="44" width="48" height="7" rx="3" fill="#1DB954" fill-opacity="0.25"/>
+    <rect x="8" y="64" width="62" height="7" rx="3" fill="#1DB954" fill-opacity="0.35"/>
+    <rect x="8" y="84" width="38" height="7" rx="3" fill="#1DB954" fill-opacity="0.25"/>
+    <rect x="8" y="120" width="74" height="9" rx="4" fill="#FF9500" fill-opacity="0.7"/>
+  </g>
+
+  <!-- Right receipt half -->
+  <g transform="translate(294, 166)">
+    <path d="M 0 0 L 90 0 L 90 168 L 81 160 L 72 168 L 63 160 L 54 168 L 45 160 L 36 168 L 27 160 L 18 168 L 9 160 L 0 168 Z"
+          fill="white" fill-opacity="0.95"/>
+    <rect x="8" y="24" width="68" height="7" rx="3" fill="#1DB954" fill-opacity="0.35"/>
+    <rect x="8" y="44" width="48" height="7" rx="3" fill="#1DB954" fill-opacity="0.25"/>
+    <rect x="8" y="64" width="62" height="7" rx="3" fill="#1DB954" fill-opacity="0.35"/>
+    <rect x="8" y="84" width="38" height="7" rx="3" fill="#1DB954" fill-opacity="0.25"/>
+    <rect x="8" y="120" width="74" height="9" rx="4" fill="#FF9500" fill-opacity="0.7"/>
+  </g>
+
+  <!-- Zigzag dashed center line -->
+  <path d="M 256 170 L 260 182 L 252 194 L 260 206 L 252 218 L 260 230 L 252 242 L 260 254 L 252 266 L 260 278 L 252 290 L 260 302 L 252 314 L 256 326"
+        stroke="white" stroke-width="2" fill="none" stroke-dasharray="4,4" opacity="0.4"/>
+
+  <!-- Sparkle accents -->
+  <path d="M 106 136 L 110 128 L 114 136 L 110 144 Z" fill="#FF9500"/>
+  <path d="M 406 176 L 410 168 L 414 176 L 410 184 Z" fill="#FF9500"/>
+  <path d="M 386 376 L 390 368 L 394 376 L 390 384 Z" fill="#FFC832"/>
+  <path d="M 136 346 L 140 338 L 144 346 L 140 354 Z" fill="#FFC832"/>
+
+  <!-- Decorative dots -->
+  <circle cx="86" cy="256" r="7" fill="#FF9500"/>
+  <circle cx="426" cy="256" r="7" fill="#1DB954"/>
+  <circle cx="256" cy="86" r="7" fill="#FFC832"/>
+  <circle cx="256" cy="426" r="7" fill="#FF9500"/>
+</svg>

@@ -56,7 +56,6 @@ export default function ActivityScreen({ route }: Props) {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'expense' | 'settlement' | 'member_joined'>('all');
 
   // Bouncing empty-state icon
   const emptyBounce = useRef(new Animated.Value(0)).current;
@@ -179,50 +178,6 @@ export default function ActivityScreen({ route }: Props) {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
-  const filteredActivities = useMemo(() => {
-    if (filter === 'all') return activities;
-    return activities.filter(a => a.type === filter);
-  }, [activities, filter]);
-
-  const renderFilterChips = () => {
-    const chips: Array<{ label: string; value: typeof filter; icon: string }> = [
-      { label: t('activity.filterAll'), value: 'all', icon: 'list' },
-      { label: t('activity.filterExpenses'), value: 'expense', icon: 'receipt-outline' },
-      { label: t('activity.filterSettlements'), value: 'settlement', icon: 'swap-horizontal-outline' },
-      { label: t('activity.filterJoined'), value: 'member_joined', icon: 'person-add-outline' },
-    ];
-
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterChipsContainer}
-      >
-        {chips.map(chip => (
-          <BouncyPressable
-            key={chip.value}
-            onPress={() => setFilter(chip.value)}
-            style={[
-              styles.filterChip,
-              filter === chip.value && { backgroundColor: colors.primary }
-            ]}
-          >
-            <Ionicons
-              name={chip.icon as any}
-              size={14}
-              color={filter === chip.value ? '#FFFFFF' : colors.textTertiary}
-            />
-            <Text style={[
-              styles.filterChipText,
-              filter === chip.value && { color: '#FFFFFF', fontFamily: FontFamily.bodySemibold }
-            ]}>
-              {chip.label}
-            </Text>
-          </BouncyPressable>
-        ))}
-      </ScrollView>
-    );
-  };
 
   const renderActivity = ({ item, index }: { item: ActivityItem; index: number }) => {
     const isExpense = item.type === 'expense';
@@ -264,7 +219,7 @@ export default function ActivityScreen({ route }: Props) {
                 color="#FFFFFF"
               />
             </LinearGradient>
-            {index < filteredActivities.length - 1 && <View style={styles.timelineLine} />}
+            {index < activities.length - 1 && <View style={styles.timelineLine} />}
           </View>
 
           {/* Activity card */}
@@ -364,8 +319,6 @@ export default function ActivityScreen({ route }: Props) {
           <Text style={styles.headerTitle}>{t('activity.title')}</Text>
         </Animated.View>
 
-        {activities.length > 0 && renderFilterChips()}
-
         {activities.length > 0 && (
           <View style={styles.countStrip}>
             <LinearGradient
@@ -374,15 +327,15 @@ export default function ActivityScreen({ route }: Props) {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             />
-            <Text style={styles.countText}>{t('activity.itemCount', { count: filteredActivities.length })}</Text>
+            <Text style={styles.countText}>{t('activity.itemCount', { count: activities.length })}</Text>
           </View>
         )}
 
         <FlatList
-          data={filteredActivities}
+          data={activities}
           keyExtractor={(item) => item.id}
           renderItem={renderActivity}
-          contentContainerStyle={filteredActivities.length === 0 ? styles.emptyList : styles.list}
+          contentContainerStyle={activities.length === 0 ? styles.emptyList : styles.list}
           ListEmptyComponent={renderEmpty}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
@@ -420,7 +373,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     header: {
       paddingHorizontal: Spacing.xxl,
       paddingTop: Spacing.md,
-      paddingBottom: Spacing.lg,
+      paddingBottom: Spacing.md,
     },
     headerKicker: {
       fontFamily: FontFamily.bodySemibold,
@@ -441,8 +394,9 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: Spacing.xxl,
-      marginBottom: Spacing.md,
-      gap: 8,
+      marginBottom: Spacing.sm,
+      marginTop: -Spacing.sm,
+      gap: 6,
     },
     countDot: {
       width: 8,
@@ -465,27 +419,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       alignItems: 'center',
     },
 
-    filterChipsContainer: {
-      paddingHorizontal: Spacing.lg,
-      paddingBottom: Spacing.md,
-      gap: 8,
-    },
-    filterChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: Spacing.md,
-      paddingVertical: 8,
-      borderRadius: Radius.full,
-      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : c.bgCard,
-      borderWidth: 1,
-      borderColor: isDark ? 'rgba(255,255,255,0.15)' : c.border,
-      gap: 6,
-    },
-    filterChipText: {
-      fontFamily: FontFamily.body,
-      fontSize: 13,
-      color: c.textSecondary,
-    },
 
     timelineRow: {
       flexDirection: 'row',

@@ -181,49 +181,34 @@ export default function ProfileScreen() {
     }
   };
 
-  const renderAchievementsGrid = () => {
+  const renderAchievementsCard = () => {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>{t('achievements.sectionTitle')}</Text>
-        <View style={styles.achievementsGrid}>
-          {ACHIEVEMENT_DEFS.map((def, idx) => {
-            const isEarned = earnedAchievements.includes(def.type);
-            return (
-              <AnimatedListItem key={def.type} index={idx}>
-                <BouncyPressable
-                  onPress={isEarned ? () => handleShareBadge(def.type) : undefined}
-                  disabled={!isEarned}
-                >
-                  <View style={styles.badgeItem}>
-                    <LinearGradient
-                      colors={def.gradientColors}
-                      style={[styles.badgeIcon, !isEarned && { opacity: 0.35 }]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <Ionicons
-                        name={def.icon as any}
-                        size={24}
-                        color="#FFFFFF"
-                      />
-                      {!isEarned && (
-                        <View style={styles.badgeLock}>
-                          <Ionicons name="lock-closed" size={10} color="#FFFFFF" />
-                        </View>
-                      )}
-                    </LinearGradient>
-                    <Text style={[styles.badgeTitle, !isEarned && styles.badgeTitleLocked]}>
-                      {t(def.titleKey)}
-                    </Text>
-                    <Text style={[styles.badgeDesc, !isEarned && styles.badgeDescLocked]}>
-                      {t(def.descKey)}
+        <AnimatedListItem index={0}>
+          <BouncyPressable onPress={() => navigation.navigate('Achievements')}>
+            <ThemedCard style={styles.achievementCardButton}>
+              <View style={styles.achievementCardContent}>
+                <View style={styles.achievementCardLeft}>
+                  <LinearGradient
+                    colors={colors.primaryGradient}
+                    style={styles.achievementCardIcon}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons name="trophy" size={20} color="#FFFFFF" />
+                  </LinearGradient>
+                  <View>
+                    <Text style={styles.achievementCardTitle}>{t('achievements.sectionTitle')}</Text>
+                    <Text style={styles.achievementCardSubtitle}>
+                      {earnedAchievements.length} / {ACHIEVEMENT_DEFS.length} {t('achievements.earned')}
                     </Text>
                   </View>
-                </BouncyPressable>
-              </AnimatedListItem>
-            );
-          })}
-        </View>
+                </View>
+                <Ionicons name={chevronForward() as any} size={16} color={colors.textTertiary} />
+              </View>
+            </ThemedCard>
+          </BouncyPressable>
+        </AnimatedListItem>
       </View>
     );
   };
@@ -305,7 +290,7 @@ export default function ProfileScreen() {
           </Animated.View>
 
           {/* Achievements */}
-          {renderAchievementsGrid()}
+          {renderAchievementsCard()}
 
           {/* Settings */}
           <View style={styles.section}>
@@ -510,57 +495,39 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       marginBottom: 4,
     },
 
-    achievementsGrid: {
+    achievementCardButton: {
+      padding: 0,
+    },
+    achievementCardContent: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: Spacing.md,
-      justifyContent: 'space-between',
-    },
-    badgeItem: {
-      width: '31%',
       alignItems: 'center',
-      paddingVertical: Spacing.md,
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 13,
     },
-    badgeIcon: {
-      width: 72,
-      height: 72,
-      borderRadius: 18,
+    achievementCardLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      gap: 12,
+    },
+    achievementCardIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 11,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: Spacing.sm,
-      position: 'relative',
     },
-    badgeLock: {
-      position: 'absolute',
-      bottom: -4,
-      right: -4,
-      backgroundColor: isDark ? c.bgDarkCard : c.bg,
-      borderRadius: 12,
-      padding: 4,
-      borderWidth: 1.5,
-      borderColor: isDark ? c.border : c.borderLight,
-    },
-    badgeTitle: {
-      fontFamily: FontFamily.bodySemibold,
-      fontSize: 12,
+    achievementCardTitle: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 15,
       color: c.text,
-      textAlign: 'center',
-      letterSpacing: -0.2,
     },
-    badgeTitleLocked: {
-      color: c.textTertiary,
-    },
-    badgeDesc: {
+    achievementCardSubtitle: {
       fontFamily: FontFamily.body,
-      fontSize: 10,
-      color: c.textSecondary,
-      textAlign: 'center',
-      marginTop: 2,
-      lineHeight: 13,
-    },
-    badgeDescLocked: {
+      fontSize: 11,
       color: c.textTertiary,
-      opacity: 0.6,
+      marginTop: 2,
     },
 
     settingRowCard: {

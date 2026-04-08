@@ -626,8 +626,11 @@
   },
   "achievements": {
     "sectionTitle": "ACHIEVEMENTS",
+    "progress": "Your Progress",
+    "of": "of",
     "earned": "Earned",
     "locked": "Locked",
+    "share": "Share",
     "sharePrompt": "Share",
     "first_expense_title": "First Steps",
     "first_expense_desc": "Added your first expense",

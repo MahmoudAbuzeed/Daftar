@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -257,8 +258,8 @@ export default function GroupChatScreen({ route, navigation }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
         >
-          <ThemedCard style={styles.inputContainer}>
-            <View style={styles.inputRow}>
+          <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
                 placeholder={t('chat.placeholder')}
@@ -272,28 +273,35 @@ export default function GroupChatScreen({ route, navigation }: Props) {
               <BouncyPressable
                 onPress={handleSendMessage}
                 disabled={!inputText.trim() || sending}
-                style={styles.sendButton}
+                style={[
+                  styles.sendButton,
+                  (!inputText.trim() || sending) && styles.sendButtonDisabled,
+                ]}
               >
                 <LinearGradient
-                  colors={colors.primaryGradient}
+                  colors={
+                    !inputText.trim() || sending
+                      ? [colors.textTertiary, colors.textTertiary]
+                      : colors.primaryGradient
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.sendButtonGradient}
                 >
-                  <Ionicons
-                    name="send"
-                    size={16}
-                    color="#FFFFFF"
-                  />
+                  {sending ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="send" size={18} color="#FFFFFF" />
+                  )}
                 </LinearGradient>
               </BouncyPressable>
             </View>
-          </ThemedCard>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
 }
-
-import { Dimensions } from 'react-native';
 
 const createStyles = (c: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
@@ -406,15 +414,14 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
 
     inputContainer: {
-      borderTopLeftRadius: Radius.lg,
-      borderTopRightRadius: Radius.lg,
-      borderBottomLeftRadius: 0,
-      borderBottomRightRadius: 0,
+      borderTopWidth: 1,
+      borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : c.border,
+      backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.md,
-      paddingBottom: Spacing.lg,
+      paddingBottom: Platform.OS === 'android' ? Spacing.lg + 4 : Spacing.md,
     },
-    inputRow: {
+    inputWrapper: {
       flexDirection: 'row',
       alignItems: 'flex-end',
       gap: Spacing.sm,
@@ -422,23 +429,30 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     input: {
       flex: 1,
       fontFamily: FontFamily.body,
-      fontSize: 14,
+      fontSize: 15,
       color: c.text,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: Radius.md,
+      borderWidth: 1.5,
+      borderColor: isDark ? 'rgba(255,255,255,0.15)' : c.border,
+      borderRadius: Radius.lg,
       paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.sm,
+      paddingVertical: Spacing.sm + 2,
       maxHeight: 100,
+      backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFFFFF',
     },
     sendButton: {
-      width: 40,
-      height: 40,
-      borderRadius: Radius.md,
+      width: 44,
+      height: 44,
+      borderRadius: Radius.lg,
       overflow: 'hidden',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sendButtonDisabled: {
+      opacity: 0.5,
     },
     sendButtonGradient: {
       flex: 1,
+      width: '100%',
       justifyContent: 'center',
       alignItems: 'center',
     },

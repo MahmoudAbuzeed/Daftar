@@ -22,6 +22,7 @@ import PeopleScreen from '../screens/people/PeopleScreen';
 import ActivityScreen from '../screens/activity/ActivityScreen';
 import GroupChatScreen from '../screens/groups/GroupChatScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import AchievementsScreen from '../screens/profile/AchievementsScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 
 // Group Screens
@@ -100,6 +101,7 @@ export type RootStackParamList = {
   RecurringExpenses: { groupId: string };
   Activity: { groupId?: string };
   GroupChat: { groupId: string };
+  Achievements: undefined;
   About: undefined;
   PrivacyPolicy: undefined;
   Terms: undefined;
@@ -381,6 +383,11 @@ function AppStack() {
         name="GroupChat"
         component={GroupChatScreen}
         options={{ title: '' }}
+      />
+      <RootStack.Screen
+        name="Achievements"
+        component={AchievementsScreen}
+        options={{ headerShown: false }}
       />
       <RootStack.Screen
         name="About"

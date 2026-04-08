@@ -260,8 +260,6 @@ export default function AddExpenseScreen({ route, navigation }: Props) {
       });
 
       // Get the payer's profile info
-      const payerMember = members.find(m => m.user_id === paidBy);
-      const payerName = (payerMember?.user as any)?.display_name || 'Someone';
       const payerPhone = profile?.phone || null;
 
       // Get users who owe money (splits where user_id !== paidBy)

@@ -17,7 +17,6 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as Contacts from 'expo-contacts';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { Spacing, Radius, FontFamily } from '../../theme';
