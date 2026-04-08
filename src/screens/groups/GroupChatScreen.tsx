@@ -29,6 +29,7 @@ import { sendNotificationsToUsers } from '../../lib/notifications';
 import BouncyPressable from '../../components/BouncyPressable';
 import ThemedCard from '../../components/ThemedCard';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
+import { AnimatedGradientButton } from '../../components/SendButton';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupChat'>;
 
@@ -270,31 +271,13 @@ export default function GroupChatScreen({ route, navigation }: Props) {
                 maxLength={500}
                 editable={!sending}
               />
-              <BouncyPressable
+              <AnimatedGradientButton
                 onPress={handleSendMessage}
-                disabled={!inputText.trim() || sending}
-                style={[
-                  styles.sendButton,
-                  (!inputText.trim() || sending) && styles.sendButtonDisabled,
-                ]}
-              >
-                <LinearGradient
-                  colors={
-                    !inputText.trim() || sending
-                      ? [colors.textTertiary, colors.textTertiary]
-                      : colors.primaryGradient
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.sendButtonGradient}
-                >
-                  {sending ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Ionicons name="send" size={18} color="#FFFFFF" />
-                  )}
-                </LinearGradient>
-              </BouncyPressable>
+                disabled={!inputText.trim()}
+                loading={sending}
+                colors={colors}
+                isDark={isDark}
+              />
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -438,23 +421,6 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       paddingVertical: Spacing.sm + 2,
       maxHeight: 100,
       backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFFFFF',
-    },
-    sendButton: {
-      width: 44,
-      height: 44,
-      borderRadius: Radius.lg,
-      overflow: 'hidden',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    sendButtonDisabled: {
-      opacity: 0.5,
-    },
-    sendButtonGradient: {
-      flex: 1,
-      width: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
     },
 
     emptyState: {
