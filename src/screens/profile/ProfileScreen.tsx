@@ -3,15 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   StatusBar,
-  ScrollView,
   I18nManager,
   DevSettings,
   ActivityIndicator,
   Animated,
   Easing,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +24,6 @@ import { Spacing, Radius, FontFamily } from '../../theme';
 import { chevronForward } from '../../utils/rtl';
 import BouncyPressable from '../../components/BouncyPressable';
 import ThemedCard from '../../components/ThemedCard';
-import FunButton from '../../components/FunButton';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAlert } from '../../hooks/useAlert';
@@ -40,8 +36,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { ACHIEVEMENT_DEFS, getAchievementDef } from '../../data/achievementDefinitions';
 
 const PROFILE_CURRENCIES: CurrencyCode[] = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'INR', 'PKR', 'TRY', 'CAD', 'AUD', 'BRL'];
-
-const { width: SW } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -181,39 +175,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const renderAchievementsCard = () => {
-    return (
-      <View style={styles.section}>
-        <AnimatedListItem index={0}>
-          <BouncyPressable onPress={() => navigation.navigate('Achievements')}>
-            <ThemedCard style={styles.achievementCardButton}>
-              <View style={styles.achievementCardContent}>
-                <View style={styles.achievementCardLeft}>
-                  <LinearGradient
-                    colors={colors.primaryGradient}
-                    style={styles.achievementCardIcon}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Ionicons name="trophy" size={20} color="#FFFFFF" />
-                  </LinearGradient>
-                  <View>
-                    <Text style={styles.achievementCardTitle}>{t('achievements.sectionTitle')}</Text>
-                    <Text style={styles.achievementCardSubtitle}>
-                      {earnedAchievements.length} / {ACHIEVEMENT_DEFS.length} {t('achievements.earned')}
-                    </Text>
-                  </View>
-                </View>
-                <Ionicons name={chevronForward() as any} size={16} color={colors.textTertiary} />
-              </View>
-            </ThemedCard>
-          </BouncyPressable>
-        </AnimatedListItem>
-      </View>
-    );
-  };
-
-  const settingsItems: Array<{
+  const quickTiles: Array<{
     icon: React.ReactNode;
     label: string;
     value: string;
@@ -221,21 +183,21 @@ export default function ProfileScreen() {
     gradColors: [string, string, ...string[]];
   }> = [
     {
-      icon: <MoonIcon size={20} color="#FFFFFF" strokeWidth={2.5} />,
+      icon: <MoonIcon size={18} color="#FFFFFF" strokeWidth={2.5} />,
       label: t('profile.appearance') || 'Appearance',
       value: isDark ? t('profile.dark') : t('profile.light'),
       onPress: toggleTheme,
       gradColors: isDark ? ['#1B7A6C', '#14B8A6'] : ['#0D9488', '#14B8A6'],
     },
     {
-      icon: <GlobeAltIcon size={20} color="#FFFFFF" strokeWidth={2.5} />,
+      icon: <GlobeAltIcon size={18} color="#FFFFFF" strokeWidth={2.5} />,
       label: t('profile.language'),
       value: isArabic ? t('profile.arabic') : t('profile.english'),
       onPress: handleLanguageToggle,
       gradColors: colors.primaryGradient,
     },
     {
-      icon: <CurrencyDollarIcon size={20} color="#FFFFFF" strokeWidth={2.5} />,
+      icon: <CurrencyDollarIcon size={18} color="#FFFFFF" strokeWidth={2.5} />,
       label: t('profile.defaultCurrency'),
       value: currentCurrency,
       onPress: handleCurrencyToggle,
@@ -261,8 +223,8 @@ export default function ProfileScreen() {
       )}
 
       <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom + Spacing.xl, Spacing.xxl) }]} showsVerticalScrollIndicator={false}>
-          {/* Hero Section */}
+        <View style={[styles.container, { paddingBottom: Math.max(insets.bottom + Spacing.md, Spacing.lg) }]}>
+          {/* Compact Hero — avatar + info + sign-out icon */}
           <Animated.View style={[styles.hero, entrance.style]}>
             <Animated.View style={[styles.avatarWrap, { transform: [{ scale: heroScale }, { rotate: rotateInterpolate }] }]}>
               <LinearGradient
@@ -279,145 +241,154 @@ export default function ProfileScreen() {
               </LinearGradient>
             </Animated.View>
 
-            <Text style={styles.displayName}>{profile?.display_name || ''}</Text>
-            <Text style={styles.email}>{profile?.email || ''}</Text>
-
-            <View style={styles.heroDivider}>
-              <View style={styles.heroDividerLine} />
-              <View style={styles.heroDividerDiamond} />
-              <View style={styles.heroDividerLine} />
+            <View style={styles.heroInfo}>
+              <Text style={styles.displayName} numberOfLines={1}>{profile?.display_name || ''}</Text>
+              <Text style={styles.email} numberOfLines={1}>{profile?.email || ''}</Text>
             </View>
+
+            <BouncyPressable onPress={handleSignOut} disabled={signingOut}>
+              <View style={styles.signOutIcon}>
+                {signingOut ? (
+                  <ActivityIndicator size="small" color={colors.danger} />
+                ) : (
+                  <ArrowRightOnRectangleIcon size={18} color={colors.danger} strokeWidth={2.5} />
+                )}
+              </View>
+            </BouncyPressable>
           </Animated.View>
 
           {/* Achievements */}
-          {renderAchievementsCard()}
+          <AnimatedListItem index={0}>
+            <BouncyPressable onPress={() => navigation.navigate('Achievements')}>
+              <ThemedCard style={styles.compactCard}>
+                <View style={styles.rowContent}>
+                  <View style={styles.rowLeft}>
+                    <LinearGradient
+                      colors={colors.primaryGradient}
+                      style={styles.rowIcon}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <Ionicons name="trophy" size={18} color="#FFFFFF" />
+                    </LinearGradient>
+                    <View style={styles.rowTextWrap}>
+                      <Text style={styles.rowTitle}>{t('achievements.sectionTitle')}</Text>
+                      <Text style={styles.rowSubtitle}>
+                        {earnedAchievements.length} / {ACHIEVEMENT_DEFS.length} {t('achievements.earned')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name={chevronForward() as any} size={16} color={colors.textTertiary} />
+                </View>
+              </ThemedCard>
+            </BouncyPressable>
+          </AnimatedListItem>
 
-          {/* Settings */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{t('profile.preferences')}</Text>
+          {/* Pro */}
+          <AnimatedListItem index={1}>
+            <BouncyPressable onPress={() => navigation.navigate('Paywall', { trigger: 'general' })}>
+              <ThemedCard style={styles.compactCard}>
+                {isDark && (
+                  <LinearGradient
+                    colors={['rgba(201,162,39,0.1)', 'rgba(201,162,39,0.03)']}
+                    style={StyleSheet.absoluteFill}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                )}
+                <View style={styles.rowContent}>
+                  <View style={styles.rowLeft}>
+                    <LinearGradient
+                      colors={[colors.accentGradient[0], colors.accentGradient[1]]}
+                      style={styles.rowIcon}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    >
+                      <StarIcon size={18} color="#FFFFFF" strokeWidth={2.5} />
+                    </LinearGradient>
+                    <View style={styles.rowTextWrap}>
+                      <Text style={styles.rowTitle}>{t('profile.fiftiPro')}</Text>
+                      <Text style={styles.rowSubtitle} numberOfLines={1}>{t('profile.fiftiProHint')}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.proBadge}>
+                    <Text style={styles.proBadgeText}>{t('profile.pro')}</Text>
+                  </View>
+                </View>
+              </ThemedCard>
+            </BouncyPressable>
+          </AnimatedListItem>
 
-            {settingsItems.map((s, i) => (
-              <AnimatedListItem key={i} index={i}>
-                <BouncyPressable onPress={s.onPress}>
-                  <ThemedCard style={styles.settingRowCard}>
-                    <View style={styles.settingRow}>
-                      <View style={styles.settingLeft}>
-                        <LinearGradient
-                          colors={s.gradColors}
-                          style={styles.settingIcon}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          {s.icon}
-                        </LinearGradient>
-                        <Text style={styles.settingLabel}>{s.label}</Text>
-                      </View>
-                      <View style={styles.settingRight}>
-                        <View style={styles.settingValueBadge}>
-                          <Text style={styles.settingValue}>{s.value}</Text>
-                        </View>
-                        <Ionicons name={chevronForward() as any} size={16} color={colors.textTertiary} />
-                      </View>
+          {/* Quick settings tile grid */}
+          <View style={styles.tileGrid}>
+            {quickTiles.map((tile, i) => (
+              <AnimatedListItem key={i} index={i + 2} style={styles.tileFlex}>
+                <BouncyPressable onPress={tile.onPress}>
+                  <ThemedCard style={styles.tileCard}>
+                    <View style={styles.tileContent}>
+                      <LinearGradient
+                        colors={tile.gradColors}
+                        style={styles.tileIcon}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        {tile.icon}
+                      </LinearGradient>
+                      <Text style={styles.tileLabel} numberOfLines={1}>{tile.label}</Text>
+                      <Text style={styles.tileValue} numberOfLines={1}>{tile.value}</Text>
                     </View>
                   </ThemedCard>
                 </BouncyPressable>
               </AnimatedListItem>
             ))}
+          </View>
 
-            {/* Pro */}
-            <AnimatedListItem index={settingsItems.length + 1}>
-              <BouncyPressable onPress={() => navigation.navigate('Paywall', { trigger: 'general' })}>
-                <ThemedCard style={styles.settingRowCard}>
-                  {isDark && (
-                    <LinearGradient
-                      colors={['rgba(201,162,39,0.1)', 'rgba(201,162,39,0.03)']}
-                      style={StyleSheet.absoluteFill}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                  )}
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                      <LinearGradient
-                        colors={[colors.accentGradient[0], colors.accentGradient[1]]}
-                        style={styles.settingIcon}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <StarIcon size={20} color="#FFFFFF" strokeWidth={2.5} />
-                      </LinearGradient>
-                      <View>
-                        <Text style={styles.settingLabel}>{t('profile.fiftiPro')}</Text>
-                        <Text style={styles.settingHint}>{t('profile.fiftiProHint')}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.proBadge}>
-                      <Text style={styles.proBadgeText}>{t('profile.pro')}</Text>
-                    </View>
-                  </View>
-                </ThemedCard>
-              </BouncyPressable>
-            </AnimatedListItem>
-
-            {/* Data Export */}
-            <AnimatedListItem index={settingsItems.length + 2}>
+          {/* Data Export + About — 2 column row */}
+          <View style={styles.tileGrid}>
+            <AnimatedListItem index={5} style={styles.tileFlex}>
               <BouncyPressable onPress={() => navigation.navigate('DataExport')}>
-                <ThemedCard style={styles.settingRowCard}>
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
+                <ThemedCard style={styles.compactCard}>
+                  <View style={styles.rowContent}>
+                    <View style={styles.rowLeft}>
                       <LinearGradient
                         colors={colors.successGradient}
-                        style={styles.settingIcon}
+                        style={styles.rowIcon}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                       >
-                        <ArrowDownTrayIcon size={20} color="#FFFFFF" strokeWidth={2.5} />
+                        <ArrowDownTrayIcon size={18} color="#FFFFFF" strokeWidth={2.5} />
                       </LinearGradient>
-                      <Text style={styles.settingLabel}>{t('export.menuLabel')}</Text>
+                      <Text style={styles.rowTitle} numberOfLines={1}>{t('export.menuLabel')}</Text>
                     </View>
-                    <Ionicons name={chevronForward() as any} size={16} color={colors.textTertiary} />
                   </View>
                 </ThemedCard>
               </BouncyPressable>
             </AnimatedListItem>
 
-            {/* About */}
-            <AnimatedListItem index={settingsItems.length + 3}>
+            <AnimatedListItem index={6} style={styles.tileFlex}>
               <BouncyPressable onPress={() => navigation.navigate('About')}>
-                <ThemedCard style={styles.settingRowCard}>
-                  <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
+                <ThemedCard style={styles.compactCard}>
+                  <View style={styles.rowContent}>
+                    <View style={styles.rowLeft}>
                       <LinearGradient
                         colors={isDark ? ['#0B1F1A', '#122420'] : [colors.bgSubtle, colors.bgSubtle]}
-                        style={styles.settingIcon}
+                        style={styles.rowIcon}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                       >
-                        <InformationCircleIcon size={20} color={isDark ? '#FFFFFF' : colors.textSecondary} strokeWidth={2.5} />
+                        <InformationCircleIcon size={18} color={isDark ? '#FFFFFF' : colors.textSecondary} strokeWidth={2.5} />
                       </LinearGradient>
-                      <Text style={styles.settingLabel}>{t('profile.about')}</Text>
+                      <Text style={styles.rowTitle} numberOfLines={1}>{t('profile.about')}</Text>
                     </View>
-                    <Ionicons name={chevronForward() as any} size={16} color={colors.textTertiary} />
                   </View>
                 </ThemedCard>
               </BouncyPressable>
             </AnimatedListItem>
           </View>
 
-          {/* Sign out */}
-          <View style={styles.signOutWrap}>
-            <FunButton
-              title={signingOut ? t('profile.signingOut') : t('profile.signOut')}
-              onPress={handleSignOut}
-              variant="danger"
-              loading={signingOut}
-              disabled={signingOut}
-              icon={<ArrowRightOnRectangleIcon size={20} color="#FFFFFF" strokeWidth={2.5} />}
-            />
-          </View>
-
+          <View style={styles.flexSpacer} />
           <Text style={styles.version}>{t('profile.version')}</Text>
-        </ScrollView>
+        </View>
       </SafeAreaView>
 
       {/* Language switch loading overlay */}
@@ -434,178 +405,149 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: c.bg },
     safe: { flex: 1 },
-    scroll: { paddingBottom: Spacing.xxl },
-
-    bgOrb: {
-      position: 'absolute',
-      width: SW * 0.7,
-      height: SW * 0.7,
-      borderRadius: SW * 0.35,
-      backgroundColor: isDark ? 'rgba(201,162,39,0.04)' : 'rgba(13,148,136,0.03)',
-      top: -SW * 0.15,
-      right: -SW * 0.25,
-    },
-    bgOrbSmall: {
-      position: 'absolute',
-      width: SW * 0.35,
-      height: SW * 0.35,
-      borderRadius: SW * 0.175,
-      backgroundColor: isDark ? 'rgba(27,122,108,0.04)' : 'rgba(201,162,39,0.03)',
-      bottom: SW * 0.1,
-      left: -SW * 0.1,
+    container: {
+      flex: 1,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+      gap: Spacing.sm,
     },
 
     hero: {
+      flexDirection: 'row',
       alignItems: 'center',
-      paddingTop: Spacing.xl,
-      paddingBottom: Spacing.lg,
+      gap: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.xs,
     },
-    avatarWrap: { marginBottom: Spacing.lg },
+    avatarWrap: {},
     avatarBorder: {
-      width: 80,
-      height: 80,
-      borderRadius: 26,
-      padding: 3,
+      width: 56,
+      height: 56,
+      borderRadius: 18,
+      padding: 2.5,
       shadowColor: c.accent,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      elevation: 6,
     },
     avatarCore: {
       flex: 1,
-      borderRadius: 23,
+      borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
     },
     avatarText: {
       fontFamily: FontFamily.bodyBold,
-      fontSize: 26,
+      fontSize: 18,
+    },
+    heroInfo: {
+      flex: 1,
+      minWidth: 0,
     },
     displayName: {
       fontFamily: FontFamily.bodyBold,
-      fontSize: 22,
+      fontSize: 18,
       color: c.text,
       letterSpacing: -0.3,
     },
     email: {
       fontFamily: FontFamily.body,
-      fontSize: 13,
+      fontSize: 12,
       color: c.textTertiary,
       marginTop: 2,
     },
-    heroDivider: {
+    signOutIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(239,68,68,0.25)' : 'rgba(239,68,68,0.18)',
+    },
+
+    compactCard: {
+      padding: 0,
+    },
+    rowContent: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      marginTop: Spacing.lg,
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 11,
     },
-    heroDividerLine: { width: 28, height: 1, backgroundColor: isDark ? 'rgba(201,162,39,0.25)' : c.borderLight },
-    heroDividerDiamond: { width: 6, height: 6, backgroundColor: c.accent, transform: [{ rotate: '45deg' }], borderRadius: 1 },
+    rowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      gap: 10,
+      minWidth: 0,
+    },
+    rowIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    rowTextWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+    rowTitle: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 14,
+      color: c.text,
+    },
+    rowSubtitle: {
+      fontFamily: FontFamily.body,
+      fontSize: 11,
+      color: c.textTertiary,
+      marginTop: 1,
+    },
 
-    section: {
-      marginHorizontal: Spacing.lg,
+    tileGrid: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    tileFlex: {
+      flex: 1,
+    },
+    tileCard: {
+      padding: 0,
+    },
+    tileContent: {
+      alignItems: 'center',
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.md,
       gap: 6,
     },
-    sectionLabel: {
-      fontFamily: FontFamily.bodySemibold,
+    tileIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 11,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 2,
+    },
+    tileLabel: {
+      fontFamily: FontFamily.body,
       fontSize: 10,
-      letterSpacing: 3,
-      color: c.kicker,
+      color: c.textTertiary,
       textTransform: 'uppercase',
-      paddingHorizontal: Spacing.xs,
-      marginBottom: 4,
+      letterSpacing: 0.6,
     },
-
-    achievementCardButton: {
-      padding: 0,
-    },
-    achievementCardContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: 13,
-    },
-    achievementCardLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-      gap: 12,
-    },
-    achievementCardIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 11,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    achievementCardTitle: {
-      fontFamily: FontFamily.bodyMedium,
-      fontSize: 15,
-      color: c.text,
-    },
-    achievementCardSubtitle: {
-      fontFamily: FontFamily.body,
-      fontSize: 11,
-      color: c.textTertiary,
-      marginTop: 2,
-    },
-
-    settingRowCard: {
-      padding: 0,
-    },
-    settingRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: 13,
-    },
-    settingLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-      gap: 12,
-    },
-    settingIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 11,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    settingLabel: {
-      fontFamily: FontFamily.bodyMedium,
-      fontSize: 15,
-      color: c.text,
-    },
-    settingHint: {
-      fontFamily: FontFamily.body,
-      fontSize: 11,
-      color: c.textTertiary,
-      marginTop: 2,
-    },
-    settingRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    settingValueBadge: {
-      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.bgSubtle,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: Radius.full,
-    },
-    settingValue: {
-      fontFamily: FontFamily.bodyMedium,
+    tileValue: {
+      fontFamily: FontFamily.bodySemibold,
       fontSize: 13,
-      color: c.textSecondary,
+      color: c.text,
     },
 
     proBadge: {
-      paddingHorizontal: 12,
-      paddingVertical: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
       borderRadius: Radius.sm,
       backgroundColor: isDark ? 'rgba(201,162,39,0.2)' : '#FDF6E3',
       borderWidth: 1,
@@ -613,21 +555,18 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     proBadgeText: {
       fontFamily: FontFamily.bodyBold,
-      fontSize: 10,
-      letterSpacing: 2,
+      fontSize: 9,
+      letterSpacing: 1.5,
       color: c.accent,
     },
 
-    signOutWrap: {
-      marginTop: Spacing.xl,
-      marginHorizontal: Spacing.lg,
-    },
+    flexSpacer: { flex: 1 },
     version: {
       fontFamily: FontFamily.body,
       textAlign: 'center',
       fontSize: 11,
       color: c.textTertiary,
-      marginTop: Spacing.lg,
+      marginTop: Spacing.sm,
     },
     langOverlay: {
       ...StyleSheet.absoluteFillObject,

@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, StyleProp, ViewStyle } from 'react-native';
 
 interface Props {
   children: React.ReactNode;
   index: number;
   delay?: number;
+  style?: StyleProp<ViewStyle>;
 }
 
-export default function AnimatedListItem({ children, index, delay = 60 }: Props) {
+export default function AnimatedListItem({ children, index, delay = 60, style }: Props) {
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -22,23 +23,26 @@ export default function AnimatedListItem({ children, index, delay = 60 }: Props)
 
   return (
     <Animated.View
-      style={{
-        opacity: anim,
-        transform: [
-          {
-            translateY: anim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [28, 0],
-            }),
-          },
-          {
-            scale: anim.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0.95, 1.02, 1],
-            }),
-          },
-        ],
-      }}
+      style={[
+        {
+          opacity: anim,
+          transform: [
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [28, 0],
+              }),
+            },
+            {
+              scale: anim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.95, 1.02, 1],
+              }),
+            },
+          ],
+        },
+        style,
+      ]}
     >
       {children}
     </Animated.View>
