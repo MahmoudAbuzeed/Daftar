@@ -24,7 +24,8 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Group, Expense, GroupMember, Balance, User } from '../../types/database';
 import { simplifyDebts, formatCurrency } from '../../utils/balance';
 import { Spacing, Radius, FontFamily } from '../../theme';
-import { generateReminder, shareViaWhatsApp } from '../../utils/whatsapp';
+import { generateReminder } from '../../utils/whatsapp';
+import { useWhatsAppReminder } from '../../hooks/useWhatsAppReminder';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import ThemedCard from '../../components/ThemedCard';
@@ -46,6 +47,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
+  const sendReminder = useWhatsAppReminder();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -227,7 +229,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 onPress={() => {
                   const lang = i18n.language === 'ar' ? 'ar' : 'en';
                   const message = generateReminder(toName, fromName, item.net_amount, group?.currency || 'EGP', lang as 'en' | 'ar');
-                  shareViaWhatsApp(message);
+                  sendReminder(message);
                 }}
               >
                 <Ionicons name="logo-whatsapp" size={14} color={colors.success} />

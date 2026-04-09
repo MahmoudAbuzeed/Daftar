@@ -23,8 +23,10 @@ import BouncyPressable from '../../components/BouncyPressable';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import useScreenEntrance from '../../hooks/useScreenEntrance';
 import { useAuth } from '../../lib/auth-context';
+import { useSubscription } from '../../lib/subscription-context';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency } from '../../utils/balance';
+import FunButton from '../../components/FunButton';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Analytics'>;
@@ -117,10 +119,11 @@ function VerticalBar({ height, color, delay }: { height: number; color: string; 
   );
 }
 
-export default function AnalyticsScreen({ route }: Props) {
+export default function AnalyticsScreen({ route, navigation }: Props) {
   const { groupId } = route.params || {};
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { isPro } = useSubscription();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const entrance = useScreenEntrance();
@@ -134,6 +137,7 @@ export default function AnalyticsScreen({ route }: Props) {
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    if (!isPro) { setLoading(false); return; }
     setLoading(true);
 
     try {
@@ -197,12 +201,42 @@ export default function AnalyticsScreen({ route }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [user, period, groupId]);
+  }, [user, period, groupId, isPro]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const maxMonth = Math.max(...monthlyTrend.map(m => m.amount), 1);
   const BAR_MAX_WIDTH = SW - Spacing.xxl * 2 - Spacing.xl * 2 - 120; // space for label + amount
+
+  if (!isPro) {
+    return (
+      <View style={styles.root}>
+        <StatusBar barStyle={colors.statusBarStyle} />
+        {isDark && <LinearGradient colors={colors.headerGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} />}
+        <SafeAreaView style={styles.safe}>
+          <Animated.View style={[styles.proGateWrap, entrance.style]}>
+            <LinearGradient
+              colors={colors.accentGradient}
+              style={styles.proGateIcon}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="bar-chart" size={36} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={styles.proGateTitle}>{t('subscription.analyticsTitle')}</Text>
+            <Text style={styles.proGateBody}>{t('subscription.features.analytics')}</Text>
+            <View style={styles.proGateButton}>
+              <FunButton
+                title={t('subscription.subscribeButton')}
+                onPress={() => navigation.navigate('Paywall', { trigger: 'analytics' })}
+                icon={<Ionicons name="star" size={18} color="#FFFFFF" />}
+              />
+            </View>
+          </Animated.View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -380,4 +414,44 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
 
     emptyWrap: { alignItems: 'center', paddingVertical: Spacing.huge, gap: Spacing.md },
     emptyText: { fontFamily: FontFamily.body, fontSize: 15, color: c.textTertiary },
+
+    proGateWrap: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.xxl,
+      gap: Spacing.lg,
+    },
+    proGateIcon: {
+      width: 88,
+      height: 88,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+      shadowColor: c.accent,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.4,
+      shadowRadius: 20,
+      elevation: 12,
+    },
+    proGateTitle: {
+      fontFamily: FontFamily.display,
+      fontSize: 26,
+      color: c.text,
+      textAlign: 'center',
+      letterSpacing: -0.5,
+    },
+    proGateBody: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 14,
+      color: c.textSecondary,
+      textAlign: 'center',
+      lineHeight: 20,
+      paddingHorizontal: Spacing.md,
+    },
+    proGateButton: {
+      alignSelf: 'stretch',
+      marginTop: Spacing.xl,
+    },
   });

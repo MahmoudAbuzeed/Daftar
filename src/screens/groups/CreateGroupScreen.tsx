@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { awardAchievement, checkSocialButterfly } from '../../lib/achievements';
 import { useAuth } from '../../lib/auth-context';
+import { useSubscription } from '../../lib/subscription-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Spacing, Radius, FontFamily } from '../../theme';
@@ -46,6 +47,7 @@ function generateInviteCode(): string {
 export default function CreateGroupScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { canPerform } = useSubscription();
   const { colors, isDark } = useAppTheme();
   const alert = useAlert();
   const insets = useSafeAreaInsets();
@@ -63,6 +65,15 @@ export default function CreateGroupScreen({ navigation }: Props) {
   const handleCreate = async () => {
     if (!user || !isValid) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Enforce free-tier group limit
+    const usage = await canPerform('group_create');
+    if (!usage.allowed) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      navigation.replace('Paywall', { trigger: 'group_limit' });
+      return;
+    }
+
     setSaving(true);
 
     try {

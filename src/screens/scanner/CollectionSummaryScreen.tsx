@@ -34,8 +34,8 @@ import { useAlert } from '../../hooks/useAlert';
 import {
   generateReminder,
   generateMultiDebtorNotification,
-  shareViaWhatsApp,
 } from '../../utils/whatsapp';
+import { useWhatsAppReminder } from '../../hooks/useWhatsAppReminder';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CollectionSummary'>;
 
@@ -92,6 +92,7 @@ export default function CollectionSummaryScreen({ navigation, route }: Props) {
   const alert = useAlert();
   const { groupId, expenseId } = route.params;
 
+  const sendReminder = useWhatsAppReminder();
   const [expense, setExpense] = useState<Expense | null>(null);
   const [debtors, setDebtors] = useState<DebtorInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,7 +169,7 @@ export default function CollectionSummaryScreen({ navigation, route }: Props) {
       currency,
       lang
     );
-    shareViaWhatsApp(message, debtor.phone || undefined);
+    sendReminder(message, debtor.phone || undefined);
   };
 
   const remindAll = () => {
@@ -186,7 +187,7 @@ export default function CollectionSummaryScreen({ navigation, route }: Props) {
       description,
       lang
     );
-    shareViaWhatsApp(message);
+    sendReminder(message);
   };
 
   const openSettleModal = (debtor: DebtorInfo) => {

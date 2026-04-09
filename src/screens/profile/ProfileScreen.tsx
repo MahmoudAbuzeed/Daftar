@@ -17,7 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { MoonIcon, GlobeAltIcon, CurrencyDollarIcon, StarIcon, InformationCircleIcon, ArrowRightOnRectangleIcon } from 'react-native-heroicons/solid';
+import { MoonIcon, GlobeAltIcon, CurrencyDollarIcon, StarIcon, InformationCircleIcon, ArrowRightOnRectangleIcon, ArrowDownTrayIcon } from 'react-native-heroicons/solid';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
@@ -359,8 +359,30 @@ export default function ProfileScreen() {
               </BouncyPressable>
             </AnimatedListItem>
 
-            {/* About */}
+            {/* Data Export */}
             <AnimatedListItem index={settingsItems.length + 2}>
+              <BouncyPressable onPress={() => navigation.navigate('DataExport')}>
+                <ThemedCard style={styles.settingRowCard}>
+                  <View style={styles.settingRow}>
+                    <View style={styles.settingLeft}>
+                      <LinearGradient
+                        colors={colors.successGradient}
+                        style={styles.settingIcon}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <ArrowDownTrayIcon size={20} color="#FFFFFF" strokeWidth={2.5} />
+                      </LinearGradient>
+                      <Text style={styles.settingLabel}>{t('export.menuLabel')}</Text>
+                    </View>
+                    <Ionicons name={chevronForward() as any} size={16} color={colors.textTertiary} />
+                  </View>
+                </ThemedCard>
+              </BouncyPressable>
+            </AnimatedListItem>
+
+            {/* About */}
+            <AnimatedListItem index={settingsItems.length + 3}>
               <BouncyPressable onPress={() => navigation.navigate('About')}>
                 <ThemedCard style={styles.settingRowCard}>
                   <View style={styles.settingRow}>

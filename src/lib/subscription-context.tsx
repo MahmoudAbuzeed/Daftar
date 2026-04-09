@@ -11,7 +11,7 @@ export const FREE_LIMITS: TierLimits = {
   maxGroups: 5,
   maxReceiptScans: Infinity,
   maxLedgerContacts: 20,
-  maxWhatsAppReminders: Infinity,
+  maxWhatsAppReminders: 10,
   hasDataExport: false,
   hasAnalytics: false,
   hasRecurringExpenses: false,

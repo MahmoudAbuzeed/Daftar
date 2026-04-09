@@ -60,6 +60,7 @@ import SearchScreen from '../screens/search/SearchScreen';
 import AddFriendsScreen from '../screens/friends/AddFriendsScreen';
 import AnalyticsScreen from '../screens/analytics/AnalyticsScreen';
 import RecurringExpensesScreen from '../screens/groups/RecurringExpensesScreen';
+import DataExportScreen from '../screens/profile/DataExportScreen';
 import AboutScreen from '../screens/legal/AboutScreen';
 import PrivacyPolicyScreen from '../screens/legal/PrivacyPolicyScreen';
 import TermsScreen from '../screens/legal/TermsScreen';
@@ -102,6 +103,7 @@ export type RootStackParamList = {
   Activity: { groupId?: string };
   GroupChat: { groupId: string };
   Achievements: undefined;
+  DataExport: undefined;
   About: undefined;
   PrivacyPolicy: undefined;
   Terms: undefined;
@@ -388,6 +390,11 @@ function AppStack() {
         name="Achievements"
         component={AchievementsScreen}
         options={{ headerShown: false }}
+      />
+      <RootStack.Screen
+        name="DataExport"
+        component={DataExportScreen}
+        options={{ title: t('export.title') }}
       />
       <RootStack.Screen
         name="About"

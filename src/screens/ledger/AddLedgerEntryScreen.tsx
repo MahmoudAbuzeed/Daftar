@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { useAuth } from '../../lib/auth-context';
+import { useSubscription, FREE_LIMITS } from '../../lib/subscription-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { supabase } from '../../lib/supabase';
 import { Spacing, Radius, FontFamily } from '../../theme';
@@ -33,6 +34,7 @@ type Direction = 'i_owe' | 'they_owe';
 export default function AddLedgerEntryScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { isPro } = useSubscription();
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
@@ -56,6 +58,27 @@ export default function AddLedgerEntryScreen({ navigation }: Props) {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Enforce free-tier ledger contacts limit
+    if (!isPro) {
+      try {
+        const trimmedName = contactName.trim();
+        const { data: existing } = await supabase
+          .from('ledger_entries')
+          .select('contact_name')
+          .eq('user_id', profile.id);
+        const distinct = new Set((existing || []).map((e: any) => e.contact_name));
+        const isNewContact = !distinct.has(trimmedName);
+        if (isNewContact && distinct.size >= FREE_LIMITS.maxLedgerContacts) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          navigation.replace('Paywall', { trigger: 'ledger_limit' });
+          return;
+        }
+      } catch {
+        // Fail open — let the insert proceed
+      }
+    }
+
     setSaving(true);
 
     try {

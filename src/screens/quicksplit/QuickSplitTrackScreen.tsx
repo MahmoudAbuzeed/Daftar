@@ -22,8 +22,8 @@ import { formatCurrency } from '../../utils/balance';
 import {
   generateReminder,
   generateMultiDebtorNotification,
-  shareViaWhatsApp,
 } from '../../utils/whatsapp';
+import { useWhatsAppReminder } from '../../hooks/useWhatsAppReminder';
 import { Spacing, Radius, FontFamily } from '../../theme';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import FunButton from '../../components/FunButton';
@@ -66,6 +66,7 @@ export default function QuickSplitTrackScreen({ navigation, route }: Props) {
   const entrance = useScreenEntrance();
   const { quickSplitId } = route.params;
 
+  const sendReminder = useWhatsAppReminder();
   const [split, setSplit] = useState<QuickSplit | null>(null);
   const [participants, setParticipants] = useState<QuickSplitParticipant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +119,7 @@ export default function QuickSplitTrackScreen({ navigation, route }: Props) {
     const lang = (i18n.language === 'ar' ? 'ar' : 'en') as 'en' | 'ar';
     const payerName = profile?.display_name || 'Someone';
     const message = generateReminder(payerName, p.name, p.amount, currency, lang);
-    shareViaWhatsApp(message, p.phone || undefined);
+    sendReminder(message, p.phone || undefined);
   };
 
   const remindAll = () => {
@@ -135,7 +136,7 @@ export default function QuickSplitTrackScreen({ navigation, route }: Props) {
       description,
       lang
     );
-    shareViaWhatsApp(message);
+    sendReminder(message);
   };
 
   if (loading) {

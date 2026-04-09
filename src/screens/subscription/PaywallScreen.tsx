@@ -139,8 +139,12 @@ export default function PaywallScreen({ navigation, route }: Props) {
         });
       case 'ledger_limit':
         return t('subscription.ledgerLimitBody');
+      case 'whatsapp_limit':
+        return t('subscription.whatsappLimitBody');
+      case 'analytics':
+        return t('subscription.analyticsBody');
       case 'export':
-        return t('subscription.exportTitle');
+        return t('subscription.exportBody');
       default:
         return t('subscription.generalTitle');
     }
