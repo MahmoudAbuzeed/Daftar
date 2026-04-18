@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, StatusBar, I18nManager } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { colors } from '../theme/colors';
+import { useTranslation } from 'react-i18next';
+import { FontFamily } from '../theme';
+import { displayFor } from '../theme/fonts';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -22,6 +24,7 @@ const AnimatedSplashScreen: React.FC<AnimatedSplashScreenProps> = ({
   const lottieRef = useRef<LottieView>(null);
   const [isVisible, setIsVisible] = useState(true);
   const startTime = useRef(Date.now());
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     if (lottieRef.current) {
@@ -41,6 +44,9 @@ const AnimatedSplashScreen: React.FC<AnimatedSplashScreenProps> = ({
 
   if (!isVisible) return null;
 
+  const direction = I18nManager.isRTL ? 'rtl' : 'ltr';
+  const titleFont = displayFor(i18n.language, 'bold');
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -59,8 +65,12 @@ const AnimatedSplashScreen: React.FC<AnimatedSplashScreenProps> = ({
 
       {/* Text overlay - rendered on top of the Lottie placeholder shapes */}
       <View style={styles.textOverlay}>
-        <Text style={styles.appName}>Fifti</Text>
-        <Text style={styles.tagline}>Split Fair</Text>
+        <Text style={[styles.appName, { fontFamily: titleFont, writingDirection: direction }]}>
+          {t('app_name')}
+        </Text>
+        <Text style={[styles.tagline, { writingDirection: direction }]}>
+          {t('auth.taglineShort')}
+        </Text>
       </View>
     </View>
   );
@@ -85,20 +95,18 @@ const styles = StyleSheet.create({
     top: SCREEN_HEIGHT * 0.47,
   },
   appName: {
-    fontFamily: 'Poppins-Bold',
-    fontSize: 36,
-    fontWeight: '700',
+    fontSize: 44,
     color: '#0D0D14',
-    letterSpacing: 2,
+    letterSpacing: -0.6,
+    lineHeight: 48,
   },
   tagline: {
-    fontFamily: 'Poppins-Medium',
-    fontSize: 16,
-    fontWeight: '500',
+    fontFamily: FontFamily.bodySemibold,
+    fontSize: 12,
     color: '#1DB954',
-    letterSpacing: 4,
+    letterSpacing: 3,
     textTransform: 'uppercase',
-    marginTop: 4,
+    marginTop: 8,
   },
 });
 

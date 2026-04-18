@@ -10,16 +10,25 @@ export interface ThemeColors {
   bgCard: string;
   bgSubtle: string;
   bgGlass: string;
+  /** Warm off-white surface for editorial cards — distinct from bgCard. */
+  paper: string;
 
   text: string;
   textSecondary: string;
   textTertiary: string;
   textOnPrimary: string;
+  /** Deep ink for editorial titles — slightly darker than `text`. */
+  ink: string;
 
   primary: string;
   primaryLight: string;
   primaryDark: string;
   primarySurface: string;
+
+  /** Brand chrome — alias for primary. Use for app chrome and primary CTAs. */
+  brand: string;
+  brandLight: string;
+  brandDark: string;
 
   accent: string;
   accentLight: string;
@@ -46,7 +55,15 @@ export interface ThemeColors {
 
   statusBarStyle: 'light-content' | 'dark-content';
 
+  /** Money owed *to* the user — financial green, distinct from `success`. */
+  owed: string;
+  /** Money the user *owes* — financial red, distinct from `danger`. */
+  owe: string;
+  /** Neutral charcoal/paper for "all clear" pills. */
+  settled: string;
+  /** @deprecated Use `owed`. Kept for back-compat. */
   positive: string;
+  /** @deprecated Use `owe`. Kept for back-compat. */
   negative: string;
   kicker: string;
 
@@ -64,16 +81,22 @@ export const lightPalette: ThemeColors = {
   bgCard: '#FFFFFF',
   bgSubtle: '#F5F5F5',
   bgGlass: 'rgba(255,255,255,0.95)',
+  paper: '#FBF8F1',
 
   text: '#1A1A2E',
   textSecondary: '#555770',
   textTertiary: '#8E8EA0',
   textOnPrimary: '#FFFFFF',
+  ink: '#15131A',
 
   primary: '#1DB954',
   primaryLight: '#4AD97B',
   primaryDark: '#17A347',
   primarySurface: '#E8F9EF',
+
+  brand: '#1DB954',
+  brandLight: '#4AD97B',
+  brandDark: '#17A347',
 
   accent: '#FF9500',
   accentLight: '#FFBB54',
@@ -100,6 +123,9 @@ export const lightPalette: ThemeColors = {
 
   statusBarStyle: 'dark-content',
 
+  owed: '#15A24A',
+  owe: '#D9342C',
+  settled: '#8E8EA0',
   positive: '#1DB954',
   negative: '#E53E3E',
   kicker: '#FF9500',
@@ -112,22 +138,28 @@ export const lightPalette: ThemeColors = {
   dangerGradient: ['#E53E3E', '#FC8181'],
 };
 
-// "Night Mode" — clean dark with green accents
+// "Night Ledger" — warm dark with paper undertones and brass accents
 export const darkPalette: ThemeColors = {
-  bg: '#0D0D14',
-  bgCard: '#1A1A28',
-  bgSubtle: '#151520',
+  bg: '#0E0D12',
+  bgCard: '#1A1822',
+  bgSubtle: '#15131A',
   bgGlass: 'rgba(255,255,255,0.04)',
+  paper: '#15131A',
 
   text: '#F0F0F5',
   textSecondary: 'rgba(240,240,245,0.6)',
   textTertiary: 'rgba(240,240,245,0.38)',
   textOnPrimary: '#FFFFFF',
+  ink: '#FBF8F1',
 
   primary: '#1DB954',
   primaryLight: '#4AD97B',
   primaryDark: '#17A347',
   primarySurface: 'rgba(29,185,84,0.15)',
+
+  brand: '#1DB954',
+  brandLight: '#4AD97B',
+  brandDark: '#17A347',
 
   accent: '#FF9500',
   accentLight: '#FFD080',
@@ -142,23 +174,26 @@ export const darkPalette: ThemeColors = {
 
   iconButtonBg: 'rgba(255,252,247,0.06)',
   iconButtonBorder: 'rgba(255,255,255,0.10)',
-  tabBarDockBg: 'rgba(6,15,13,0.94)',
+  tabBarDockBg: 'rgba(8,7,12,0.94)',
 
   shadowColor: '#000000',
   overlay: 'rgba(13,13,20,0.7)',
 
-  tabBarBg: '#0A0A12',
+  tabBarBg: '#0A0810',
   tabBarBorder: 'rgba(255,255,255,0.06)',
   tabActive: '#4AD97B',
   tabInactive: 'rgba(240,240,245,0.28)',
 
   statusBarStyle: 'light-content',
 
+  owed: '#5BE08E',
+  owe: '#FC8181',
+  settled: 'rgba(240,240,245,0.45)',
   positive: '#4AD97B',
   negative: '#FC8181',
-  kicker: 'rgba(255,149,0,0.7)',
+  kicker: 'rgba(255,149,0,0.78)',
 
-  headerGradient: ['#0D0D14', '#151520', '#1A1A28'],
+  headerGradient: ['#0E0D12', '#15131A', '#1A1822'],
   primaryGradient: ['#17A347', '#1DB954'],
   cardGradient: ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)'],
   accentGradient: ['#E08600', '#FF9500', '#FFBB54'],

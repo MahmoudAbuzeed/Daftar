@@ -5,39 +5,60 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StatusBar,
   Animated,
-  Dimensions,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Group, Expense, GroupMember, Balance, User } from '../../types/database';
-import { simplifyDebts, formatCurrency } from '../../utils/balance';
-import { Spacing, Radius, FontFamily } from '../../theme';
+import { simplifyDebts } from '../../utils/balance';
+import { Spacing, Radius, FontFamily, tabularNums } from '../../theme';
+import { displayFor } from '../../theme/fonts';
 import { generateReminder } from '../../utils/whatsapp';
 import { useWhatsAppReminder } from '../../hooks/useWhatsAppReminder';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
+import StateScreen from '../../components/StateScreen';
+import EmptyState from '../../components/EmptyState';
+import AmountText from '../../components/AmountText';
+import SectionDivider from '../../components/SectionDivider';
 import useFabFloat from '../../hooks/useFabFloat';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
-const { width: SW } = Dimensions.get('window');
 
 interface SimplifiedDebt extends Balance {
   from_user_data?: User;
   to_user_data?: User;
+}
+
+// Avatar gradient hash for member initials
+const AVATAR_GRADIENTS: [string, string][] = [
+  ['#0D9488', '#14B8A6'],
+  ['#7C3AED', '#A78BFA'],
+  ['#DB2777', '#F472B6'],
+  ['#2563EB', '#60A5FA'],
+  ['#D97706', '#FBBF24'],
+  ['#059669', '#34D399'],
+];
+function avatarGradient(name: string): [string, string] {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+}
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
 }
 
 export default function GroupDetailScreen({ route, navigation }: Props) {
@@ -54,6 +75,7 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
   const [debts, setDebts] = useState<SimplifiedDebt[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const headerBounce = useRef(new Animated.Value(0)).current;
   const fabFloat = useFabFloat();
@@ -64,43 +86,52 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     }).start();
   }, []);
 
-  // Add activity + scan + settings buttons to header
+  // Header actions: primary scan (brass) + secondary outlined icon buttons
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity
             onPress={() => navigation.navigate('Activity', { groupId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={[styles.headerIconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.iconButtonBorder }]}
           >
-            <Ionicons name="time-outline" size={22} color={colors.textSecondary} />
+            <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('GroupChat', { groupId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={[styles.headerIconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.iconButtonBorder }]}
           >
-            <Ionicons name="chatbubble-outline" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ScanReceipt', { groupId })}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="scan-outline" size={22} color={colors.primary} />
+            <Ionicons name="chatbubble-outline" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('GroupSettings', { groupId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={[styles.headerIconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.iconButtonBorder }]}
           >
-            <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+            <Ionicons name="settings-outline" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
+          {/* Primary action: Scan — brass gradient circle */}
+          <BouncyPressable onPress={() => navigation.navigate('ScanReceipt', { groupId })} scaleDown={0.92}>
+            <LinearGradient
+              colors={colors.accentGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.headerPrimaryBtn, { shadowColor: colors.accent }]}
+            >
+              <Ionicons name="scan-outline" size={18} color="#FFFFFF" />
+            </LinearGradient>
+          </BouncyPressable>
         </View>
       ),
     });
-  }, [navigation, groupId, colors]);
+  }, [navigation, groupId, colors, styles]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
+      setError(null);
       const { data: groupData, error: groupError } = await supabase.from('groups').select('*').eq('id', groupId).single();
       if (groupError) throw groupError;
       setGroup(groupData);
@@ -140,13 +171,13 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 
       const simplified = simplifyDebts(rawBalances);
       setDebts(simplified.map((d) => ({ ...d, from_user_data: userMap.get(d.from_user), to_user_data: userMap.get(d.to_user) })));
-    } catch (err) {
-      // Pull to refresh will retry
+    } catch (err: any) {
+      setError(err.message || t('common.error'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user, groupId, navigation]);
+  }, [user, groupId, navigation, t]);
 
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
   const onRefresh = useCallback(() => { setRefreshing(true); fetchData(); }, [fetchData]);
@@ -157,52 +188,66 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     return t('common.unknown');
   };
 
-  // ── Render: Balance summary bar ───────────────────────────────
-  const renderQuickBalance = () => {
-    if (debts.length === 0) {
-      return (
-        <Animated.View style={{ opacity: headerBounce, transform: [{ scale: headerBounce.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }}>
-          <LinearGradient colors={colors.headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.balanceBar}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.successLight} style={{ marginRight: 8 }} />
-            <Text style={styles.balanceBarSettled}>{t('groups.settled_up')}</Text>
-          </LinearGradient>
-        </Animated.View>
-      );
-    }
+  // ── Hero balance card ────────────────────────────────────────
+  const renderHero = () => {
     const userDebts = debts.filter((d) => d.from_user === user?.id);
     const userCredits = debts.filter((d) => d.to_user === user?.id);
     const totalOwed = userDebts.reduce((s, d) => s + d.net_amount, 0);
     const totalOwedToYou = userCredits.reduce((s, d) => s + d.net_amount, 0);
+    const net = totalOwedToYou - totalOwed;
+    const isSettled = Math.abs(net) < 0.01;
+
     return (
-      <Animated.View style={{ opacity: headerBounce, transform: [{ translateY: headerBounce.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-        <LinearGradient colors={colors.headerGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.balanceBar}>
-          {totalOwed > 0 && (
-            <BouncyPressable onPress={() => navigation.navigate('GroupBalances', { groupId })} scaleDown={0.95}>
-              <View style={styles.balanceChip}>
-                <Ionicons name="arrow-up-circle-outline" size={16} color={colors.dangerLight} style={{ marginRight: 4 }} />
-                <Text style={styles.balanceChipLabelRed}>{t('groups.you_owe')}</Text>
-                <Text style={styles.balanceChipAmountRed}>{formatCurrency(totalOwed, group?.currency || 'EGP')}</Text>
-              </View>
-            </BouncyPressable>
-          )}
-          {totalOwedToYou > 0 && (
-            <BouncyPressable onPress={() => navigation.navigate('GroupBalances', { groupId })} scaleDown={0.95}>
-              <View style={styles.balanceChip}>
-                <Ionicons name="arrow-down-circle-outline" size={16} color={colors.successLight} style={{ marginRight: 4 }} />
-                <Text style={styles.balanceChipLabelGreen}>{t('groups.owes_you')}</Text>
-                <Text style={styles.balanceChipAmountGreen}>{formatCurrency(totalOwedToYou, group?.currency || 'EGP')}</Text>
-              </View>
-            </BouncyPressable>
-          )}
-          {totalOwed === 0 && totalOwedToYou === 0 && (
-            <Text style={styles.balanceBarSettled}>{t('groups.settled_up')}</Text>
-          )}
+      <Animated.View
+        style={{
+          opacity: headerBounce,
+          transform: [{ translateY: headerBounce.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+        }}
+      >
+        <LinearGradient
+          colors={isDark ? colors.headerGradient : ['#FBF8F1', '#FFFFFF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <Text style={styles.heroKicker}>
+            {isSettled ? t('groups.settled_up') : net >= 0 ? t('groups.you_are_owed') : t('groups.you_owe_total')}
+          </Text>
+          <AmountText
+            amount={Math.abs(net)}
+            currency={group?.currency || 'EGP'}
+            variant="display"
+            tone={isSettled ? 'neutral' : net >= 0 ? 'owed' : 'owe'}
+            signMode="absolute"
+          />
+          {!isSettled ? (
+            <View style={styles.heroBreakdown}>
+              {totalOwed > 0 ? (
+                <BouncyPressable onPress={() => navigation.navigate('GroupBalances', { groupId })} scaleDown={0.96}>
+                  <View style={styles.heroChip}>
+                    <View style={[styles.heroDot, { backgroundColor: colors.owe }]} />
+                    <Text style={styles.heroChipLabel}>{t('groups.you_owe')}</Text>
+                    <AmountText amount={totalOwed} currency={group?.currency || 'EGP'} variant="inline" tone="owe" signMode="absolute" />
+                  </View>
+                </BouncyPressable>
+              ) : null}
+              {totalOwedToYou > 0 ? (
+                <BouncyPressable onPress={() => navigation.navigate('GroupBalances', { groupId })} scaleDown={0.96}>
+                  <View style={styles.heroChip}>
+                    <View style={[styles.heroDot, { backgroundColor: colors.owed }]} />
+                    <Text style={styles.heroChipLabel}>{t('groups.owes_you')}</Text>
+                    <AmountText amount={totalOwedToYou} currency={group?.currency || 'EGP'} variant="inline" tone="owed" signMode="absolute" />
+                  </View>
+                </BouncyPressable>
+              ) : null}
+            </View>
+          ) : null}
         </LinearGradient>
       </Animated.View>
     );
   };
 
-  // ── Render: Compact debt row (shown inline above expenses) ────
+  // ── Compact debt list above expenses ──────────────────────────
   const renderDebtSection = () => {
     if (debts.length === 0) return null;
     return (
@@ -223,7 +268,9 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
                 {' → '}
                 <Text style={styles.debtRowName}>{toName}</Text>
               </Text>
-              <Text style={styles.debtRowAmount}>{formatCurrency(item.net_amount, group?.currency || 'EGP')}</Text>
+              <Text style={[styles.debtRowAmount, tabularNums]}>
+                {(group?.currency || 'EGP')} {item.net_amount.toFixed(2)}
+              </Text>
               <TouchableOpacity
                 style={styles.debtRowRemind}
                 onPress={() => {
@@ -241,34 +288,46 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  // ── Render: Expense card (simplified) ─────────────────────────
+  // ── Expense card with payer avatar ────────────────────────────
   const renderExpenseItem = ({ item, index }: { item: Expense; index: number }) => {
-    const paidByName = item.paid_by === user?.id ? t('common.you') : item.paid_by_user?.display_name || t('common.unknown');
+    const isMine = item.paid_by === user?.id;
+    const paidByName = isMine ? t('common.you') : item.paid_by_user?.display_name || t('common.unknown');
     const date = new Date(item.created_at);
     const dateStr = `${date.getDate()}/${date.getMonth() + 1}`;
+    const grad = avatarGradient(paidByName);
+
     return (
       <AnimatedListItem index={index}>
         <BouncyPressable onPress={() => {}} scaleDown={0.98}>
           <ThemedCard style={styles.expenseCard}>
             <View style={styles.expenseLeft}>
-              <LinearGradient colors={colors.primaryGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.categoryDot}>
-                <Ionicons name="receipt-outline" size={14} color="#FFFFFF" />
+              <LinearGradient colors={grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.payerAvatar}>
+                <Text style={[styles.payerAvatarText, { fontFamily: displayFor(i18n.language, 'bold') }]}>
+                  {initials(paidByName)}
+                </Text>
               </LinearGradient>
               <View style={styles.expenseInfo}>
                 <Text style={styles.expenseDescription} numberOfLines={1}>{item.description}</Text>
-                <Text style={styles.expenseMeta}>
-                  {paidByName} {'\u2022'} {dateStr}{item.category ? ` \u2022 ${item.category}` : ''}
+                <Text style={styles.expenseMeta} numberOfLines={1}>
+                  {paidByName} {t('expenses.paid')} {'\u2022'} {dateStr}
+                  {item.category ? ` \u2022 ${item.category}` : ''}
                 </Text>
               </View>
             </View>
-            <Text style={styles.expenseAmount}>{formatCurrency(item.total_amount, group?.currency || 'EGP')}</Text>
+            <AmountText
+              amount={item.total_amount}
+              currency={group?.currency || 'EGP'}
+              variant="amount"
+              tone={isMine ? 'owed' : 'neutral'}
+              signMode="absolute"
+            />
           </ThemedCard>
         </BouncyPressable>
       </AnimatedListItem>
     );
   };
 
-  // ── Loading ───────────────────────────────────────────────────
+  // ── Loading / error states ────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.root}>
@@ -278,36 +337,39 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  // ── Main render ───────────────────────────────────────────────
+  if (error) {
+    return <StateScreen variant="error" body={error} onRetry={fetchData} />;
+  }
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       {isDark && <LinearGradient colors={colors.headerGradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} />}
 
-      {renderQuickBalance()}
+      {renderHero()}
 
       <FlatList
         data={expenses}
         keyExtractor={(item) => item.id}
         renderItem={renderExpenseItem}
         contentContainerStyle={expenses.length === 0 ? styles.emptyList : styles.list}
-        ListHeaderComponent={renderDebtSection}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconWrap}>
-              <LinearGradient colors={colors.primaryGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.emptyIconCircle}>
-                <Ionicons name="receipt-outline" size={32} color="#FFFFFF" />
-              </LinearGradient>
-            </View>
-            <Text style={styles.emptyTitle}>{t('expenses.no_expenses')}</Text>
-            <Text style={styles.emptySubtitle}>{t('expenses.tapToAdd')}</Text>
+        ListHeaderComponent={
+          <View>
+            {renderDebtSection()}
+            {expenses.length > 0 ? <SectionDivider label={t('groups.expenses', 'Expenses')} variant="subtle" /> : null}
           </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="receipt-outline"
+            title={t('expenses.no_expenses')}
+            body={t('expenses.tapToAdd')}
+          />
         }
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Single FAB → Add Expense */}
       <Animated.View style={[styles.fab, { transform: [{ translateY: fabFloat }] }]}>
         <BouncyPressable onPress={() => navigation.navigate('AddExpense', { groupId })}>
           <LinearGradient colors={colors.primaryGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fabGradient}>
@@ -322,26 +384,80 @@ export default function GroupDetailScreen({ route, navigation }: Props) {
 const createStyles = (c: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: c.bg },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-    // Balance bar
-    balanceBar: {
-      flexDirection: 'row', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg,
-      gap: Spacing.md, justifyContent: 'center', alignItems: 'center',
+    headerIconBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
-    balanceChip: {
-      flexDirection: 'row', alignItems: 'center', gap: 4,
-      backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full,
+    headerPrimaryBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 10,
+      elevation: 8,
     },
-    balanceChipLabelRed: { fontSize: 13, color: c.dangerLight, fontFamily: FontFamily.body },
-    balanceChipAmountRed: { fontSize: 15, color: c.dangerLight, fontFamily: FontFamily.bodyBold },
-    balanceChipLabelGreen: { fontSize: 13, color: c.successLight, fontFamily: FontFamily.body },
-    balanceChipAmountGreen: { fontSize: 15, color: c.successLight, fontFamily: FontFamily.bodyBold },
-    balanceBarSettled: { fontSize: 15, color: '#F4F0E8', fontFamily: FontFamily.bodySemibold, opacity: 0.8 },
 
-    // Debt section (compact inline)
+    // Hero balance card
+    hero: {
+      paddingHorizontal: Spacing.gutter,
+      paddingTop: Spacing.lg,
+      paddingBottom: Spacing.xl,
+      marginHorizontal: Spacing.lg,
+      marginTop: Spacing.md,
+      borderRadius: Radius.xl,
+      borderWidth: 1,
+      borderColor: isDark ? c.border : 'rgba(255,149,0,0.2)',
+      gap: Spacing.sm,
+    },
+    heroKicker: {
+      fontFamily: FontFamily.bodySemibold,
+      fontSize: 10,
+      letterSpacing: 2.4,
+      textTransform: 'uppercase',
+      color: c.kicker,
+      marginBottom: Spacing.xs,
+    },
+    heroBreakdown: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      marginTop: Spacing.md,
+      flexWrap: 'wrap',
+    },
+    heroChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.65)',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 8,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      borderColor: isDark ? c.border : c.borderLight,
+    },
+    heroDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    heroChipLabel: {
+      fontFamily: FontFamily.bodyMedium,
+      fontSize: 12,
+      color: c.textSecondary,
+    },
+
+    // Debt section
     debtSection: {
-      marginBottom: Spacing.lg,
+      marginHorizontal: Spacing.lg,
+      marginTop: Spacing.xl,
+      marginBottom: Spacing.md,
       paddingBottom: Spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: c.borderLight,
@@ -354,14 +470,14 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     debtSectionTitle: {
       fontFamily: FontFamily.bodySemibold,
-      fontSize: 12,
-      letterSpacing: 2,
+      fontSize: 10,
+      letterSpacing: 2.2,
       color: c.textTertiary,
       textTransform: 'uppercase',
     },
     debtSectionLink: {
       fontFamily: FontFamily.bodySemibold,
-      fontSize: 13,
+      fontSize: 12,
       color: c.primary,
     },
     debtRow: {
@@ -373,7 +489,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     debtRowText: {
       flex: 1,
       fontFamily: FontFamily.body,
-      fontSize: 14,
+      fontSize: 13,
       color: c.textSecondary,
     },
     debtRowName: {
@@ -382,45 +498,45 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     debtRowAmount: {
       fontFamily: FontFamily.bodyBold,
-      fontSize: 14,
-      color: c.danger,
+      fontSize: 13,
+      color: c.owe,
     },
     debtRowRemind: {
-      padding: 4,
+      padding: 6,
       borderRadius: Radius.full,
       backgroundColor: isDark ? 'rgba(37,211,102,0.1)' : '#E8F8EE',
     },
 
-    // List
-    list: { padding: Spacing.xl, paddingBottom: 100 },
-    emptyList: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
-    emptyContainer: { alignItems: 'center', paddingVertical: 40, gap: Spacing.md },
-    emptyIconWrap: { marginBottom: Spacing.sm },
-    emptyIconCircle: {
-      width: 64, height: 64, borderRadius: 32,
-      justifyContent: 'center', alignItems: 'center',
-      shadowColor: c.primary, shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
-    },
-    emptyTitle: { fontSize: 18, color: c.text, fontFamily: FontFamily.bodyBold, letterSpacing: -0.3 },
-    emptySubtitle: { fontSize: 14, color: c.textTertiary, fontFamily: FontFamily.body },
+    // Lists
+    list: { padding: Spacing.lg, paddingBottom: 100 },
+    emptyList: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
 
-    // Expense cards (simplified)
+    // Expense cards
     expenseCard: {
-      marginBottom: Spacing.md, flexDirection: 'row',
-      alignItems: 'center', justifyContent: 'space-between',
+      marginBottom: Spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
-    expenseLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: Spacing.md },
-    categoryDot: {
-      width: 34, height: 34, borderRadius: 11, marginRight: Spacing.md,
-      justifyContent: 'center', alignItems: 'center',
+    expenseLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginEnd: Spacing.md },
+    payerAvatar: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      marginEnd: Spacing.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    payerAvatarText: {
+      fontSize: 14,
+      color: '#FFFFFF',
+      letterSpacing: -0.4,
     },
     expenseInfo: { flex: 1 },
     expenseDescription: { fontFamily: FontFamily.bodySemibold, fontSize: 15, color: c.text },
     expenseMeta: { fontFamily: FontFamily.body, fontSize: 12, color: c.textTertiary, marginTop: 2 },
-    expenseAmount: { fontSize: 16, fontFamily: FontFamily.bodyBold, color: c.text, letterSpacing: -0.3 },
 
-    // FAB (single action)
+    // FAB
     fab: {
       position: 'absolute', bottom: 24, end: 20,
       shadowColor: c.primary, shadowOffset: { width: 0, height: 6 },

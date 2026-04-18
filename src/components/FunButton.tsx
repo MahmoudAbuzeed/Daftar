@@ -118,7 +118,7 @@ export default function FunButton({
                   {
                     color: textColorMap[variant],
                     fontSize: isSmall ? 14 : 16,
-                    marginLeft: icon ? 8 : 0,
+                    marginStart: icon ? 8 : 0,
                   },
                 ]}
               >

@@ -70,6 +70,8 @@ export const Spacing = {
   xxl: 24,
   xxxl: 32,
   huge: 48,
+  /** screen-edge gutter — change once, propagates everywhere */
+  gutter: 24,
 };
 
 export const Radius = {
@@ -79,9 +81,50 @@ export const Radius = {
   xl: 20,
   xxl: 24,
   full: 999,
+  /** semantic alias for card surfaces */
+  card: 20,
+  /** semantic alias for pills */
+  pill: 999,
 };
 
+/** Style fragment to apply tabular numerals — spread into any text style that renders amounts. */
+export const tabularNums = { fontVariant: ['tabular-nums'] as const };
+
 export const Typography = {
+  // ── Editorial display ─────────────────────────────────────
+  /** 56pt Cormorant — the single hero amount on a screen. Pair with kicker. */
+  amountHero: {
+    fontFamily: FontFamily.serifBold,
+    fontSize: 56,
+    letterSpacing: -1.8,
+    lineHeight: 60,
+    color: Colors.textPrimary,
+  },
+  /** 36pt Cormorant — secondary hero numbers (per-person, totals, balances). */
+  amountDisplay: {
+    fontFamily: FontFamily.serifBold,
+    fontSize: 36,
+    letterSpacing: -1,
+    lineHeight: 40,
+    color: Colors.textPrimary,
+  },
+  /** 32pt Cormorant — editorial screen titles, used in EditorialHeader. */
+  editorialTitle: {
+    fontFamily: FontFamily.serifBold,
+    fontSize: 32,
+    letterSpacing: -0.6,
+    lineHeight: 36,
+    color: Colors.textPrimary,
+  },
+  /** 11pt Poppins uppercase tracked — kicker label above editorial titles. */
+  kicker: {
+    fontFamily: FontFamily.bodySemibold,
+    fontSize: 10,
+    letterSpacing: 2.4,
+    color: Colors.accent,
+    textTransform: 'uppercase' as const,
+  },
+  // ── Legacy display variants (kept for back-compat) ────────
   heroTitle: {
     fontFamily: FontFamily.display,
     fontSize: 40,

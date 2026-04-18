@@ -10,6 +10,16 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
+import {
+  Cormorant_500Medium,
+  Cormorant_600SemiBold,
+  Cormorant_700Bold,
+} from '@expo-google-fonts/cormorant';
+import {
+  Tajawal_500Medium,
+  Tajawal_700Bold,
+  Tajawal_800ExtraBold,
+} from '@expo-google-fonts/tajawal';
 import { Ionicons } from '@expo/vector-icons';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { AuthProvider } from './src/lib/auth-context';
@@ -101,6 +111,12 @@ export default function App() {
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
+    Cormorant_500Medium,
+    Cormorant_600SemiBold,
+    Cormorant_700Bold,
+    Tajawal_500Medium,
+    Tajawal_700Bold,
+    Tajawal_800ExtraBold,
     ...Ionicons.font,
   });
 

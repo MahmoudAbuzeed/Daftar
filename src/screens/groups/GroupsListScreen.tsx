@@ -5,14 +5,9 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
-  StatusBar,
   Animated,
-  Easing,
-  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -26,22 +21,24 @@ import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { MainTabParamList, RootStackParamList } from '../../navigation/AppNavigator';
 import { Group } from '../../types/database';
-import { formatCurrency } from '../../utils/balance';
 import { Spacing, Radius, FontFamily } from '../../theme';
+import { displayFor } from '../../theme/fonts';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import FunButton from '../../components/FunButton';
 import ThemedCard from '../../components/ThemedCard';
 import BouncyPressable from '../../components/BouncyPressable';
-import useScreenEntrance from '../../hooks/useScreenEntrance';
+import PageScaffold from '../../components/PageScaffold';
+import EditorialHeader from '../../components/EditorialHeader';
+import EmptyState from '../../components/EmptyState';
+import BalancePill from '../../components/BalancePill';
+import SectionDivider from '../../components/SectionDivider';
 import useFabFloat from '../../hooks/useFabFloat';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'GroupsTab'>,
   NativeStackScreenProps<RootStackParamList, 'MainTabs'>
 >;
-
-const { width: SW } = Dimensions.get('window');
 
 interface GroupWithMeta extends Group {
   member_count: number;
@@ -50,28 +47,16 @@ interface GroupWithMeta extends Group {
 }
 
 export default function GroupsListScreen({ navigation }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
-  const entrance = useScreenEntrance();
   const fabFloat = useFabFloat();
 
   const [groups, setGroups] = useState<GroupWithMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Bouncing empty-state icon
-  const emptyBounce = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(emptyBounce, { toValue: -12, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(emptyBounce, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-    ).start();
-  }, []);
 
   const fetchGroups = useCallback(async () => {
     if (!user) return;
@@ -121,7 +106,6 @@ export default function GroupsListScreen({ navigation }: Props) {
         }
         return { ...group, member_count: memberCount, net_balance: Math.round(netBalance * 100) / 100, is_favorite: favMap.get(group.id) || false };
       });
-      // Sort: favorites first, then by created_at (already desc from query)
       enrichedGroups.sort((a, b) => (a.is_favorite === b.is_favorite ? 0 : a.is_favorite ? -1 : 1));
       setGroups(enrichedGroups);
     } catch (err: any) {
@@ -135,29 +119,9 @@ export default function GroupsListScreen({ navigation }: Props) {
   useFocusEffect(useCallback(() => { fetchGroups(); }, [fetchGroups]));
   const onRefresh = useCallback(() => { setRefreshing(true); fetchGroups(); }, [fetchGroups]);
 
-  const renderBalancePill = (balance: number, currency: string) => {
-    if (Math.abs(balance) < 0.01) {
-      return (
-        <View style={styles.pillSettled}>
-          <Ionicons name="checkmark-circle" size={12} color={colors.textTertiary} style={{ marginRight: 4 }} />
-          <Text style={styles.pillSettledText}>{t('groups.settled_up')}</Text>
-        </View>
-      );
-    }
-    const isPos = balance > 0;
-    return (
-      <View style={[styles.pill, isPos ? styles.pillPos : styles.pillNeg]}>
-        <Text style={[styles.pillText, { color: isPos ? colors.positive : colors.negative }]}>
-          {isPos ? '+' : '-'}{formatCurrency(Math.abs(balance), currency)}
-        </Text>
-      </View>
-    );
-  };
-
   const toggleFavorite = async (groupId: string, current: boolean) => {
     if (!user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Optimistic update
     setGroups((prev) => {
       const updated = prev.map((g) => g.id === groupId ? { ...g, is_favorite: !current } : g);
       updated.sort((a, b) => (a.is_favorite === b.is_favorite ? 0 : a.is_favorite ? -1 : 1));
@@ -181,13 +145,15 @@ export default function GroupsListScreen({ navigation }: Props) {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.cardIconText}>{item.name.charAt(0).toUpperCase()}</Text>
+              <Text style={[styles.cardIconText, { fontFamily: displayFor(i18n.language, 'bold') }]}>
+                {item.name.charAt(0).toUpperCase()}
+              </Text>
             </LinearGradient>
 
             <View style={styles.cardTitleBlock}>
               <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
               <View style={styles.cardSubRow}>
-                <Ionicons name="people" size={12} color={colors.primaryLight} />
+                <Ionicons name="people" size={12} color={colors.textTertiary} />
                 <Text style={styles.cardSub}>
                   {' '}{item.member_count} {t('groups.members').toLowerCase()}
                 </Text>
@@ -205,212 +171,142 @@ export default function GroupsListScreen({ navigation }: Props) {
                 color={item.is_favorite ? colors.accent : colors.textTertiary}
               />
             </TouchableOpacity>
-
-            {renderBalancePill(item.net_balance, item.currency)}
           </View>
 
-          {item.description ? (
-            <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
-          ) : null}
+          <View style={styles.cardBottom}>
+            {item.description ? (
+              <Text style={styles.cardDesc} numberOfLines={1}>{item.description}</Text>
+            ) : <View />}
+            <BalancePill amount={item.net_balance} currency={item.currency} compact />
+          </View>
         </ThemedCard>
       </BouncyPressable>
     </AnimatedListItem>
   );
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Animated.View style={[styles.emptyIconWrap, { transform: [{ translateY: emptyBounce }] }]}>
-        <LinearGradient
-          colors={[`${colors.primary}22`, `${colors.primary}08`]}
-          style={styles.emptyIconCircle}
-        >
-          <Ionicons name="people-outline" size={42} color={colors.primary} />
-        </LinearGradient>
-      </Animated.View>
-      <Text style={styles.emptyTitle}>{t('groups.no_groups')}</Text>
-      <Text style={styles.emptySub}>{t('groups.no_groups_subtitle')}</Text>
-      <FunButton
-        title={t('groups.createFirst')}
-        onPress={() => navigation.navigate('CreateGroup')}
-        icon={<Ionicons name="add-circle-outline" size={18} color="#FFFFFF" />}
-        style={{ marginTop: Spacing.xxl, paddingHorizontal: Spacing.xxxl, alignSelf: 'center' }}
-      />
+  const headerRight = (
+    <View style={styles.headerActions}>
+      <BouncyPressable onPress={() => navigation.navigate('QuickSplit')} scaleDown={0.92}>
+        <View style={styles.actionBtn}>
+          <Ionicons name="flash" size={16} color={isDark ? colors.accentLight : colors.accent} />
+        </View>
+      </BouncyPressable>
+      <BouncyPressable onPress={() => navigation.navigate('JoinGroup')} scaleDown={0.96}>
+        <View style={styles.joinBtn}>
+          <Ionicons
+            name="enter-outline"
+            size={14}
+            color={isDark ? colors.accentLight : colors.accent}
+          />
+          <Text style={styles.joinBtnText}>{t('groups.join')}</Text>
+        </View>
+      </BouncyPressable>
     </View>
   );
 
   if (loading) {
     return (
-      <View style={styles.root}>
-        <StatusBar barStyle={colors.statusBarStyle} />
+      <PageScaffold decor>
         <SkeletonList count={4} />
-      </View>
+      </PageScaffold>
     );
   }
 
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle={colors.statusBarStyle} />
-      {isDark && (
-        <LinearGradient
-          colors={colors.headerGradient}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0.3, y: 1 }}
-        />
+    <PageScaffold decor>
+      <EditorialHeader
+        kicker={t('groups.yourCircles')}
+        title={t('groups.title')}
+        rightAction={headerRight}
+      />
+
+      {error ? (
+        <View style={styles.errorBar}>
+          <Ionicons name="alert-circle" size={16} color={isDark ? '#FDBA74' : colors.danger} style={{ marginEnd: 8 }} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={fetchGroups}>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {groups.length > 0 && (
+        <SectionDivider label={t('groups.groupCount', { count: groups.length })} variant="subtle" />
       )}
-      <View style={styles.bgOrb} />
-      <View style={styles.bgOrbSmall} />
 
-      <SafeAreaView style={styles.safe}>
-        <Animated.View style={[styles.header, entrance.style]}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerKicker}>{t('groups.yourCircles')}</Text>
-            <Text style={styles.headerTitle}>{t('groups.title')}</Text>
-          </View>
-          <BouncyPressable onPress={() => navigation.navigate('JoinGroup')}>
-            <View style={styles.joinBtn}>
-              <Ionicons name="enter-outline" size={16} color={isDark ? colors.accentLight : colors.accent} style={{ marginRight: 4 }} />
-              <Text style={styles.joinBtnText}>{t('groups.join')}</Text>
-            </View>
-          </BouncyPressable>
-        </Animated.View>
+      <FlatList
+        data={groups}
+        keyExtractor={(item) => item.id}
+        renderItem={renderGroupCard}
+        ListEmptyComponent={
+          <EmptyState
+            icon="people-outline"
+            title={t('groups.no_groups')}
+            body={t('groups.no_groups_subtitle')}
+            action={
+              <FunButton
+                title={t('groups.createFirst')}
+                onPress={() => navigation.navigate('CreateGroup')}
+                icon={<Ionicons name="add-circle-outline" size={18} color="#FFFFFF" />}
+              />
+            }
+          />
+        }
+        contentContainerStyle={groups.length === 0 ? styles.emptyList : styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+      />
 
-        {error ? (
-          <View style={styles.errorBar}>
-            <Ionicons name="alert-circle" size={16} color={isDark ? '#FDBA74' : colors.danger} style={{ marginRight: 8 }} />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={fetchGroups}>
-              <Text style={styles.retryText}>{t('common.retry')}</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
-        {/* Quick Split hero button */}
-        <Animated.View style={entrance.style}>
-          <BouncyPressable onPress={() => navigation.navigate('QuickSplit')} scaleDown={0.97}>
-            <View style={styles.quickSplitCard}>
-              <LinearGradient
-                colors={colors.primaryGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.quickSplitIcon}
-              >
-                <Ionicons name="flash" size={20} color="#FFFFFF" />
-              </LinearGradient>
-              <View style={styles.quickSplitText}>
-                <Text style={styles.quickSplitTitle}>{t('quick_split.title')}</Text>
-                <Text style={styles.quickSplitHint}>{t('quick_split.heroHint')}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-            </View>
-          </BouncyPressable>
-        </Animated.View>
-
-        {groups.length > 0 && (
-          <View style={styles.listLabel}>
-            <View style={styles.listLabelLine} />
-            <Text style={styles.listLabelText}>{t('groups.groupCount', { count: groups.length })}</Text>
-            <View style={styles.listLabelLine} />
-          </View>
-        )}
-
-        <FlatList
-          data={groups}
-          keyExtractor={(item) => item.id}
-          renderItem={renderGroupCard}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={groups.length === 0 ? styles.emptyList : styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
-        />
-
-        <Animated.View style={[styles.fab, { transform: [{ translateY: fabFloat }] }]}>
-          <BouncyPressable onPress={() => navigation.navigate('CreateGroup')}>
-            <LinearGradient colors={colors.primaryGradient} style={styles.fabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Ionicons name="add" size={28} color="#FFFFFF" />
-            </LinearGradient>
-          </BouncyPressable>
-        </Animated.View>
-      </SafeAreaView>
-    </View>
+      <Animated.View style={[styles.fab, { transform: [{ translateY: fabFloat }] }]}>
+        <BouncyPressable onPress={() => navigation.navigate('CreateGroup')}>
+          <LinearGradient colors={colors.primaryGradient} style={styles.fabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <Ionicons name="add" size={28} color="#FFFFFF" />
+          </LinearGradient>
+        </BouncyPressable>
+      </Animated.View>
+    </PageScaffold>
   );
 }
 
 const createStyles = (c: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
-    root: { flex: 1, backgroundColor: c.bg },
-    safe: { flex: 1 },
-    loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-    bgOrb: {
-      position: 'absolute',
-      width: SW * 0.7,
-      height: SW * 0.7,
-      borderRadius: SW * 0.35,
-      backgroundColor: isDark ? 'rgba(27,122,108,0.06)' : 'rgba(13,148,136,0.04)',
-      top: -SW * 0.15,
-      left: -SW * 0.2,
-    },
-    bgOrbSmall: {
-      position: 'absolute',
-      width: SW * 0.35,
-      height: SW * 0.35,
-      borderRadius: SW * 0.175,
-      backgroundColor: isDark ? 'rgba(201,162,39,0.04)' : 'rgba(201,162,39,0.03)',
-      bottom: SW * 0.1,
-      right: -SW * 0.1,
-    },
-
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-end',
-      paddingHorizontal: Spacing.xxl,
-      paddingTop: Spacing.md,
-      paddingBottom: Spacing.lg,
-    },
-    headerLeft: { flex: 1, marginRight: Spacing.md },
-    headerKicker: {
-      fontFamily: FontFamily.bodySemibold,
-      fontSize: 10,
-      letterSpacing: 4,
-      color: c.kicker,
-      textTransform: 'uppercase',
-      marginBottom: Spacing.xs,
-    },
-    headerTitle: {
-      fontFamily: FontFamily.display,
-      fontSize: 32,
-      letterSpacing: -1,
-      color: c.text,
-    },
-    joinBtn: {
+    headerActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      gap: Spacing.sm,
+    },
+    actionBtn: {
+      width: 38,
+      height: 38,
       borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: isDark ? 'rgba(201,162,39,0.35)' : c.border,
       backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : c.bgCard,
-      marginBottom: 4,
-      shadowColor: c.shadowColor,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0 : 0.05,
-      shadowRadius: 6,
-      elevation: isDark ? 0 : 2,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    joinBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(201,162,39,0.35)' : c.border,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : c.bgCard,
     },
     joinBtnText: {
       fontFamily: FontFamily.bodyBold,
-      fontSize: 13,
+      fontSize: 12,
       color: isDark ? c.accentLight : c.accent,
-      letterSpacing: 0.5,
+      letterSpacing: 0.4,
     },
 
     errorBar: {
       backgroundColor: isDark ? 'rgba(234,88,12,0.12)' : '#FEF2F2',
       padding: Spacing.md,
-      marginHorizontal: Spacing.xl,
+      marginHorizontal: Spacing.gutter,
       marginBottom: Spacing.md,
       borderRadius: Radius.md,
       borderWidth: 1,
@@ -419,65 +315,10 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       alignItems: 'center',
     },
     errorText: { color: isDark ? '#FDBA74' : c.danger, fontSize: 13, fontFamily: FontFamily.body, flex: 1 },
-    retryText: { color: c.primaryLight, fontSize: 13, fontFamily: FontFamily.bodyBold, marginLeft: Spacing.md },
-
-    listLabel: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: Spacing.xxl,
-      marginBottom: Spacing.md,
-      gap: Spacing.md,
-    },
-    listLabelLine: { flex: 1, height: 1, backgroundColor: isDark ? c.borderLight : c.border },
-    listLabelText: {
-      fontFamily: FontFamily.bodySemibold,
-      fontSize: 10,
-      letterSpacing: 3,
-      color: c.textTertiary,
-      textTransform: 'uppercase',
-    },
-
-    quickSplitCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginHorizontal: Spacing.lg,
-      marginBottom: Spacing.lg,
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.lg,
-      borderRadius: Radius.xl,
-      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : c.bgCard,
-      borderWidth: 1,
-      borderColor: isDark ? c.border : c.borderLight,
-      gap: Spacing.md,
-      shadowColor: c.shadowColor,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: isDark ? 0 : 0.06,
-      shadowRadius: 8,
-      elevation: isDark ? 0 : 2,
-    },
-    quickSplitIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: Radius.md,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    quickSplitText: { flex: 1 },
-    quickSplitTitle: {
-      fontFamily: FontFamily.bodySemibold,
-      fontSize: 15,
-      color: c.text,
-      letterSpacing: -0.2,
-    },
-    quickSplitHint: {
-      fontFamily: FontFamily.body,
-      fontSize: 12,
-      color: c.textTertiary,
-      marginTop: 1,
-    },
+    retryText: { color: c.primary, fontSize: 13, fontFamily: FontFamily.bodyBold, marginStart: Spacing.md },
 
     list: { paddingHorizontal: Spacing.lg, paddingBottom: 160, gap: Spacing.md },
-    emptyList: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    emptyList: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
 
     cardTop: { flexDirection: 'row', alignItems: 'center' },
     cardIcon: {
@@ -488,12 +329,13 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       alignItems: 'center',
     },
     cardIconText: {
-      fontFamily: FontFamily.display,
-      fontSize: 22,
+      fontSize: 24,
       color: '#FFFFFF',
+      letterSpacing: -0.6,
+      lineHeight: 28,
     },
-    starBtn: { marginRight: Spacing.sm },
-    cardTitleBlock: { flex: 1, marginLeft: Spacing.lg },
+    starBtn: { paddingHorizontal: Spacing.sm },
+    cardTitleBlock: { flex: 1, marginStart: Spacing.lg },
     cardTitle: {
       fontFamily: FontFamily.bodySemibold,
       fontSize: 17,
@@ -510,65 +352,19 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       fontSize: 12,
       color: c.textSecondary,
     },
+    cardBottom: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: Spacing.md,
+      marginStart: 64,
+      gap: Spacing.md,
+    },
     cardDesc: {
+      flex: 1,
       fontFamily: FontFamily.body,
       fontSize: 13,
       color: c.textSecondary,
-      marginTop: Spacing.sm,
-      marginLeft: 64,
-    },
-
-    pill: {
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: Radius.full,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    pillPos: {
-      backgroundColor: isDark ? 'rgba(20,184,166,0.15)' : '#ECFDF5',
-      borderWidth: 1,
-      borderColor: isDark ? 'rgba(20,184,166,0.3)' : '#A7F3D0',
-    },
-    pillNeg: {
-      backgroundColor: isDark ? 'rgba(234,88,12,0.12)' : '#FEF2F2',
-      borderWidth: 1,
-      borderColor: isDark ? 'rgba(234,88,12,0.25)' : '#FECACA',
-    },
-    pillSettled: {
-      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: Radius.full,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    pillText: { fontFamily: FontFamily.bodyBold, fontSize: 13, letterSpacing: -0.2 },
-    pillSettledText: { fontFamily: FontFamily.bodySemibold, fontSize: 12, color: c.textSecondary },
-
-    emptyContainer: { alignItems: 'center', paddingHorizontal: Spacing.xxxl },
-    emptyIconWrap: { marginBottom: Spacing.xl },
-    emptyIconCircle: {
-      width: 96,
-      height: 96,
-      borderRadius: 32,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1.5,
-      borderColor: isDark ? c.border : c.borderLight,
-    },
-    emptyTitle: {
-      fontFamily: FontFamily.display,
-      fontSize: 20,
-      color: c.text,
-      marginBottom: Spacing.sm,
-    },
-    emptySub: {
-      fontFamily: FontFamily.body,
-      fontSize: 14,
-      color: c.textTertiary,
-      textAlign: 'center',
-      lineHeight: 22,
     },
 
     fab: {
