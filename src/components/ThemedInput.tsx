@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   icon: {
-    marginRight: Spacing.sm,
+    marginEnd: Spacing.sm,
   },
   input: {
     flex: 1,

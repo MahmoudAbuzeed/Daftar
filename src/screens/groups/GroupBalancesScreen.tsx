@@ -4,12 +4,10 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StatusBar,
   ScrollView,
   Animated,
   I18nManager,
@@ -17,7 +15,6 @@ import {
   AppStateStatus,
   Share,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -29,14 +26,19 @@ import { useAuth } from '../../lib/auth-context';
 import { useAppTheme, ThemeColors } from '../../lib/theme-context';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { Balance, User, PaymentMethod } from '../../types/database';
-import { simplifyDebts, formatCurrency } from '../../utils/balance';
-import { Spacing, Radius, FontFamily } from '../../theme';
+import { simplifyDebts } from '../../utils/balance';
+import { Spacing, Radius, FontFamily, tabularNums } from '../../theme';
+import { displayFor } from '../../theme/fonts';
 import AnimatedListItem from '../../components/AnimatedListItem';
 import FunButton from '../../components/FunButton';
 import ThemedCard from '../../components/ThemedCard';
 import ThemedInput from '../../components/ThemedInput';
 import BouncyPressable from '../../components/BouncyPressable';
-import useScreenEntrance from '../../hooks/useScreenEntrance';
+import PageScaffold from '../../components/PageScaffold';
+import EditorialHeader from '../../components/EditorialHeader';
+import EmptyState from '../../components/EmptyState';
+import StateScreen from '../../components/StateScreen';
+import AmountText from '../../components/AmountText';
 import { useAlert } from '../../hooks/useAlert';
 import { generateBalanceSummary, shareViaWhatsApp } from '../../utils/whatsapp';
 import { sendNotificationsToUsers, saveInAppNotification } from '../../lib/notifications';
@@ -57,7 +59,7 @@ interface SimplifiedDebt extends Balance {
   to_user_data?: User;
 }
 
-const PAYMENT_METHODS: { key: PaymentMethod; labelKey: string; icon: string }[] = [
+const PAYMENT_METHODS: { key: PaymentMethod; labelKey: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'cash', labelKey: 'settlements.cash', icon: 'cash-outline' },
   { key: 'bank', labelKey: 'settlements.bank', icon: 'business-outline' },
   { key: 'paypal', labelKey: 'settlements.paypal', icon: 'logo-paypal' },
@@ -70,6 +72,26 @@ const PAYMENT_METHODS: { key: PaymentMethod; labelKey: string; icon: string }[] 
   { key: 'other', labelKey: 'settlements.other', icon: 'ellipsis-horizontal-outline' },
 ];
 
+// Avatar gradient hash for member initials
+const AVATAR_GRADIENTS: [string, string][] = [
+  ['#0D9488', '#14B8A6'],
+  ['#7C3AED', '#A78BFA'],
+  ['#DB2777', '#F472B6'],
+  ['#2563EB', '#60A5FA'],
+  ['#D97706', '#FBBF24'],
+  ['#059669', '#34D399'],
+];
+function avatarGradient(name: string): [string, string] {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+}
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
 export default function GroupBalancesScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
   const { t, i18n } = useTranslation();
@@ -81,6 +103,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   const [debts, setDebts] = useState<SimplifiedDebt[]>([]);
   const [currency, setCurrency] = useState<string>('EGP');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
 
   // Settlement modal state
@@ -96,12 +119,11 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   const [recipientPhone, setRecipientPhone] = useState('');
   const [launchTime, setLaunchTime] = useState<number | null>(null);
 
-  const entrance = useScreenEntrance();
-
   const fetchBalances = useCallback(async () => {
     if (!user) return;
 
     try {
+      setError(null);
       // Fetch group currency
       const { data: group } = await supabase
         .from('groups')
@@ -169,12 +191,12 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
       }));
 
       setDebts(enriched);
-    } catch (err) {
-      // handled silently
+    } catch (err: any) {
+      setError(err.message || t('common.error'));
     } finally {
       setLoading(false);
     }
-  }, [user, groupId]);
+  }, [user, groupId, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -330,46 +352,56 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
   const renderDebtRow = ({ item, index }: { item: SimplifiedDebt; index: number }) => {
     const fromName = getUserName(item.from_user, item.from_user_data);
     const toName = getUserName(item.to_user, item.to_user_data);
-    const canSettle =
-      item.from_user === user?.id || item.to_user === user?.id;
+    const canSettle = item.from_user === user?.id || item.to_user === user?.id;
+    const userPays = item.from_user === user?.id;
+    const fromGrad = avatarGradient(fromName);
+    const toGrad = avatarGradient(toName);
 
     return (
       <AnimatedListItem index={index}>
         <ThemedCard style={styles.debtRow}>
-          <View style={styles.debtRowLeft}>
-            <View style={styles.avatarRow}>
-              <LinearGradient
-                colors={colors.dangerGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={styles.avatarText}>
-                  {(item.from_user_data?.display_name || '?').charAt(0).toUpperCase()}
-                </Text>
-              </LinearGradient>
-              <View style={styles.arrowCircle}>
-                <Ionicons name="arrow-forward" size={14} color={colors.textTertiary} />
-              </View>
-              <LinearGradient
-                colors={colors.successGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatar}
-              >
-                <Text style={styles.avatarText}>
-                  {(item.to_user_data?.display_name || '?').charAt(0).toUpperCase()}
-                </Text>
-              </LinearGradient>
+          <View style={styles.avatarRow}>
+            <LinearGradient
+              colors={fromGrad}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatar}
+            >
+              <Text style={[styles.avatarText, { fontFamily: displayFor(i18n.language, 'bold') }]}>
+                {initials(fromName)}
+              </Text>
+            </LinearGradient>
+            <View style={styles.arrowCircle}>
+              <Ionicons
+                name={I18nManager.isRTL ? 'arrow-back' : 'arrow-forward'}
+                size={14}
+                color={colors.textTertiary}
+              />
             </View>
-            <Text style={styles.debtRowText}>
+            <LinearGradient
+              colors={toGrad}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatar}
+            >
+              <Text style={[styles.avatarText, { fontFamily: displayFor(i18n.language, 'bold') }]}>
+                {initials(toName)}
+              </Text>
+            </LinearGradient>
+          </View>
+          <View style={styles.debtRowMiddle}>
+            <Text style={styles.debtRowText} numberOfLines={1}>
               <Text style={styles.debtRowName}>{fromName}</Text>
               {` ${t('groups.owes')} `}
               <Text style={styles.debtRowName}>{toName}</Text>
             </Text>
-            <Text style={styles.debtRowAmount}>
-              {formatCurrency(item.net_amount, currency)}
-            </Text>
+            <AmountText
+              amount={item.net_amount}
+              currency={currency}
+              variant="amount"
+              tone={userPays ? 'owe' : 'owed'}
+              signMode="absolute"
+            />
           </View>
           {canSettle && (
             <FunButton
@@ -388,34 +420,30 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle={colors.statusBarStyle} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
+      <PageScaffold>
+        <StateScreen variant="loading" />
+      </PageScaffold>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageScaffold>
+        <StateScreen variant="error" body={error} onRetry={fetchBalances} />
+      </PageScaffold>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'light-content'} />
-
-      <LinearGradient
-        colors={colors.headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerBar}
-      >
-        <Animated.View style={entrance.style}>
-          <Text style={styles.headerTitle}>{t('groups.balances')}</Text>
-          <Text style={styles.headerSubtitle}>
-            {debts.length === 0
-              ? t('groups.settled_up')
-              : `${debts.length} ${debts.length === 1 ? t('groups.payment') : t('groups.payments')}`}
-          </Text>
-        </Animated.View>
-      </LinearGradient>
+    <PageScaffold decor>
+      <EditorialHeader
+        kicker={
+          debts.length === 0
+            ? t('groups.allClear', 'All clear')
+            : `${debts.length} ${debts.length === 1 ? t('groups.payment') : t('groups.payments')}`
+        }
+        title={t('groups.balances')}
+      />
 
       {/* Remind All button - only if others owe the current user */}
       {debts.some((d) => d.to_user === user?.id) && (
@@ -453,20 +481,11 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
           debts.length === 0 ? styles.emptyList : styles.list
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <LinearGradient
-              colors={colors.successGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.emptyIconCircle}
-            >
-              <Ionicons name="checkmark-done-outline" size={36} color={colors.textOnPrimary} />
-            </LinearGradient>
-            <Text style={styles.emptyTitle}>{t('groups.settled_up')}</Text>
-            <Text style={styles.emptySubtitle}>
-              {t('groups.settled_up')}
-            </Text>
-          </View>
+          <EmptyState
+            icon="checkmark-done-outline"
+            title={t('groups.settled_up')}
+            body={t('groups.allClearBody', 'No outstanding balances. Everyone is square.')}
+          />
         }
         showsVerticalScrollIndicator={false}
       />
@@ -488,7 +507,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
             <Pressable style={styles.modalContent} onPress={() => {}}>
               <View style={styles.modalHandle} />
 
-              <Text style={styles.modalTitle}>{t('settlements.record')}</Text>
+              <Text style={[styles.modalTitle, { fontFamily: displayFor(i18n.language, 'bold') }]}>{t('settlements.record')}</Text>
 
               {/* CONFIGURE STEP - Main settlement form */}
               {modalStep === 'configure' && (
@@ -566,10 +585,10 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
                             ]}
                           >
                             <Ionicons
-                              name={m.icon as any}
+                              name={m.icon}
                               size={14}
                               color={paymentMethod === m.key ? colors.textOnPrimary : colors.textTertiary}
-                              style={{ marginRight: 6 }}
+                              style={{ marginEnd: 6 }}
                             />
                             <Text
                               style={[
@@ -724,34 +743,6 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
 
 const createStyles = (c: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.bg,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    // Gradient header
-    headerBar: {
-      paddingHorizontal: Spacing.xxl,
-      paddingTop: Spacing.xl,
-      paddingBottom: Spacing.xxl,
-    },
-    headerTitle: {
-      fontFamily: FontFamily.display,
-      fontSize: 28,
-      letterSpacing: -0.6,
-      color: c.text,
-    },
-    headerSubtitle: {
-      fontFamily: FontFamily.bodyMedium,
-      fontSize: 14,
-      color: c.textSecondary,
-      opacity: 0.7,
-      marginTop: Spacing.xs,
-    },
     // Remind All
     remindAllRow: {
       paddingHorizontal: Spacing.xl,
@@ -774,97 +765,59 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     // List
     list: {
-      padding: Spacing.xl,
+      padding: Spacing.lg,
+      paddingTop: Spacing.md,
     },
     emptyList: {
-      flex: 1,
+      flexGrow: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: Spacing.xl,
     },
-    emptyContainer: {
-      alignItems: 'center',
-      paddingHorizontal: Spacing.xxxl,
-    },
-    emptyIconCircle: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: Spacing.lg,
-      shadowColor: c.success,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.3,
-      shadowRadius: 14,
-      elevation: 8,
-    },
-    emptyTitle: {
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 18,
-      letterSpacing: -0.3,
-      color: c.text,
-      marginBottom: Spacing.sm,
-    },
-    emptySubtitle: {
-      fontFamily: FontFamily.body,
-      fontSize: 15,
-      color: c.textSecondary,
-      lineHeight: 22,
-      textAlign: 'center',
-    },
-    // Debt row card
+    // Debt row card — horizontal: avatars · text+amount · settle button
     debtRow: {
       marginBottom: Spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    debtRowLeft: {
-      flex: 1,
-      marginRight: Spacing.md,
+      gap: Spacing.md,
     },
     avatarRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: Spacing.sm,
-      gap: Spacing.sm,
+      gap: 6,
     },
     avatar: {
-      width: 38,
-      height: 38,
-      borderRadius: Radius.full,
+      width: 36,
+      height: 36,
+      borderRadius: 12,
       justifyContent: 'center',
       alignItems: 'center',
     },
     avatarText: {
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 15,
+      fontSize: 13,
       color: c.textOnPrimary,
+      letterSpacing: -0.3,
     },
     arrowCircle: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
       backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : c.borderLight,
       justifyContent: 'center',
       alignItems: 'center',
     },
+    debtRowMiddle: {
+      flex: 1,
+      gap: 4,
+    },
     debtRowText: {
       fontFamily: FontFamily.body,
-      fontSize: 14,
+      fontSize: 13,
       color: c.textSecondary,
-      marginBottom: Spacing.xs,
     },
     debtRowName: {
       fontFamily: FontFamily.bodyBold,
       color: c.text,
-    },
-    debtRowAmount: {
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 24,
-      letterSpacing: -0.5,
-      color: c.danger,
     },
     // Settle button
     settleButtonWrap: {
@@ -899,9 +852,9 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
       marginBottom: Spacing.xl,
     },
     modalTitle: {
-      fontFamily: FontFamily.bodyBold,
-      fontSize: 20,
-      letterSpacing: -0.3,
+      fontSize: 26,
+      letterSpacing: -0.4,
+      lineHeight: 30,
       color: c.text,
       marginBottom: Spacing.md,
     },
@@ -933,7 +886,7 @@ const createStyles = (c: ThemeColors, isDark: boolean) =>
     },
     modalDirectionNames: {
       flex: 1,
-      marginLeft: Spacing.sm,
+      marginStart: Spacing.sm,
     },
     modalSubtitle: {
       fontFamily: FontFamily.bodyMedium,

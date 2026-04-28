@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +21,8 @@ const DOCK_WIDTH = SCREEN_W - DOCK_H_PAD * 2;
 
 const ICON_MAP: Record<string, [string, string]> = {
   GroupsTab: ['people', 'people-outline'],
-  PeopleTab: ['person-add', 'person-add-outline'],
+  PeopleTab: ['person', 'person-outline'],
+  NotificationsTab: ['notifications', 'notifications-outline'],
   ProfileTab: ['person-circle', 'person-circle-outline'],
 };
 
@@ -30,7 +32,10 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
   const tabCount = state.routes.length;
   const tabWidth = DOCK_WIDTH / tabCount;
 
-  const pillX = useRef(new Animated.Value(state.index * tabWidth)).current;
+  // RTL: visually mirror the index so the pill slides from the right side
+  // for Arabic users (where tab order is mirrored by flexDirection: row-reverse).
+  const visualIndex = I18nManager.isRTL ? tabCount - 1 - state.index : state.index;
+  const pillX = useRef(new Animated.Value(visualIndex * tabWidth)).current;
   const anims = useRef(
     state.routes.map((_, i) => new Animated.Value(i === state.index ? 1 : 0)),
   ).current;
@@ -59,8 +64,9 @@ export default function AnimatedTabBar({ state, descriptors, navigation }: Botto
   }, []);
 
   useEffect(() => {
+    const targetIndex = I18nManager.isRTL ? tabCount - 1 - state.index : state.index;
     Animated.spring(pillX, {
-      toValue: state.index * tabWidth,
+      toValue: targetIndex * tabWidth,
       useNativeDriver: true,
       damping: 22,
       stiffness: 220,
