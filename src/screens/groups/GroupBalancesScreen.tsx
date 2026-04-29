@@ -737,7 +737,7 @@ export default function GroupBalancesScreen({ route, navigation }: Props) {
           </KeyboardAvoidingView>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </PageScaffold>
   );
 }
 
