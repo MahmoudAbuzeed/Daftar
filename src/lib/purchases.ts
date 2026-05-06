@@ -6,9 +6,13 @@ import Purchases, {
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-// RevenueCat API keys
-const REVENUECAT_IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || 'test_icBvIOqImAaaNmNFCRNeVscTFlB';
-const REVENUECAT_ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || 'test_icBvIOqImAaaNmNFCRNeVscTFlB';
+// RevenueCat API keys — must be the production (App-specific public) keys
+// from the RevenueCat dashboard. iOS keys start with `appl_`, Android with `goog_`.
+// Do NOT hardcode a `test_` key here: RevenueCat refuses to run with a sandbox
+// key in a production build (TestFlight/App Store/Play) and will show a
+// "Wrong API Key" dialog and close the app.
+const REVENUECAT_IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+const REVENUECAT_ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
 
 // Entitlement ID configured in RevenueCat dashboard
 const PRO_ENTITLEMENT = 'Fifti Pro';
@@ -20,17 +24,15 @@ export async function initPurchases(userId?: string): Promise<void> {
   const apiKey = Platform.OS === 'ios' ? REVENUECAT_IOS_KEY : REVENUECAT_ANDROID_KEY;
 
   if (!apiKey) {
-    console.warn('RevenueCat API key not configured');
+    console.warn(
+      `RevenueCat ${Platform.OS} API key not configured — set EXPO_PUBLIC_REVENUECAT_${Platform.OS === 'ios' ? 'IOS' : 'ANDROID'}_KEY`,
+    );
     return;
   }
 
   Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.VERBOSE : LOG_LEVEL.ERROR);
 
-  if (Platform.OS === 'ios') {
-    await Purchases.configure({ apiKey: REVENUECAT_IOS_KEY, appUserID: userId || undefined });
-  } else if (Platform.OS === 'android') {
-    await Purchases.configure({ apiKey: REVENUECAT_ANDROID_KEY, appUserID: userId || undefined });
-  }
+  Purchases.configure({ apiKey, appUserID: userId || undefined });
 }
 
 /**
