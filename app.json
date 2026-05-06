@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.fifti.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Fifti needs camera access to scan receipts and split bills automatically",
